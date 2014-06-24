@@ -89,7 +89,7 @@ template RecordSet(alias RecordFormatT)
 			foreach( i; 0..this.length )
 				jData[i] = this.getStdJSONDataAt(i);
 				
-			jValues["d"] = jData;
+			jValues.object["d"] = jData;
 
 			return jValues;
 		}
