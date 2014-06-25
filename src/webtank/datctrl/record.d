@@ -78,8 +78,8 @@ template Record(alias RecordFormatT)
 		{	
 			JSONValue jValue = _recordSet.getStdJSONFormat();
 			
-			jValue["d"] = _recordSet.getStdJSONDataAt( _recordSet.getRecordIndex(_recordKey) );
-			jValue["t"] = "record";
+			jValue.object["d"] = _recordSet.getStdJSONDataAt( _recordSet.getRecordIndex(_recordKey) );
+			jValue.object["t"] = "record";
 
 			return jValue;
 		}
