@@ -14,6 +14,11 @@ $(LOCALE_RU_RU Базовый интерфейс для записи данны�
 +/
 interface IBaseRecord
 {
+	string getRawStr(string fieldName);
+	string getRawStr(string fieldName, string defaultValue);
+	
+	string getStr(string fieldName);
+	
 	/++
 	$(LOCALE_EN_US Function returns string representation of value for field
 		with name $(D_PARAM fieldName). Parameter $(D_PARAM defaultValue) determines

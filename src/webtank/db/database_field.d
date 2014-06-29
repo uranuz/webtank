@@ -7,7 +7,7 @@ import webtank.datctrl.data_field, webtank.db.database, webtank.datctrl.record_f
 
 
 ///Класс ключевого поля
-class DatabaseField(FieldType FieldT) : IDataField!( FieldT )
+class DatabaseField(FormatType) : IDataField!( FormatType )
 {
 protected: ///ВНУТРЕННИЕ ПОЛЯ КЛАССА
 	alias DataFieldValueType!(FieldT) T;
@@ -16,6 +16,7 @@ protected: ///ВНУТРЕННИЕ ПОЛЯ КЛАССА
 	immutable(size_t) _fieldIndex;
 	immutable(string) _name;
 
+	/+
 	//Поля от формата поля
 	static if( isKeyFieldType!(FieldT))
 	{	size_t[size_t] _indexes;
@@ -24,6 +25,7 @@ protected: ///ВНУТРЕННИЕ ПОЛЯ КЛАССА
 	else
 	{	bool _isNullable = true;
 	}
+	+/
 	
 	static if( FieldT == FieldType.Enum )
 	{	EnumFormat _enumFormat;
@@ -63,8 +65,8 @@ public:
 
 	override { //Переопределяем интерфейсные методы
 		///Возвращает тип поля
-		FieldType type()
-		{	return FieldT; }
+		//FieldType type()
+		//{	return FieldT; }
 		
 		///Возвращает количество записей для поля
 		size_t length()
@@ -168,6 +170,7 @@ public:
 			return ( isNull(index) ? defaultValue : _queryResult.get(_fieldIndex, index) );
 		}
 
+/+
 		static if( isKeyFieldType!(FieldT) )
 		{	///Возвращает порядковый номер ячейки со значением ключа key
 			size_t getIndex(size_t key)
@@ -187,37 +190,11 @@ public:
 					throw new Exception(`Индекс ` ~ index.to!string ~ ` не найден в поле данных!!!`);
 			}
 		}
+*/
 		
 			
 	} //override
-	
-// 	bool keyExists(size_t key)
-// 	{	if( key in _indexes ) return true;
-// 		return false;
-// 	}
-	
-	
-	
-protected:
 
-	static if( isKeyFieldType!(FieldT) )
-	{
-		void _readKeys()
-		{	auto recordCount = _queryResult.recordCount;
-			for( size_t i = 0; i < recordCount; i++ )
-			{	auto key = std.conv.to!(size_t)( _queryResult.get(_fieldIndex, i) );
-				_keys ~= key;
-				_indexes[key] = i;
-			}
-		}
-	}
-	
-	// 	void set( T value, size_t key )
-	// 	{	if( !keyExists(key) ) assert(0);
-	// 		_nullFlags[ _getIndex(key) ] = false;
-	// 		//Значение должно копироваться (для текста)
-	// 		_values[ _getIndex(key) ] = value;
-	// 	}
 
 }
 

@@ -21,6 +21,7 @@ struct RecordFormat(Args...)
 	EnumFormat[string] enumFormats; ///Возможные значения для перечислимых полей
 
 	/++
+	/++
 	$(LOCALE_EN_US Property returns array of semantic types of fields)
 	$(LOCALE_RU_RU Свойство возвращает массив семантических типов полей)
 	+/
@@ -30,6 +31,7 @@ struct RecordFormat(Args...)
 			result ~= spec.fieldType;
 		return result;
 	}
+	+/
 
 	/++
 	$(LOCALE_EN_US Property returns array of field names for record format)
@@ -75,7 +77,7 @@ struct RecordFormat(Args...)
 	///Шаблон возвращает кортеж имён полей отфильтрованных по типам FilterFieldTypes
 	///Элементы кортежа FilterFieldTypes должны иметь тип FieldType
 	template filterNamesByTypes(FilterFieldTypes...)
-	{	alias _getFieldNameTuple!( _filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterFieldTypes) ) filterNamesByTypes;
+	{	alias filterNamesByTypes = _getFieldNameTuple!( _filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterFieldTypes) );
 	}
 
 	/++
@@ -83,23 +85,23 @@ struct RecordFormat(Args...)
 	$(LOCALE_RU_RU Шаблон возвращает кортеж всех имен полей для формата записи)
 	+/
 	template tupleOfNames()
-	{	alias _getFieldNameTuple!(_fieldSpecs) tupleOfNames;
+	{	alias tupleOfNames = _getFieldNameTuple!(_fieldSpecs);
 	}
 
 	/++
 	$(LOCALE_EN_US Template returns semantic field type $(D FieldType) for field with name $(D_PARAM fieldName))
 	$(LOCALE_RU_RU Шаблон возвращает семантический тип поля $(D FieldType) для поля с именем $(D_PARAM fieldName))
 	+/
-	template getFieldType(string fieldName)
-	{	alias _getFieldSpec!(fieldName, _fieldSpecs).fieldType getFieldType;
+	template getFormatType(string fieldName)
+	{	alias getFormatType = _getFieldSpec!(fieldName, _fieldSpecs).Type;
 	}
 
 	/++
 	$(LOCALE_EN_US Template returns semantic field type $(D FieldType) for field with index $(D_PARAM fieldIndex))
 	$(LOCALE_RU_RU Шаблон возвращает семантический тип поля $(D FieldType) для поля с номером $(D_PARAM fieldIndex))
 	+/
-	template getFieldType(size_t fieldIndex)
-	{	alias _getFieldSpec!(fieldIndex, _fieldSpecs).fieldType getFieldType;
+	template getFormatType(size_t fieldIndex)
+	{	alias getFormatType = _getFieldSpec!(fieldIndex, _fieldSpecs).Type;
 	}
 
 	/++
@@ -107,7 +109,7 @@ struct RecordFormat(Args...)
 	$(LOCALE_RU_RU Шаблон возвращает тип языка D для поля с именем $(D_PARAM fieldName))
 	+/
 	template getValueType(string fieldName)
-	{	alias _getFieldSpec!(fieldName, _fieldSpecs).ValueType getValueType;
+	{	alias getValueType = _getFieldSpec!(fieldName, _fieldSpecs).ValueType;
 	}
 	
 	/++
@@ -115,7 +117,7 @@ struct RecordFormat(Args...)
 	$(LOCALE_RU_RU Шаблон возвращает тип языка D для поля с номером $(D_PARAM fieldIndex))
 	+/
 	template getValueType(size_t fieldIndex)
-	{	alias _getFieldSpec!(fieldIndex, _fieldSpecs).ValueType getValueType;
+	{	alias getValueType = _getFieldSpec!(fieldIndex, _fieldSpecs).ValueType;
 	}
 
 	/++
@@ -123,7 +125,7 @@ struct RecordFormat(Args...)
 	$(LOCALE_RU_RU Шаблон возвращает имя для поля с номером $(D_PARAM fieldIndex))
 	+/
 	template getFieldName(size_t fieldIndex)
-	{	alias _getFieldSpec!(fieldIndex, _fieldSpecs).name getFieldName;
+	{	alias getFieldName = _getFieldSpec!(fieldIndex, _fieldSpecs).name;
 	}
 
 	/++
@@ -131,202 +133,35 @@ struct RecordFormat(Args...)
 	$(LOCALE_RU_RU Шаблон возвращает номер для поля с именем $(D_PARAM fieldName))
 	+/
 	template getFieldIndex(string fieldName)
-	{	alias _getFieldIndex!(fieldName, 0, _fieldSpecs) getFieldIndex;
+	{	alias getFieldIndex = _getFieldIndex!(fieldName, 0, _fieldSpecs);
 	}
 }
 
-/++
-$(LOCALE_EN_US Struct represents format for enumerated type of field)
-$(LOCALE_RU_RU Структура представляет формат для перечислимого типа поля)
-+/
-///Формат для перечислимого поля
-struct EnumFormat
-{	
-protected:
-	string[int] _names;
-	int[] _keys;
-	string _defaultName;
-
-public:
-
-	//Конструктор формата получает на входе карту соответсвия
-	//ключей названиям элементов и параметр сортировки ключей
-	//(возрастающий по-умолчанию)
-	this(immutable(string[int]) names, bool isAscendingOrder = true) immutable
-	{	_names = names;
-		import std.algorithm, std.exception;
-		int[] keys = names.keys;
-		
-		if( isAscendingOrder )
-			sort!("a < b")(keys);
-		else
-			sort!("a > b")(keys);
-			
-		_keys = assumeUnique(keys);
-	}
-	
-	this(immutable(string[int]) names, string nullName, bool isAscendingOrder = true) immutable
-	{	this(names, isAscendingOrder);
-		_defaultName = nullName;
-	}
-	
-	this( const(EnumFormat) format )
-	{	foreach( key, name; format._names )
-			_names[key] = name;
-		
-		_keys = format._keys.dup;
-		_defaultName = format._defaultName;
-	}
-	
-	EnumFormat mutCopy() @property const
-	{	return EnumFormat(this);
-	}
-	
-	/++
-	$(LOCALE_EN_US Serializes enumerated field format into std.json)
-	$(LOCALE_RU_RU Сериализует формат перечислимого типа в std.json)
-	+/
-	JSONValue getStdJSON() const
-	{	JSONValue[string] jArray; //Массив полей для формата перечислимого типа
-		
-		//Словарь перечислимых значений (числовой ключ --> строковое имя)
-		JSONValue[string] jEnumNames;
-		
-		foreach( key, name; _names )
-			jEnumNames[key.to!string] = name;
-		jArray["enum_n"] = jEnumNames;
-		
-		
-		//Массив, определяющий порядок перечислимых значений
-		JSONValue[] jEnumKeys;
-		jEnumKeys.length = _keys.length;
-
-		foreach( i, key; _keys )
-			jEnumKeys[i] = key;
-		jArray["enum_k"] = jEnumKeys;
-		
-		return JSONValue(jArray);
-	}
-
-	///Конструктор формата получает на входе карту соответсвия
-	///ключей названиям элементов и массив ключей, определяющий
-	///их порядок следования
-// 	this(string[int] names, int[] keys)
-// 	{	_names = names.idup;
-// 		_keys = keys.idup;
-// 	}
-
-
-	/++
-	$(LOCALE_EN_US Index operator for getting name of enumerated value by key)
-	$(LOCALE_RU_RU оператор индексации для получения имени перичислимого значения по ключу)
-	+/
-	///Оператор индексации по ключам для получения имени значения
-	///Возвращает null, если значения нет в контейнере
-	string opIndex(K)(K key) const
-		if( is( K == int ) )
-	{	return _names.get( key, _defaultName ); }
-	
-	///Шаблонный оператор индексации по ключам для получения имени значения
-	///Возвращает null, если значения нет в контейнере
-	///Принимает в качестве параметра "занулябельные" ключи, определённые
-	///через std.typecons.Nullable или NullableRef. Однако базовый тип
-	///значения должен быть int
-	string opIndex(K)(K key) const
-		if( isOptional!(K) && is( OptionalValueType!(K) == int )  )
-	{	return ( key.isNull ? _defaultName : _names.get( key.value, _defaultName ) ); }
-	
-	///Метод получения имени для перечислимого типа по ключю
-	///с указанием значения по-умолчанию (на случай если имя для ключа не определено)
-	string get(K)(K key, string defaultValue) const
-		if( is( K == int ) )
-	{	return _names.get(key, defaultValue); }
-	
-	///Шаблонный метод получения имени перечислимого типа по ключу типа
-	///std.typecons.Nullable или NullableRef. Однако тип значения
-	///в "занулябельных" переменных должен быть int
-	string get(K)(K key, string defaultValue) const
-		if( isOptional!(K) && is( OptionalValueType!(K) == int )  )
-	{	return ( key.isNull ? defaultValue : _names.get( key.value, defaultValue) ); }
-	
-	
-	//TODO: Разобраться что применять string* или bool
-	///Оператор in для проверки наличия ключа в наборе значений перечислимого типа
-	inout(string)* opBinaryRight(string op)(int key) inout 
-		if( op == "in" )
-	{	return key in _names; }
-	
-	///Возвращает набор названий значений перечислимого типа
-	string[] names() @property const
-	{	string[] result;
-		foreach( key; _keys )
-			result ~= _names[key];
-		return result;
-	}
-	
-	///Возвращает набор ключей для значений перечислимого типа
-	int[] keys() @property const
-	{	return _keys.dup;
-	}
-	
-	///Возвращает имя для пустого значения (null) для перечислимого типа
-	string defaultName() @property const
-	{	return _defaultName; }
-	
-	///Оператор для обхода значений перечислимого типа через foreach
-	///Первый параметр - имя (строка), второй - ключ (число)
-	int opApply(int delegate(string name, int i) dg) const
-	{	foreach( key; _keys )
-		{	auto result = dg(_names[key], key);
-			if(result)
-				return result;
-		}
-		return 0;
-	}
-	
-	///Оператор для обхода значений перечислимого типа через foreach
-	///в случае одного параметра (ключа)
-	int opApply(int delegate(int i) dg)
-	{	foreach( key; _keys )
-		{	auto result = dg(key);
-			if(result)
-				return result;
-		}
-		return 0;
-	}
-}
-
-
-///В шаблоне хранится соответсвие между именем и типом поля
-template FieldSpec( FieldType ft, string s = null )
-{	alias ft fieldType;
-	alias DataFieldValueType!(ft) ValueType;
-	alias s name;
-}
 
 //Шаблон разбирает аргументы и находит соответсвие имен и типов полей
 //Результат: кортеж элементов FieldSpec
 template _parseRecordFormatArgs(Args...)
 {	static if( Args.length == 0 )
-	{	alias TypeTuple!() _parseRecordFormatArgs;
+	{	alias _parseRecordFormatArgs = TypeTuple!() ;
 	}
-	else static if( is( typeof( Args[0] ) : FieldType ) )
-	{	static if( is( typeof( Args[1] ) : string ) )
-			alias TypeTuple!(FieldSpec!(Args[0 .. 2]), _parseRecordFormatArgs!(Args[2 .. $])) _parseRecordFormatArgs;
+	else static if( is(Args[0]) )
+	{	
+		static if( is( typeof( Args[1] ) : string ) )
+			alias _parseRecordFormatArgs = TypeTuple!(FieldSpec!(Args[0 .. 2]), _parseRecordFormatArgs!(Args[2 .. $]));
 		else 
-			alias TypeTuple!(FieldSpec!(Args[0]), _parseRecordFormatArgs!(Args[1 .. $])) _parseRecordFormatArgs;
+			alias _parseRecordFormatArgs = TypeTuple!(FieldSpec!(Args[0]), _parseRecordFormatArgs!(Args[1 .. $]));
 	}
 	else
 	{	static assert(0, "Attempted to instantiate Tuple with an "
-				~"invalid argument: "~ Args[0].stringof);
+				~ "invalid argument: " ~ Args[0].stringof);
 	}
 }
 
 template _getFieldNameTuple(FieldSpecs...)
 {	static if( FieldSpecs.length == 0 )
-		alias TypeTuple!() _getFieldNameTuple;
+		alias _getFieldNameTuple = TypeTuple!();
 	else
-		alias TypeTuple!( FieldSpecs[0].name, _getFieldNameTuple!(FieldSpecs[1..$]) ) _getFieldNameTuple;
+		alias _getFieldNameTuple = TypeTuple!( FieldSpecs[0].name, _getFieldNameTuple!(FieldSpecs[1..$]) );
 }
 
 //Получить из кортежа элементов типа FieldSpec нужный элемент по имени
@@ -334,28 +169,28 @@ template _getFieldSpec(string fieldName, FieldSpecs...)
 {	static if( FieldSpecs.length == 0 )
 		static assert(0, "Field with name \"" ~ fieldName ~ "\" is not found in container!!!");
 	else static if( FieldSpecs[0].name == fieldName )
-		alias FieldSpecs[0] _getFieldSpec;
+		alias _getFieldSpec = FieldSpecs[0];
 	else
-		alias _getFieldSpec!(fieldName, FieldSpecs[1 .. $]) _getFieldSpec;
+		alias _getFieldSpec = _getFieldSpec!(fieldName, FieldSpecs[1 .. $]);
 }
 
-//Получить из кортежа элементов типа FieldSpec нужный элемент по имени
+//Получить из кортежа элементов типа FieldSpec нужный элемент по номеру
 template _getFieldSpec(size_t index, FieldSpecs...)
 {	static if( FieldSpecs.length == 0 )
 		static assert(0, "Field with given index is not found in container!!!");
 	else static if( index == 0 )
-		alias FieldSpecs[0] _getFieldSpec;
+		alias _getFieldSpec = FieldSpecs[0];
 	else
-		alias _getFieldSpec!( index - 1, FieldSpecs[1 .. $]) _getFieldSpec;
+		alias _getFieldSpec = _getFieldSpec!( index - 1, FieldSpecs[1 .. $]);
 }
 
 template _getFieldIndex(string fieldName, size_t index, FieldSpecs...)
 {	static if( FieldSpecs.length == 0 )
 		static assert(0, "Field with name \"" ~ fieldName ~ "\" is not found in container!!!");
 	else static if( FieldSpecs[0].name == fieldName )
-		alias index _getFieldIndex;
+		alias _getFieldIndex = index;
 	else 
-		alias _getFieldIndex!(fieldName, index + 1 , FieldSpecs[1 .. $]) _getFieldIndex;
+		alias _getFieldIndex = _getFieldIndex!(fieldName, index + 1 , FieldSpecs[1 .. $]);
 	
 }
 
@@ -365,15 +200,15 @@ template _filterFieldSpecs(FieldSpecs...)
 	//Элементы кортежа FilterFieldTypes должны иметь тип FieldType
 	template ByTypes(FilterFieldTypes...)
 	{	static if( FieldSpecs.length == 0 )
-			alias TypeTuple!() ByTypes;
+			alias ByTypes = TypeTuple!();
 		else
-			alias TypeTuple!(
+			alias ByTypes = TypeTuple!(
 				//Вызов фильтации для первого FieldSpec по набору FilterFieldTypes (типов полей)
 				_filterFieldSpec!(FieldSpecs[0], FilterFieldTypes),
 				
 				//Вызов для остальных FieldSpecs
 				_filterFieldSpecs!(FieldSpecs[1..$]).ByTypes!(FilterFieldTypes)
-			) ByTypes;
+			);
 	}
 	
 }
@@ -383,12 +218,12 @@ template _filterFieldSpecs(FieldSpecs...)
 template _filterFieldSpec(alias FieldSpec, FilterFieldTypes...)
 {	
 	static if( FilterFieldTypes.length == 0 )
-		alias TypeTuple!() _filterFieldSpec;
+		alias _filterFieldSpec = TypeTuple!();
 	else
-	{	static if( FilterFieldTypes[0] == FieldSpec.fieldType )
-			alias FieldSpec _filterFieldSpec;
+	{	static if( is( FilterFieldTypes[0] == FieldSpec.Type ) )
+			alias _filterFieldSpec = FieldSpec;
 		else
-			alias _filterFieldSpec!(FieldSpec, FilterFieldTypes[1..$]) _filterFieldSpec;
+			alias _filterFieldSpec = _filterFieldSpec!(FieldSpec, FilterFieldTypes[1..$]);
 	}
 }
 

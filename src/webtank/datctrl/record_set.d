@@ -8,10 +8,34 @@ import std.typetuple, std.typecons, std.conv, std.json;
 
 import webtank.datctrl.data_field, webtank.datctrl.record, webtank.datctrl.record_format, webtank.common.serialization;
 
-// interface IBaseRecordSet
-// {	
-// 	
-// }
+interface IBaseRecordSet
+{	
+	RecordType opIndex(size_t recordIndex);
+	
+	RecordType getRecordAt(size_t recordIndex);
+	RecordType getRecord(size_t recordKey);
+	string getStr(string fieldName, size_t recordKey, string defaultValue);
+	string getStrAt(string fieldName, size_t recordIndex, string defaultValue);
+	
+	RecordType front() @property;
+	void popFront();
+	bool empty() @property;
+	size_t keyFieldIndex() @property;
+	void setKeyField(size_t index);
+	bool isNull(string fieldName, size_t recordKey);
+	bool isNullAt(string fieldName, size_t recordIndex);
+	bool isNullable(string fieldName);
+	size_t length() @property;
+	
+	size_t getRecordIndex(size_t key);
+	size_t getRecordKey(size_t index);
+	
+}
+
+interface IWriteableRecordSet: IBaseRecordSet
+{
+	
+}
 
 /++
 $(LOCALE_EN_US Class implements work with record set)
@@ -122,7 +146,7 @@ template RecordSet(alias RecordFormatT)
 
 
 
-		template get(string fieldName)
+		template get(string fieldName, K)
 		{	alias FormatType.getValueType!(fieldName) ValueType;
 
 			/++
@@ -392,6 +416,16 @@ template RecordSet(alias RecordFormatT)
 		}
 		
 	}
+}
+
+class RecordSet(alias RecordFormatT, bool Writeable: true)
+{
+	template set(string fieldName)
+	{
+		void set()
+	
+	}
+
 }
 
 
