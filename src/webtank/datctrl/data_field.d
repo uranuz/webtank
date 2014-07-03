@@ -4,14 +4,15 @@ import webtank._version;
 
 static if( isDatCtrlEnabled ) {
 
-import std.array, std.conv, std.json, std.datetime;
+import std.array, std.conv, std.json, std.datetime, std.traits;
 
 import webtank.datctrl.enum_format;
 
 
 ///В шаблоне хранится соответсвие между именем и типом поля
 template FieldSpec( T, string s = null )
-{	alias FormatType = T;
+{	
+	alias FormatDecl = T;
 	alias ValueType = DataFieldValueType!(T);
 	alias name = s;
 }
@@ -24,7 +25,7 @@ template CandidateKey(T, bool isPrimaryKey = false)
 
 template PrimaryKey(T)
 {
-	alias PrimaryKey = CandidateKey(T, true);
+	alias PrimaryKey = CandidateKey!(T, true);
 }
 
 /++
@@ -86,7 +87,7 @@ template DataFieldValueType(FormatType)
 	else
 		static assert( 0, FormatType.stringof ~ " is not valid D type!!!" );
 }
-
+/+
 /++
 $(LOCALE_EN_US
 	Function converts values from different real D types to another
@@ -161,6 +162,7 @@ auto fldConv(FieldType FieldT, S)( S value )
 // 	}
 
 }
++/
 
 /++
 $(LOCALE_EN_US
@@ -211,10 +213,6 @@ interface IBaseDataField
 	$(LOCALE_RU_RU Функция возвращает true, если значение поля с номером $(D_PARAM index) пустое (null) )
 	+/
 	bool isNull(size_t index);
-	
-	string getRawStr(size_t index);
-	string getRawStr(size_t index, string defaultValue);
-
 	
 	string getStr(size_t index);
 	

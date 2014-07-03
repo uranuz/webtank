@@ -8,132 +8,17 @@ import std.typecons;
 $(LOCALE_EN_US Struct represents format for enumerated type of field)
 $(LOCALE_RU_RU Структура представляет формат для перечислимого типа поля)
 +/
-struct EnumFormat(alias enumValues, string nullString = null)
-	if( isArray!( typeof(enumValues) ) )
-{
-	alias ArgElemType = ElementType!( typeof(enumValues) );
-	
-	enum bool hasNames = isTuple!( ArgElemType );
-	enum bool isStatic = true;
-	
-	static if( hasNames )
-	{
-		static assert( ArgElemType.length == 2, 
-			"Static enum value tuple must contain 2 elements. Use plain array if value-only enum needed." );
-			
-		alias ValueType = typeof(ArgElemType[0]);
-		
-		static string getName(ValueType value)
-		{
-			foreach( ref pair; enumValues )
-			{
-				if( pair[0] == value )
-					return pair[1];
-			}
-			assert( 0, "Attempt to get name for value that doesn't exist in EnumFormat object!!" );
-		}
-		
-		template getName(ValueType value)
-		{
-			enum string getName = .getName(value);
-		}
-		
-		static ValueType getValue(string name)
-		{
-			foreach( ref pair; enumValues )
-			{
-				if( pair[1] == name )
-					return pair[0];
-			}
-			assert( 0, "Attempt to get value for name that doesn't exist in EnumFormat object!!" );
-		}
-		
-		template getValue(string name)
-		{
-			enum string getValue = .getValue(name);
-		}
-		
-		static string[] names() @property
-		{
-			string[] result;
-			result.length = enumValues.length;
-			
-			foreach( i, ref pair; enumValues )
-				result[i] = pair[1];
-			
-			return result;
-		}
-		
-		///Оператор для обхода значений перечислимого типа через foreach
-		///Первый параметр - имя (строка), второй - значение
-		static int opApply(int delegate(string name, ValueType value) dg)
-		{	foreach( ref pair; enumValues )
-			{	auto result = dg(pair[1], pair[0]);
-				if(result)
-					return result;
-			}
-			return 0;
-		}
-	
-		///Оператор для обхода значений перечислимого типа через foreach
-		///в случае одного параметра (значения)
-		static int opApply(int delegate(ValueType value) dg)
-		{	foreach( ref pair; enumValues )
-			{	auto result = dg(pair[0]);
-				if(result)
-					return result;
-			}
-			return 0;
-		}
-	}
-	else 
-	{
-		alias ValueType = ArgElemType;
-		
-		///Оператор для обхода значений перечислимого типа через foreach
-		///в случае одного параметра (значения)
-		static int opApply(int delegate(ValueType value) dg)
-		{	foreach( ref value; enumValues )
-			{	auto result = dg(value);
-				if(result)
-					return result;
-			}
-			return 0;
-		}
-		
-	}
-	
-	static ValueType[] values() @property
-	{
-		ValueType[] result;
-		result.length = enumValues.length;
-		
-		foreach( i, ref val; enumValues )
-		{	
-			static if( hasNames )
-				result[i] = val[0]; //Первый элемент кортежа - значение
-			else
-				result[i] = val;
-		}
-		
-		return result;
-	}
-
-}
-
 struct EnumFormat( T, bool hasNames )
-	if( !isArray!(T) )
 {
 	alias ValueType = T;
-	enum bool isStatic = false;
-	
+
 	//Имя для пустого (отсутствующего) значения null
 	string nullString;
-	
+
 	static if( hasNames )
 	{
 		//Массив пар "значение: название" для перечислимого типа
-		Tuple!(ValueType, string)[] _pairs;
+		private Tuple!(ValueType, string)[] _pairs;
 
 		this( Tuple!(ValueType, string)[] pairs )
 		{

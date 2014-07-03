@@ -5,21 +5,22 @@ import std.conv;
 
 import webtank.db.database, webtank.db.database_field;
 
-import   webtank.datctrl.record_format, webtank.datctrl.record_set, webtank.datctrl.data_field;
+import webtank.datctrl.record_format, webtank.datctrl.record_set, webtank.datctrl.data_field;
 
 //junction, joint, link, coop
 
 
 
 auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, const(RecordFormatT) format)
-{	alias RecordSet!RecordFormatT RecordSetT;
+{	
+	alias RecordSetT = RecordSet!RecordFormatT;
 	
 	IBaseDataField[] dataFields;
 	foreach( i, fieldName; RecordFormatT.tupleOfNames!() )
-	{	alias RecordFormatT.getFieldType!(fieldName) fieldType;
-		alias DatabaseField!(fieldType) CurrFieldT;
+	{	alias FieldFormatDecl = RecordFormatT.getFieldFormatDecl!(fieldName);
+		alias CurrFieldT = DatabaseField!(FieldFormatDecl);
 		
-		static if( fieldType == FieldType.Enum )
+		static if( isEnumFormat!(FieldFormatDecl) )
 		{	if( fieldName in format.enumFormats )
 				dataFields ~= new CurrFieldT( queryResult, i, fieldName, format.enumFormats[fieldName] );
 			else
@@ -29,6 +30,5 @@ auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, const(RecordFormatT
 			dataFields ~= new CurrFieldT( queryResult, i, fieldName );
 	}
 	auto recordSet = new RecordSetT(dataFields);
-	recordSet.setKeyField(0);
 	return recordSet;
 }

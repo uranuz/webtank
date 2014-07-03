@@ -10,31 +10,44 @@ import webtank.datctrl.data_field, webtank.datctrl.record, webtank.datctrl.recor
 
 interface IBaseRecordSet
 {	
-	RecordType opIndex(size_t recordIndex);
-	
-	RecordType getRecordAt(size_t recordIndex);
-	RecordType getRecord(size_t recordKey);
-	string getStr(string fieldName, size_t recordKey, string defaultValue);
+
+	string getStrAt(string fieldName, size_t recordIndex);
 	string getStrAt(string fieldName, size_t recordIndex, string defaultValue);
 	
-	RecordType front() @property;
-	void popFront();
-	bool empty() @property;
 	size_t keyFieldIndex() @property;
-	void setKeyField(size_t index);
-	bool isNull(string fieldName, size_t recordKey);
+
 	bool isNullAt(string fieldName, size_t recordIndex);
 	bool isNullable(string fieldName);
 	size_t length() @property;
 	
-	size_t getRecordIndex(size_t key);
-	size_t getRecordKey(size_t index);
-	
 }
 
-interface IWriteableRecordSet: IBaseRecordSet
+interface IRecordSet(alias RecordFormatT): IBaseRecordSet
 {
+	alias PKValueType = ;
+	alias RecordType = ;
+	enum bool hasKeyField = ;
 	
+	RecordType opIndex(size_t recordIndex);
+	
+	RecordType getRecordAt(size_t recordIndex);
+	
+	static if( hasKeyField )
+	{
+		RecordType getRecord(PKValueType recordKey);
+		
+		string getStr(string fieldName, PKValueType recordKey);
+		string getStr(string fieldName, PKValueType recordKey, string defaultValue);
+		
+		bool isNull(string fieldName, PKValueType recordKey);
+		
+		size_t getRecordIndex(PKValueType key);
+		PKValueType getRecordKey(size_t index);
+	}
+	
+	RecordType front() @property;
+	void popFront();
+	bool empty() @property;
 }
 
 /++
@@ -43,19 +56,46 @@ $(LOCALE_RU_RU Класс реализует работу с набором за
 +/
 template RecordSet(alias RecordFormatT)
 {
-	class RecordSet: /+IBaseRecordSet,+/ IStdJSONSerializeable
+	class RecordSet: IRecordSet!(RecordFormatT), IStdJSONSerializeable
 	{	
 		//Тип формата для набора записей
 		alias RecordFormatT FormatType; 
 		
 		//Тип записи, возвращаемый из набора записей
-		alias Record!FormatType RecordType;  
+		alias Record!FormatType RecordType;
+		
+		alias PKValueType = ;
+		
+		enum bool hasKeyField = ;
 		
 	protected:
 		IBaseDataField[] _dataFields;
-		size_t _keyFieldIndex;
+		
+		static if( hasKeyField )
+		{
+			size_t[PKValueType] _recordIndexes;
+			PKValueType[] _primaryKeys;
+			
+			static immutable(size_t) _keyFieldIndex = ;
+			
+			void _readKeys()
+			{
+				auto keyField = cast(IDataField!(FieldFormatType)) _dataFields[_keyFieldIndex];
+				_primaryKeys.length = keyField.length;
+				
+				for( size_t i = 0; i < keyField.length; i++ )
+				{
+					auto keyValue = keyField.get(i);
+					_recordIndexes[keyValue] = i;
+					_primaryKeys[i] = keyValue;
+				}
+			}
+		}
 		
 		size_t _currRecIndex;
+		
+		
+		
 	public:
 
 		/++
@@ -119,8 +159,9 @@ template RecordSet(alias RecordFormatT)
 		}
 		
 		this(IBaseDataField[] dataFields)
-		{	//Устанавливаем размер массива полей
-			_dataFields = dataFields; 
+		{	
+			_dataFields = dataFields;
+			_readKeys();
 		}
 
 		/++
@@ -137,52 +178,120 @@ template RecordSet(alias RecordFormatT)
 		RecordType getRecordAt(size_t recordIndex)
 		{	return getRecord( getRecordKey(recordIndex) ); }
 
-		/++
-		$(LOCALE_EN_US Method returns record by it's primary $(D_PARAM recordKey))
-		$(LOCALE_RU_RU Метод возвращает запись по первичному ключу $(D_PARAM recordKey))
-		+/
-		RecordType getRecord(size_t recordKey)
-		{	return new RecordType(this, recordKey); }
+		static if( hasKeyField )
+		{
+			
+			/++
+			$(LOCALE_EN_US Method returns record by it's primary $(D_PARAM recordKey))
+			$(LOCALE_RU_RU Метод возвращает запись по первичному ключу $(D_PARAM recordKey))
+			+/
+			RecordType getRecord(PKValueType recordKey)
+			{	return new RecordType(this, recordKey); }
+			
+			template get(string fieldName, K)
+			{	alias FormatType.getValueType!(fieldName) ValueType;
 
+				/++
+				$(LOCALE_EN_US
+					Method returns value of cell with field name $(D_PARAM fieldName) and primary key
+					value $(D_PARAM recordKey). If cell value is null then behaviour is undefined
+				)
+				$(LOCALE_RU_RU
+					Метод возвращает значение ячейки с именем поля $(D_PARAM fieldName) и значением
+					первичного ключа $(D_PARAM recordKey). Если значение ячейки пустое (null), то
+					поведение не определено
+				)
+				+/
+				ValueType get(PKValueType recordKey)
+				{	return getAt!(fieldName)( getRecordIndex(recordKey) ); }
 
-
-		template get(string fieldName, K)
-		{	alias FormatType.getValueType!(fieldName) ValueType;
+				/++
+				$(LOCALE_EN_US
+					Method returns value of cell with field name $(D_PARAM fieldName) and primary key
+					value $(D_PARAM recordKey). Parameter $(D_PARAM defaultValue) determines return
+					value when cell in null
+				)
+				$(LOCALE_RU_RU
+					Метод возвращает значение ячейки с именем поля $(D_PARAM fieldName) и значением
+					первичного ключа $(D_PARAM recordKey). Параметр $(D_PARAM defaultValue)
+					определяет возвращаемое значение, когда значение ячейки пустое (null)
+				)
+				+/
+				ValueType get(PKValueType recordKey, ValueType defaultValue)
+				{	return getAt!(fieldName)( getRecordIndex(recordKey), defaultValue ); }
+			}
+		
+			string getStr(string fieldName, PKValueType recordKey)
+			{	return this.getStrAt( fieldName, getRecordIndex(recordKey) ); }
+			
+			/++
+			$(LOCALE_EN_US
+				Method returns string representation of cell with field name $(D_PARAM fieldName)
+				and record primary key $(D_PARAM recordKey). If value of cell is empty then
+				it return value specified by $(D_PARAM defaultValue) parameter, which will
+				have null value if parameter is missed.
+			)
+			$(LOCALE_RU_RU
+				Метод возвращает строковое представление ячейки с именем поля $(D_PARAM fieldName)
+				и значением первичного ключа записи $(D_PARAM recordKey). Если значение
+				ячейки пустое (null), тогда функция вернет значение задаваемое параметром
+				$(D_PARAM defaultValue). Этот параметр будет иметь значение null, если параметр опущен
+			)
+			+/
+			string getStr(string fieldName, PKValueType recordKey, string defaultValue)
+			{	return this.getStrAt( fieldName, getRecordIndex(recordKey), defaultValue ); }
+		
+		
+			/++
+			$(LOCALE_EN_US Function returns index of field considered as primary key field)
+			$(LOCALE_RU_RU Функция возвращает номер поля рассматриваемого как первичный ключ)
+			+/
+			size_t keyFieldIndex() @property
+			{	return _keyFieldIndex;
+			}
 
 			/++
 			$(LOCALE_EN_US
-				Method returns value of cell with field name $(D_PARAM fieldName) and primary key
-				value $(D_PARAM recordKey). If cell value is null then behaviour is undefined
+				Function returns true if cell with field name $(D_PARAM fieldName) and record
+				primary key $(D_PARAM recordKey) is null or false otherwise
 			)
 			$(LOCALE_RU_RU
-				Метод возвращает значение ячейки с именем поля $(D_PARAM fieldName) и значением
-				первичного ключа $(D_PARAM recordKey). Если значение ячейки пустое (null), то
-				поведение не определено
+				Функция возвращает true, если ячейка с именем поля $(D_PARAM fieldName) и
+				первичным ключом записи $(D_PARAM recordKey) пуста (null). В противном
+				случае возвращает false
 			)
 			+/
-			ValueType get(size_t recordKey)
-			{	return getAt!(fieldName)( getRecordIndex(recordKey) ); }
+			bool isNull(string fieldName, PKValueType recordKey)
+			{	return this.isNullAt( fieldName, getRecordIndex(recordKey) ); }
+		
+			/++
+			$(LOCALE_EN_US Function returns record index by it's primary $(D_PARAM key))
+			$(LOCALE_RU_RU Метод возвращает порядковый номер записи по первичному ключу $(D_PARAM key))
+			+/
+			size_t getRecordIndex(PKValueType key)
+			{	return _recordIndexes[key];
+			}
 
 			/++
-			$(LOCALE_EN_US
-				Method returns value of cell with field name $(D_PARAM fieldName) and primary key
-				value $(D_PARAM recordKey). Parameter $(D_PARAM defaultValue) determines return
-				value when cell in null
-			)
+			$(LOCALE_EN_US Function returns record primary key by it's $(D_PARAM index) in set)
 			$(LOCALE_RU_RU
-				Метод возвращает значение ячейки с именем поля $(D_PARAM fieldName) и значением
-				первичного ключа $(D_PARAM recordKey). Параметр $(D_PARAM defaultValue)
-				определяет возвращаемое значение, когда значение ячейки пустое (null)
+				Метод возвращает первичный ключ записи по порядковому номеру
+				$(D_PARAM index) в наборе
 			)
 			+/
-			ValueType get(size_t recordKey, ValueType defaultValue)
-			{	return getAt!(fieldName)( getRecordIndex(recordKey), defaultValue ); }
-		}
+			PKValueType getRecordKey(size_t index)
+			{	return _primaryKeys[index];
+			}
+		
+		} //static if( hasKeyField )
+		
+		
 
 		template getAt(string fieldName)
-		{	alias FormatType.getValueType!(fieldName) ValueType;
-			alias FormatType.getFieldType!(fieldName) fieldType;
-			alias FormatType.getFieldIndex!(fieldName) fieldIndex;
+		{	
+			alias ValueType = FormatType.getValueType!(fieldName);
+			alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
+			alias fieldIndex FormatType.getFieldIndex!(fieldName);
 
 			/++
 			$(LOCALE_EN_US
@@ -196,7 +305,7 @@ template RecordSet(alias RecordFormatT)
 			)
 			+/
 			ValueType getAt(size_t recordIndex)
-			{	auto currField = cast(IDataField!(fieldType)) _dataFields[fieldIndex];
+			{	auto currField = cast(IDataField!(FieldFormatType)) _dataFields[fieldIndex];
 				return currField.get( recordIndex );
 			}
 
@@ -212,7 +321,7 @@ template RecordSet(alias RecordFormatT)
 			)
 			+/
 			ValueType getAt(size_t recordIndex, ValueType defaultValue)
-			{	auto currField = cast(IDataField!(fieldType)) _dataFields[fieldIndex];
+			{	auto currField = cast(IDataField!(FieldFormatType)) _dataFields[fieldIndex];
 				return currField.get( recordIndex, defaultValue );
 			}
 		}
@@ -228,38 +337,26 @@ template RecordSet(alias RecordFormatT)
 		)
 		+/
 		template getEnumFormat(string fieldName)
-		{	alias FormatType.getValueType!(fieldName) ValueType;
-			alias FormatType.getFieldType!(fieldName) fieldType;
-			alias FormatType.getFieldIndex!(fieldName) fieldIndex;
+		{
+			alias ValueType = FormatType.getValueType!(fieldName);
+			alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
+			alias fieldIndex = FormatType.getFieldIndex!(fieldName);
 			
-			static if( fieldType == FieldType.Enum )
+			static if( isEnumFormat!(FormatType) )
 			{	auto getEnumFormat()
-				{	auto currField = cast(IDataField!(fieldType)) _dataFields[fieldIndex];
-					return currField.enumFormat();
+				{	auto currField = cast(IDataField!(FieldFormatType)) _dataFields[fieldIndex];
+					return currField.enumFormat;
 				}
 			}
 			else
 				static assert( 0, "Getting enum data is only available for enum field types!!!" );
 		}
 
-		/++
-		$(LOCALE_EN_US
-			Method returns string representation of cell with field name $(D_PARAM fieldName)
-			and record primary key $(D_PARAM recordKey). If value of cell is empty then
-			it return value specified by $(D_PARAM defaultValue) parameter, which will
-			have null value if parameter is missed.
-		)
-		$(LOCALE_RU_RU
-			Метод возвращает строковое представление ячейки с именем поля $(D_PARAM fieldName)
-			и значением первичного ключа записи $(D_PARAM recordKey). Если значение
-			ячейки пустое (null), тогда функция вернет значение задаваемое параметром
-			$(D_PARAM defaultValue). Этот параметр будет иметь значение null, если параметр опущен
-		)
-		+/
-		string getStr(string fieldName, size_t recordKey, string defaultValue = null)
-		{	return this.getStrAt( fieldName, getRecordIndex(recordKey), defaultValue ); }
-
-
+		
+		string getStrAt(string fieldName, size_t recordIndex)
+		{	return _dataFields[ FormatType.indexes[fieldName] ].getStr( recordIndex );
+		}
+		
 		/++
 		$(LOCALE_EN_US
 			Method returns string representation of cell with field name $(D_PARAM fieldName)
@@ -274,9 +371,8 @@ template RecordSet(alias RecordFormatT)
 			$(D_PARAM defaultValue). Этот параметр будет иметь значение null, если параметр опущен
 		)
 		+/
-		string getStrAt(string fieldName, size_t recordIndex, string defaultValue = null)
-		{	auto currField = _dataFields[ FormatType.indexes[fieldName] ];
-			return currField.getStr( recordIndex, defaultValue );
+		string getStrAt(string fieldName, size_t recordIndex, string defaultValue)
+		{	return _dataFields[ FormatType.indexes[fieldName] ].getStr( recordIndex, defaultValue );
 		}
 
 
@@ -311,42 +407,7 @@ template RecordSet(alias RecordFormatT)
 			}
 		}
 		
-		/++
-		$(LOCALE_EN_US Function returns index of field considered as primary key field)
-		$(LOCALE_RU_RU Функция возвращает номер поля рассматриваемого как первичный ключ)
-		+/
-		size_t keyFieldIndex() @property
-		{	return _keyFieldIndex;
-		}
-
-		/++
-		$(LOCALE_EN_US Function sets primary key field by $(D_PARAAM index))
-		$(LOCALE_RU_RU Функция задает поле первичного ключа по номеру $(D_PARAAM index))
-		+/
-		void setKeyField(size_t index)
-		{	auto keyFieldIndexes = getKeyFieldIndexes!(FormatType._fieldSpecs)();
-			foreach( i; keyFieldIndexes )
-			{	if( i == index )
-				{	_keyFieldIndex = index;
-					return;
-				}
-			}
-			assert( 0, "Field with index \"" ~ index.to!string ~ "\" isn't found or can't be used as primary key!" );
-		}
-
-		/++
-		$(LOCALE_EN_US
-			Function returns true if cell with field name $(D_PARAM fieldName) and record
-			primary key $(D_PARAM recordKey) is null or false otherwise
-		)
-		$(LOCALE_RU_RU
-			Функция возвращает true, если ячейка с именем поля $(D_PARAM fieldName) и
-			первичным ключом записи $(D_PARAM recordKey) пуста (null). В противном
-			случае возвращает false
-		)
-		+/
-		bool isNull(string fieldName, size_t recordKey)
-		{	return this.isNullAt( fieldName, getRecordIndex(recordKey) ); }
+		
 
 		/++
 		$(LOCALE_EN_US
@@ -360,8 +421,7 @@ template RecordSet(alias RecordFormatT)
 		)
 		+/
 		bool isNullAt(string fieldName, size_t recordIndex)
-		{	auto currField = _dataFields[ FormatType.indexes[fieldName] ];
-			return currField.isNull( recordIndex );
+		{	return _dataFields[ FormatType.indexes[fieldName] ].isNull( recordIndex );
 		}
 
 		/++
@@ -375,8 +435,7 @@ template RecordSet(alias RecordFormatT)
 		)
 		+/
 		bool isNullable(string fieldName)
-		{	auto currField = _dataFields[ FormatType.indexes[fieldName] ];
-			return currField.isNullable();
+		{	return _dataFields[ FormatType.indexes[fieldName] ].isNullable;
 		}
 
 		/++
@@ -384,49 +443,11 @@ template RecordSet(alias RecordFormatT)
 		$(LOCALE_RU_RU Функция возвращает количество записей в наборе)
 		+/
 		size_t length() @property
-		{	assert( _dataFields[_keyFieldIndex].type == FieldType.IntKey, "Field with index " 
-				~ _keyFieldIndex.to!string ~ " is not a key field!!!" ); 
-			auto keyField = cast( IDataField!(FieldType.IntKey) ) _dataFields[_keyFieldIndex];
-			return keyField.length;
+		{	return ( _dataFields.length > 0 ) ? _dataFields[0].length : 0;
 		}
-
-		/++
-		$(LOCALE_EN_US Function returns record index by it's primary $(D_PARAM key))
-		$(LOCALE_RU_RU Метод возвращает порядковый номер записи по первичному ключу $(D_PARAM key))
-		+/
-		size_t getRecordIndex(size_t key)
-		{	assert( _dataFields[_keyFieldIndex].type == FieldType.IntKey, "Field with index " 
-				~ _keyFieldIndex.to!string ~ " is not a key field!!!" ); 
-			auto keyField = cast( IDataField!(FieldType.IntKey) ) _dataFields[_keyFieldIndex];
-			return keyField.getIndex(key);
-		}
-
-		/++
-		$(LOCALE_EN_US Function returns record primary key by it's $(D_PARAM index) in set)
-		$(LOCALE_RU_RU
-			Метод возвращает первичный ключ записи по порядковому номеру
-			$(D_PARAM index) в наборе
-		)
-		+/
-		size_t getRecordKey(size_t index)
-		{	assert( _dataFields[_keyFieldIndex].type == FieldType.IntKey, "Field with index " 
-				~ _keyFieldIndex.to!string ~ " is not a key field!!!" ); 
-			auto keyField = cast( IDataField!(FieldType.IntKey) ) _dataFields[_keyFieldIndex];
-			return keyField.getKey(index);
-		}
-		
 	}
 }
 
-class RecordSet(alias RecordFormatT, bool Writeable: true)
-{
-	template set(string fieldName)
-	{
-		void set()
-	
-	}
-
-}
 
 
 } //static if( isDatCtrlEnabled )
