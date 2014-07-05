@@ -17,73 +17,43 @@ $(LOCALE_RU_RU
 	указанному в параметре шаблона FieldT
 )
 +/
-auto fldConv(FieldType FieldT, S)( S value )
+auto fldConv(ValueType, S)( string value )
 {	
-	import std.traits;
-// 	// целые числа --> DataFieldValueType!(FieldT)
-// 	static if( isIntegral!(S) )
-// 	{	with( FieldType ) {
-// 		//Стандартное преобразование
-// 		static if( FieldT == Int || FieldT == Str || FieldT == IntKey )
-// 		{	return value.to!( DataFieldValueType!FieldT ); }
-// 		else static if( FieldT == Bool ) //Для уверенности
-// 		{	return ( value == 0 ) ? false : true ; }
-// 		else
-// 			static assert( 0, _notImplementedErrorMsg ~ typeof(value).stringof ~ " --> " ~ FieldT.to!string );
-// 		}  //with( FieldType )
-// 		assert(0);
-// 	}
-	
-	// строки --> DataFieldValueType!(FieldT)
-	//else 
-	static if( isSomeString!(S) )
-	{	with( FieldType ) {
-		//Стандартное преобразование
-		static if( FieldT == Int || FieldT == Str || FieldT == IntKey || FieldT == Enum )
-		{	return value.to!( DataFieldValueType!FieldT ); }
-		else static if( FieldT == Bool )
-		{	import std.string;
-			foreach(logVal; _logicTrueValues) 
-				if ( logVal == toLower( strip( value ) ) ) 
-					return true;
-			
-			foreach(logVal; _logicFalseValues) 
-				if ( logVal == toLower( strip( value ) ) ) 
-					return false;
-			
-			//TODO: Посмотреть, что делать с типами исключений в этом модуле
-			throw new Exception( `Value "` ~ value.to!string ~ `" cannot be interpreted as boolean!!!` );
-		}
-		else static if( FieldT == Date )
-		{	return std.datetime.Date.fromISOExtString(value); }
-		else
-			static assert( 0, _notImplementedErrorMsg ~ typeof(value).stringof ~ " --> " ~ FieldT.to!string );
-		}  //with( FieldType )
-		assert(0);
+	import std.traits, std.conv;
+	static if( is( ValueType == enum )  )
+	{
+		alias BaseType = OriginalType!(ValueType);
+		return value.to!(BaseType).to!(ValueType);
 	}
-	
-	// bool --> DataFieldValueType!(FieldT)
-// 	else static if( is( S : bool ) )
-// 	{	with( FieldType ) {
-// 		static if( FieldT == Int || FieldT == IntKey || FieldT == Enum )
-// 		{	return ( value ) ? 1 : 0; }
-// 		else static if( FieldT == Str )
-// 		{	return ( value ) ? "да" : "нет"; }
-// 		else static if( FieldT == Bool )
-// 		{	return value; }
-// 		else
-// 			static assert( 0, _notImplementedErrorMsg ~ typeof(value).stringof ~ " --> " ~ FieldT.to!string );
-// 		}  //with( FieldType )
-// 		assert(0);
-// 	}
-
+	else static if( is( ValueType == bool ) )
+	{
+		import std.string;
+		foreach(logVal; _logicTrueValues) 
+			if ( logVal == toLower( strip( value ) ) ) 
+				return true;
+		
+		foreach(logVal; _logicFalseValues) 
+			if ( logVal == toLower( strip( value ) ) ) 
+				return false;
+				
+		//TODO: Посмотреть, что делать с типами исключений в этом модуле
+		throw new Exception( `Value "` ~ value.to!string ~ `" cannot be interpreted as boolean!!!` );
+	}
+	else static if( is( ValueType == std.datetime.Date ) )
+	{
+		return std.datetime.Date.fromISOExtString(value);
+	}
+	else
+	{
+		return value.to!( ValueType );
+	}
 }
 
 ///Класс ключевого поля
 class DatabaseField(FormatT) : IDataField!( FormatT )
 {
 	alias FormatType = FormatT;
-	alias ValueType = DataFieldValueType!(FormatType) T;
+	alias ValueType = DataFieldValueType!(FormatType);
 
 protected: ///ВНУТРЕННИЕ ПОЛЯ КЛАССА
 	IDBQueryResult _queryResult;
@@ -130,11 +100,11 @@ public:
 		//{	return FieldT; }
 		
 		///Возвращает количество записей для поля
-		size_t length()
+		size_t length() @property
 		{	return _queryResult.recordCount; }
 		
 		string name() @property
--		{	return _name; }
+		{	return _name; }
 		
 		///Возвращает true, если поле может быть пустым и false - иначе
 		bool isNullable() @property
@@ -159,9 +129,9 @@ public:
 			JSONValue[string] jArray;
 			
 			jArray["n"] = _name; //Вывод имени поля
-			jArray["t"] = FieldT.to!string; //Вывод типа поля
+			jArray["t"] = ValueType.stringof; //Вывод типа поля
 			
-			static if( FieldT == FieldType.Enum )
+			static if( isEnumFormat!(FormatType) )
 			{	//Сериализуем формат для перечислимого типа (выбираем все поля формата)
 				foreach( string key, val; _enumFormat.getStdJSON() )
 					jArray[key] = val;
@@ -175,7 +145,7 @@ public:
 		{	
 			assert( index <=  _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			return fldConv!( FieldT )( _queryResult.get(_fieldIndex, index) );
+			return fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) );
 		}
 		
 		///Получение данных из поля по порядковому номеру index
@@ -184,13 +154,30 @@ public:
 		{	
 			assert( index <= _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			return ( isNull(index) ? defaultValue : fldConv!( FieldT )( _queryResult.get(_fieldIndex, index) ) );
+			return ( isNull(index) ? defaultValue : fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) ) );
 		}
 		
 		///Получает строковое представление данных
 		string getStr(size_t index)
 		{
-		
+			assert( index <= _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
+				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
+			
+			static if( isEnumFormat!(FormatType) )
+			{
+				if( isNull(index) )
+				{	
+					return _enumFormat.nullString;
+				}
+				else
+				{
+					return _enumFormat.getStr( fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) ) );
+				}
+			}
+			else
+			{	
+				return _queryResult.get(_fieldIndex, index).to!string;
+			}
 		}
 		
 		///Получает строковое представление данных
@@ -198,25 +185,23 @@ public:
 		{	
 			assert( index <= _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			
-			static if( isEnumFormat!(FormatType) )
-			{	if( isNull(index) )
-				{	return _enumFormat.nullString;
-					
-				}
-// 				else
-// 				{	_enumFormat.
-// 					
-// 				}
 				
-				
+			if( isNull(index) )
+			{
+				return defaultValue;
 			}
 			else
-			{	
-				
-			}
+			{
+				static if( isEnumFormat!(FormatType) )
+				{
+					return _enumFormat.getStr( fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) ) );
+				}
+				else
+				{	
+					return _queryResult.get(_fieldIndex, index).to!string;
+				}
 			
-			return ( isNull(index) ? defaultValue : _queryResult.get(_fieldIndex, index) );
+			}
 		}
 	} //override
 

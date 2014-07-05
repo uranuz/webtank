@@ -17,15 +17,9 @@ template FieldSpec( T, string s = null )
 	alias name = s;
 }
 
-template CandidateKey(T, bool isPrimaryKey = false)
-{
-	alias FormatType = T;
-	alias isPrimary = isPrimaryKey;
-}
-
 template PrimaryKey(T)
 {
-	alias PrimaryKey = CandidateKey!(T, true);
+	alias BaseDecl = T;
 }
 
 /++
@@ -37,8 +31,8 @@ $(LOCALE_RU_RU
 	Возвращает true если $(D_PARAM FieldT) является типом ключевого поля или false в противном случае
 )
 +/
-enum isCandidateKeyFormat(T) = isInstanceOf!(CandidateKey, T);
-enum isPrimaryKeyFormat(T) = isInstanceOf!(CandidateKey, T) && T.isPrimaryKey;
+
+enum isPrimaryKeyFormat(T) = isInstanceOf!(PrimaryKey, T);
 
 /++
 $(LOCALE_EN_US
@@ -72,9 +66,9 @@ $(LOCALE_RU_RU
 +/
 template DataFieldValueType(FormatType) 
 {	
-	static if( isCandidateKeyFormat!(FormatType) )
+	static if( isPrimaryKeyFormat!(FormatType) )
 	{
-		alias DataFieldValueType = DataFieldValueType!(FormatType.FormatType);
+		alias DataFieldValueType = DataFieldValueType!(FormatType.BaseDecl);
 	}
 	else static if( isEnumFormat!(FormatType) )
 	{
@@ -87,82 +81,7 @@ template DataFieldValueType(FormatType)
 	else
 		static assert( 0, FormatType.stringof ~ " is not valid D type!!!" );
 }
-/+
-/++
-$(LOCALE_EN_US
-	Function converts values from different real D types to another
-	real D types but coresponding to semantical field types set
-	by template argument $(D_PARAM FieldT)
-)
 
-$(LOCALE_RU_RU
-	Преобразование из различных настоящих типов в другой реальный
-	тип, который соотвествует семантическому типу поля,
-	указанному в параметре шаблона FieldT
-)
-+/
-auto fldConv(FieldType FieldT, S)( S value )
-{	
-	import std.traits;
-// 	// целые числа --> DataFieldValueType!(FieldT)
-// 	static if( isIntegral!(S) )
-// 	{	with( FieldType ) {
-// 		//Стандартное преобразование
-// 		static if( FieldT == Int || FieldT == Str || FieldT == IntKey )
-// 		{	return value.to!( DataFieldValueType!FieldT ); }
-// 		else static if( FieldT == Bool ) //Для уверенности
-// 		{	return ( value == 0 ) ? false : true ; }
-// 		else
-// 			static assert( 0, _notImplementedErrorMsg ~ typeof(value).stringof ~ " --> " ~ FieldT.to!string );
-// 		}  //with( FieldType )
-// 		assert(0);
-// 	}
-	
-	// строки --> DataFieldValueType!(FieldT)
-	//else 
-	static if( isSomeString!(S) )
-	{	with( FieldType ) {
-		//Стандартное преобразование
-		static if( FieldT == Int || FieldT == Str || FieldT == IntKey || FieldT == Enum )
-		{	return value.to!( DataFieldValueType!FieldT ); }
-		else static if( FieldT == Bool )
-		{	import std.string;
-			foreach(logVal; _logicTrueValues) 
-				if ( logVal == toLower( strip( value ) ) ) 
-					return true;
-			
-			foreach(logVal; _logicFalseValues) 
-				if ( logVal == toLower( strip( value ) ) ) 
-					return false;
-			
-			//TODO: Посмотреть, что делать с типами исключений в этом модуле
-			throw new Exception( `Value "` ~ value.to!string ~ `" cannot be interpreted as boolean!!!` );
-		}
-		else static if( FieldT == Date )
-		{	return std.datetime.Date.fromISOExtString(value); }
-		else
-			static assert( 0, _notImplementedErrorMsg ~ typeof(value).stringof ~ " --> " ~ FieldT.to!string );
-		}  //with( FieldType )
-		assert(0);
-	}
-	
-	// bool --> DataFieldValueType!(FieldT)
-// 	else static if( is( S : bool ) )
-// 	{	with( FieldType ) {
-// 		static if( FieldT == Int || FieldT == IntKey || FieldT == Enum )
-// 		{	return ( value ) ? 1 : 0; }
-// 		else static if( FieldT == Str )
-// 		{	return ( value ) ? "да" : "нет"; }
-// 		else static if( FieldT == Bool )
-// 		{	return value; }
-// 		else
-// 			static assert( 0, _notImplementedErrorMsg ~ typeof(value).stringof ~ " --> " ~ FieldT.to!string );
-// 		}  //with( FieldType )
-// 		assert(0);
-// 	}
-
-}
-+/
 
 /++
 $(LOCALE_EN_US

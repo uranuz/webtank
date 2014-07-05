@@ -24,16 +24,18 @@ interface IBaseRecordSet
 
 interface IRecordSet(alias RecordFormatT): IBaseRecordSet
 {
-	alias PKValueType = ;
-	alias RecordType = ;
-	enum bool hasKeyField = ;
+	enum bool hasKeyField = RecordFormatT.hasKeyField;
+	pragma(msg, "hasKeyField: ", hasKeyField);
+	
+	alias RecordType = Record!(RecordFormatT);
 	
 	RecordType opIndex(size_t recordIndex);
-	
 	RecordType getRecordAt(size_t recordIndex);
 	
 	static if( hasKeyField )
 	{
+		alias PKValueType = RecordFormatT.getKeyFieldSpec!().ValueType;
+		
 		RecordType getRecord(PKValueType recordKey);
 		
 		string getStr(string fieldName, PKValueType recordKey);
@@ -64,9 +66,14 @@ template RecordSet(alias RecordFormatT)
 		//Тип записи, возвращаемый из набора записей
 		alias Record!FormatType RecordType;
 		
-		alias PKValueType = ;
+		enum bool hasKeyField = RecordFormatT.hasKeyField;
 		
-		enum bool hasKeyField = ;
+		static if( hasKeyField )
+		{
+			pragma(msg, RecordFormatT.getKeyFieldSpec!());
+		
+			alias PKValueType = RecordFormatT.getKeyFieldSpec!().ValueType;
+		}
 		
 	protected:
 		IBaseDataField[] _dataFields;
@@ -76,7 +83,7 @@ template RecordSet(alias RecordFormatT)
 			size_t[PKValueType] _recordIndexes;
 			PKValueType[] _primaryKeys;
 			
-			static immutable(size_t) _keyFieldIndex = ;
+			static immutable(size_t) _keyFieldIndex = RecordFormatT.getKeyFieldIndex!();
 			
 			void _readKeys()
 			{
@@ -123,7 +130,8 @@ template RecordSet(alias RecordFormatT)
 		{	JSONValue[string] jValues;
 			
 			//Выводим номер ключевого поля
-			jValues["kfi"] = _keyFieldIndex;
+			static if( hasKeyField )
+				jValues["kfi"] = _keyFieldIndex;
 			
 			//Выводим тип данных
 			jValues["t"] = "recordset";
@@ -161,7 +169,9 @@ template RecordSet(alias RecordFormatT)
 		this(IBaseDataField[] dataFields)
 		{	
 			_dataFields = dataFields;
-			_readKeys();
+			
+			static if( hasKeyField )
+				_readKeys();
 		}
 
 		/++
@@ -176,7 +186,12 @@ template RecordSet(alias RecordFormatT)
 		$(LOCALE_RU_RU Метод возвращает запись на позиции $(D_PARAM recordIndex))
 		+/
 		RecordType getRecordAt(size_t recordIndex)
-		{	return getRecord( getRecordKey(recordIndex) ); }
+		{	
+			static if( hasKeyField )
+				return getRecord( getRecordKey(recordIndex) );
+			else
+				return new Record
+		}
 
 		static if( hasKeyField )
 		{
@@ -291,7 +306,7 @@ template RecordSet(alias RecordFormatT)
 		{	
 			alias ValueType = FormatType.getValueType!(fieldName);
 			alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
-			alias fieldIndex FormatType.getFieldIndex!(fieldName);
+			alias fieldIndex = FormatType.getFieldIndex!(fieldName);
 
 			/++
 			$(LOCALE_EN_US
@@ -451,3 +466,43 @@ template RecordSet(alias RecordFormatT)
 
 
 } //static if( isDatCtrlEnabled )
+
+import webtank.datctrl.enum_format;
+
+
+enum Category { first, second, third };
+
+alias t = tuple;
+
+static immutable categoryEnumFormat = EnumFormat!(Category, true)( [ t(Category.first, "1st"), t(Category.second, "2nd"), t(Category.third, "3rd")], "not specified" );
+
+
+static immutable fmt = makeRecordFormat!(
+	int, "num", 
+	string, "description", 
+	Category, "category", 
+	categoryEnumFormat, "cat1",
+	categoryEnumFormat, "cat2",
+	EnumFormat!(Category, true), "hh"
+)();
+
+
+
+shared static this()
+{
+}
+
+void main()
+{
+	import std.stdio;
+	
+	alias RecordSetType = typeof(fmt);
+	
+	pragma(msg, RecordSetType);
+	
+	auto rs = new RecordSet!( RecordSetType )();
+	writeln;
+	writeln;
+	writeln(fmt);
+
+}

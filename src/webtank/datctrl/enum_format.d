@@ -127,6 +127,44 @@ struct EnumFormat( T, bool hasNames )
 			return 0;
 		}
 	}
+	
+	string getStr(ValueType value)
+	{
+		static if( hasNames )
+		{
+			return getName( value );
+		}
+		else
+		{
+			static if( isSomeString!(ValueType) )
+			{
+				import std.algorithm : canFind;
+				static assert( _values.canFind(value), "Value is not present in enum format!" );
+				return value.to!string;
+			}
+			else static if( is( ValueType == enum ) )
+			{
+				alias BaseType = OriginalType!(ValueType);
+				static if( isSomeString!(BaseType) )
+				{
+					import std.algorithm : canFind;
+					static assert( _values.canFind(value), "Value is not present in enum format!" );
+					return value.to!string;
+				}
+				else
+				{
+					//Вывод идентификатора значения перечислимого типа из кода на D
+					return value.stringof;
+				}
+			}
+			else
+			{
+				import std.algorithm : canFind;
+				static assert( _values.canFind(value), "Value is not present in enum format!" );
+				return value.to!string;
+			}
+		}
+	}
 }
 
 enum isEnumFormat(E) = isInstanceOf!(EnumFormat, E);
