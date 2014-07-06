@@ -162,7 +162,7 @@ struct RecordFormat(Args...)
 	{
 		alias PKFieldSpecs = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs);
 		static assert( PKFieldSpecs.length > 0, "Primary key is not set for record format!!!" );
-		static assert( PKFieldSpecs.length < 1, "Only one primary key allowed for record format!!!" );
+		static assert( PKFieldSpecs.length < 2, "Only one primary key allowed for record format!!!" );
 		
 		alias getKeyFieldIndex = _getFieldIndex!(PKFieldSpecs[0].name, 0, _fieldSpecs);
 	}
@@ -172,9 +172,9 @@ struct RecordFormat(Args...)
 	{
 		alias PKFieldSpecs = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs);
 		static assert( PKFieldSpecs.length > 0, "Primary key is not set for record format!!!" );
-		static assert( PKFieldSpecs.length < 1, "Only one primary key allowed for record format!!!" );
+		static assert( PKFieldSpecs.length < 2, "Only one primary key allowed for record format!!!" );
 		
-		alias getKeyFieldIndex = PKFieldSpecs[0];
+		alias getKeyFieldSpec = PKFieldSpecs[0];
 	}
 }
 
@@ -271,7 +271,7 @@ template _parseRecordFormatArgs(Args...)
 {	static if( Args.length == 0 )
 	{	alias _parseRecordFormatArgs = TypeTuple!() ;
 	}
-	else static if( is(Args[0]) )
+	else static if( is(Args[0]) || is( Args[0] == PrimaryKey!(T), T...) )
 	{	
 		static if( is( typeof( Args[1] ) : string ) )
 			alias _parseRecordFormatArgs = TypeTuple!(FieldSpec!(Args[0 .. 2]), _parseRecordFormatArgs!(Args[2 .. $]));

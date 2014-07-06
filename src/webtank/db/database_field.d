@@ -1,8 +1,8 @@
 module webtank.db.database_field;
 
-import std.json, std.conv;
+import std.json, std.conv, std.traits;
 
-import webtank.datctrl.data_field, webtank.db.database, webtank.datctrl.record_format;
+import webtank.datctrl.data_field, webtank.db.database, webtank.datctrl.record_format, webtank.datctrl.enum_format;
 
 /++
 $(LOCALE_EN_US
@@ -17,9 +17,9 @@ $(LOCALE_RU_RU
 	указанному в параметре шаблона FieldT
 )
 +/
-auto fldConv(ValueType, S)( string value )
+auto fldConv(ValueType)( string value )
 {	
-	import std.traits, std.conv;
+	pragma(msg, "ValueType: ", ValueType);
 	static if( is( ValueType == enum )  )
 	{
 		alias BaseType = OriginalType!(ValueType);
@@ -44,8 +44,8 @@ auto fldConv(ValueType, S)( string value )
 		return std.datetime.Date.fromISOExtString(value);
 	}
 	else
-	{
-		return value.to!( ValueType );
+	{	
+		return std.conv.to!(ValueType)( value );
 	}
 }
 
@@ -54,6 +54,7 @@ class DatabaseField(FormatT) : IDataField!( FormatT )
 {
 	alias FormatType = FormatT;
 	alias ValueType = DataFieldValueType!(FormatType);
+	//pragma(msg, ValueType);
 
 protected: ///ВНУТРЕННИЕ ПОЛЯ КЛАССА
 	IDBQueryResult _queryResult;
@@ -78,7 +79,7 @@ public:
 			_fieldIndex = fieldIndex;
 			_name = _fieldName;
 			_isNullable = isNullable;
-			_enumFormat = enumFormat.mutCopy();
+			_enumFormat = enumFormat;
 		}
 		
 		///Возвращает формат значения перечислимого типа
@@ -90,7 +91,7 @@ public:
 	this( IDBQueryResult queryResult, size_t fieldIndex, string fieldName, bool isNullable )
 	{	_queryResult = queryResult;
 		_fieldIndex = fieldIndex;
-		_name = _fieldName;
+		_name = fieldName;
 		_isNullable = isNullable;
 	}
 
@@ -141,8 +142,9 @@ public:
 		}
 		
 		///Получение данных из поля по порядковому номеру index
-		T get(size_t index)
+		ValueType get(size_t index)
 		{	
+			pragma(msg, "get ValueType: ", ValueType);
 			assert( index <=  _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
 			return fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) );
@@ -150,7 +152,7 @@ public:
 		
 		///Получение данных из поля по порядковому номеру index
 		///Возвращает defaultValue, если значение поля пустое
-		T get(size_t index, T defaultValue)
+		ValueType get(size_t index, ValueType defaultValue)
 		{	
 			assert( index <= _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );

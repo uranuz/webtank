@@ -17,7 +17,7 @@ template FieldSpec( T, string s = null )
 	alias name = s;
 }
 
-template PrimaryKey(T)
+struct PrimaryKey(T)
 {
 	alias BaseDecl = T;
 }
@@ -32,7 +32,7 @@ $(LOCALE_RU_RU
 )
 +/
 
-enum isPrimaryKeyFormat(T) = isInstanceOf!(PrimaryKey, T);
+alias isPrimaryKeyFormat(T...) =  isInstanceOf!(PrimaryKey, T[0]);
 
 /++
 $(LOCALE_EN_US

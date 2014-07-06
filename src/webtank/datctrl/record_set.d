@@ -29,6 +29,8 @@ interface IRecordSet(alias RecordFormatT): IBaseRecordSet
 	
 	alias RecordType = Record!(RecordFormatT);
 	
+	pragma(msg, "RecordType: ", RecordType);
+	
 	RecordType opIndex(size_t recordIndex);
 	RecordType getRecordAt(size_t recordIndex);
 	
@@ -70,7 +72,7 @@ template RecordSet(alias RecordFormatT)
 		
 		static if( hasKeyField )
 		{
-			pragma(msg, RecordFormatT.getKeyFieldSpec!());
+			//pragma(msg, RecordFormatT.getKeyFieldSpec!());
 		
 			alias PKValueType = RecordFormatT.getKeyFieldSpec!().ValueType;
 		}
@@ -84,6 +86,7 @@ template RecordSet(alias RecordFormatT)
 			PKValueType[] _primaryKeys;
 			
 			static immutable(size_t) _keyFieldIndex = RecordFormatT.getKeyFieldIndex!();
+			alias FieldFormatType = RecordFormatT.getKeyFieldSpec!().FormatDecl;
 			
 			void _readKeys()
 			{
@@ -190,7 +193,7 @@ template RecordSet(alias RecordFormatT)
 			static if( hasKeyField )
 				return getRecord( getRecordKey(recordIndex) );
 			else
-				return new Record
+				return new RecordType(this, recordIndex);
 		}
 
 		static if( hasKeyField )
@@ -203,7 +206,7 @@ template RecordSet(alias RecordFormatT)
 			RecordType getRecord(PKValueType recordKey)
 			{	return new RecordType(this, recordKey); }
 			
-			template get(string fieldName, K)
+			template get(string fieldName)
 			{	alias FormatType.getValueType!(fieldName) ValueType;
 
 				/++
@@ -399,7 +402,7 @@ template RecordSet(alias RecordFormatT)
 		)
 		+/
 		RecordType front() @property
-		{	return new RecordType( this, getRecordKey(_currRecIndex) );
+		{	return this.getRecordAt(_currRecIndex);
 		}
 
 		/++
@@ -466,43 +469,3 @@ template RecordSet(alias RecordFormatT)
 
 
 } //static if( isDatCtrlEnabled )
-
-import webtank.datctrl.enum_format;
-
-
-enum Category { first, second, third };
-
-alias t = tuple;
-
-static immutable categoryEnumFormat = EnumFormat!(Category, true)( [ t(Category.first, "1st"), t(Category.second, "2nd"), t(Category.third, "3rd")], "not specified" );
-
-
-static immutable fmt = makeRecordFormat!(
-	int, "num", 
-	string, "description", 
-	Category, "category", 
-	categoryEnumFormat, "cat1",
-	categoryEnumFormat, "cat2",
-	EnumFormat!(Category, true), "hh"
-)();
-
-
-
-shared static this()
-{
-}
-
-void main()
-{
-	import std.stdio;
-	
-	alias RecordSetType = typeof(fmt);
-	
-	pragma(msg, RecordSetType);
-	
-	auto rs = new RecordSet!( RecordSetType )();
-	writeln;
-	writeln;
-	writeln(fmt);
-
-}

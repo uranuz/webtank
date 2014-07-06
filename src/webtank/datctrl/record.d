@@ -14,8 +14,6 @@ $(LOCALE_RU_RU Базовый интерфейс для записи данны�
 +/
 interface IBaseRecord
 {
-	string getRawStr(string fieldName);
-	string getRawStr(string fieldName, string defaultValue);
 	
 	string getStr(string fieldName);
 	
@@ -69,12 +67,23 @@ template Record(alias RecordFormatT)
 	{
 		//Тип формата для записи
 		alias RecordFormatT FormatType;
+		enum bool hasKeyField = RecordFormatT.hasKeyField;
+		
+		static if( hasKeyField )
+		{
+			//pragma(msg, RecordFormatT.getKeyFieldSpec!());
+			alias PKValueType = RecordFormatT.getKeyFieldSpec!().ValueType;
+		}
 		
 		private alias RecordSet!FormatType RecordSetType;
 		
 	protected:
 		RecordSetType _recordSet;
-		size_t _recordKey;
+		
+		static if( hasKeyField )
+			PKValueType _recordKey;
+		else
+			size_t _recordIndex;
 	
 	public:
 		
@@ -83,16 +92,31 @@ template Record(alias RecordFormatT)
 		{	
 			JSONValue jValue = _recordSet.getStdJSONFormat();
 			
-			jValue.object["d"] = _recordSet.getStdJSONDataAt( _recordSet.getRecordIndex(_recordKey) );
+			static if( hasKeyField )
+				jValue.object["d"] = _recordSet.getStdJSONDataAt( _recordSet.getRecordIndex(_recordKey) );
+			else
+				jValue.object["d"] = _recordSet.getStdJSONDataAt( _recordIndex );
+				
 			jValue.object["t"] = "record";
 
 			return jValue;
 		}
 		
-		this(RecordSetType recordSet, size_t recordKey)
-		{	_recordSet = recordSet;
-			_recordKey = recordKey;
+		static if( hasKeyField )
+		{
+			this(RecordSetType recordSet, PKValueType recordKey)
+			{	_recordSet = recordSet;
+				_recordKey = recordKey;
+			}
 		}
+		else
+		{
+			this(RecordSetType recordSet, size_t recordIndex)
+			{	_recordSet = recordSet;
+				_recordIndex = recordIndex;
+			}
+		}
+		
 
 
 		template get(string fieldName)
@@ -108,7 +132,11 @@ template Record(alias RecordFormatT)
 			)
 			+/
 			ValueType get()
-			{	return _recordSet.get!(fieldName)(_recordKey);
+			{	
+				static if( hasKeyField )
+					return _recordSet.get!(fieldName)(_recordKey);
+				else
+					return _recordSet.getAt!(fieldName)(_recordIndex);
 			}
 
 			/++
@@ -122,7 +150,11 @@ template Record(alias RecordFormatT)
 			)
 			+/
 			ValueType get(ValueType defaultValue)
-			{	return _recordSet.get!(fieldName)(_recordKey, defaultValue);
+			{	
+				static if( hasKeyField )
+					return _recordSet.get!(fieldName)(_recordKey, defaultValue);
+				else
+					return _recordSet.getAt!(fieldName)(_recordIndex, defaultValue);
 			}
 		}
 
@@ -139,6 +171,14 @@ template Record(alias RecordFormatT)
 		}
 		
 		override {
+			string getStr(string fieldName)
+			{	
+				static if( hasKeyField )
+					return _recordSet.getStr( fieldName, _recordKey);
+				else
+					return _recordSet.getStrAt( fieldName, _recordIndex);
+			}
+			
 			/++
 			$(LOCALE_EN_US Method returns string value representation for field with name $(D_PARAM fieldName).
 				Parameter $(D_PARAM defaultValue) determines returned value if value
@@ -149,8 +189,12 @@ template Record(alias RecordFormatT)
 				если значение для поля с именем $(D_PARAM fieldName) является пустым (null)
 			)
 			+/
-			string getStr(string fieldName, string defaultValue = null)
-			{	return _recordSet.getStr( fieldName, _recordKey, defaultValue );
+			string getStr(string fieldName, string defaultValue)
+			{	
+				static if( hasKeyField )
+					return _recordSet.getStr( fieldName, _recordKey, defaultValue );
+				else
+					return _recordSet.getStrAt( fieldName, _recordIndex, defaultValue );
 			}
 
 			/++
@@ -162,7 +206,11 @@ template Record(alias RecordFormatT)
 			)
 			+/
 			bool isNull(string fieldName)
-			{	return _recordSet.isNull(fieldName, _recordKey);
+			{	
+				static if( hasKeyField )
+					return _recordSet.isNull(fieldName, _recordKey);
+				else
+					return _recordSet.isNullAt(fieldName, _recordIndex);
 			}
 
 			/++
