@@ -18,6 +18,7 @@ interface IBaseRecordSet
 
 	bool isNullAt(string fieldName, size_t recordIndex);
 	bool isNullable(string fieldName);
+	bool isWriteable(string fieldName);
 	size_t length() @property;
 	
 }
@@ -455,6 +456,10 @@ template RecordSet(alias RecordFormatT)
 		bool isNullable(string fieldName)
 		{	return _dataFields[ FormatType.indexes[fieldName] ].isNullable;
 		}
+		
+		bool isWriteable(string fieldName)
+		{	return _dataFields[ FormatType.indexes[fieldName] ].isWriteable;
+		}
 
 		/++
 		$(LOCALE_EN_US Function returns number of record in set)
@@ -464,6 +469,44 @@ template RecordSet(alias RecordFormatT)
 		{	return ( _dataFields.length > 0 ) ? _dataFields[0].length : 0;
 		}
 	}
+}
+
+class WriteableRecordSet(alias RecordFormatT): RecordSet!(RecordFormatT)
+{
+protected:
+	
+
+public:
+	template set(string fieldName)
+	{
+		void set(PKValueType recordKey, ValueType value)
+		{
+		
+		
+		}
+	
+	}
+	
+	template setAt(string fieldName)
+	{
+		void setAt(size_t recordIndex, ValueType value)
+		{
+		
+		
+		}
+	
+	}
+	
+	void setNull(string fieldName)(PKValueType recordKey, bool value)
+	{
+	
+	}
+	
+	void setNullAt(string fieldName)(size_t recordIndex, bool value)
+	{
+	
+	}
+
 }
 
 

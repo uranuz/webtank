@@ -29,5 +29,6 @@ void main()
 		writeln( " - " ~ typeid( rec.get!"Жанр"() ).to!string );
 	}
 	
+	auto indRS = new IndependentRecord!( typeof(bookRecFormat) )();
 	
 }

@@ -106,6 +106,11 @@ struct RecordFormat(Args...)
 	template tupleOfNames()
 	{	alias tupleOfNames = _getFieldNameTuple!(_fieldSpecs);
 	}
+	
+	template getFieldValueTypes()
+	{
+		alias getFieldValueTypes = _getFieldValueTypes!(_fieldSpecs);
+	}
 
 	/++
 	$(LOCALE_EN_US Template returns semantic field type $(D FieldType) for field with name $(D_PARAM fieldName))
@@ -282,6 +287,14 @@ template _parseRecordFormatArgs(Args...)
 	{	static assert(0, "Attempted to instantiate Tuple with an "
 				~ "invalid argument: " ~ Args[0].stringof);
 	}
+}
+
+template _getFieldValueTypes(FieldSpecs...)
+{
+	static if( FieldSpecs.length == 0 )
+		alias _getFieldValueTypes = TypeTuple!();
+	else
+		alias _getFieldValueTypes = TypeTuple!( FieldSpecs[0].ValueType, _getFieldValueTypes!(FieldSpecs[1..$]) );
 }
 
 template _getFieldNameTuple(FieldSpecs...)

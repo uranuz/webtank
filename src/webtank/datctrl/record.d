@@ -48,6 +48,8 @@ interface IBaseRecord
 	)
 	+/
 	bool isNullable(string fieldName);
+	
+	bool isWriteable(string fieldName);
 
 	/++
 	$(LOCALE_EN_US Returns number of fields in record)
@@ -225,6 +227,10 @@ template Record(alias RecordFormatT)
 			{	return _recordSet.isNullable(fieldName);
 			}
 			
+			bool isWriteable(string fieldName)
+			{	return _recordSet.isWriteable(fieldName);
+			}
+			
 			/++
 			$(LOCALE_EN_US Function returns number of fields in record)
 			$(LOCALE_RU_RU Функция возвращает количество полей в записи)
@@ -245,5 +251,138 @@ template Record(alias RecordFormatT)
 	}
 }
 
+
+class IndependentRecord(alias RecordFormatT): IBaseRecord
+{
+	alias FormatType = RecordFormatT;
+	alias ValueTypes = FormatType.getFieldValueTypes!();
+	
+	pragma(msg, "tupleOfNames: ", FormatType.tupleOfNames!()[0]);
+protected:
+	Tuple!(ValueTypes) _values;
+	bool[] _nullFlags;
+	bool[] _nullableFlags;
+	bool[] _writeableFlags;
+	
+	size_t[string] _indexes;
+
+public:
+	this() {}
+
+	void _readIndexes()
+	{
+		foreach( i, name; FormatType.names )
+		{
+			_indexes[name] = i;
+		}
+	}
+
+	template get(string fieldName)
+	{	
+		alias FormatType.getValueType!(fieldName) ValueType;
+		
+		alias fieldIndex = FormatType.getFieldIndex!(fieldName);
+
+		ValueType get()
+		{	
+			return _values[fieldIndex];
+		}
+
+		ValueType get(ValueType defaultValue)
+		{	
+			return _nullFlags[fieldIndex] ? defaultValue : _values[fieldIndex];
+		}
+	}
+	
+	template set(string fieldName)
+	{
+		alias FormatType.getValueType!(fieldName) ValueType;
+		
+		alias fieldIndex = FormatType.getFieldIndex!(fieldName);
+		
+		void set(ValueType value)
+		{
+			_values[fieldIndex] = value;
+			_nullableFlags[fieldIndex] = false;
+		
+		}
+	
+	}
+	
+	override 
+	{
+		string getStr(string fieldName)
+		{	
+			if( isNull(fieldName) )
+				return null;
+			else
+			{
+				foreach( i, name ; FormatType.tupleOfNames!() )
+				{
+					if( name == fieldName )
+						return _values[i].to!string;
+				}
+			}
+			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+			
+			return null;
+		}
+		
+
+		string getStr(string fieldName, string defaultValue)
+		{	
+			if( isNull(fieldName) )
+				return defaultValue;
+			else
+			{
+				foreach( i, name ; FormatType.tupleOfNames!() )
+				{
+					if( name == fieldName )
+						return _values[i].to!string;
+				}
+			}
+			
+			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+		}
+
+		bool isNull(string fieldName)
+		{	
+			foreach( i, name ; FormatType.tupleOfNames!() )
+			{
+				if( name == fieldName )
+					return _nullFlags[i];
+			}
+
+			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+		}
+
+		bool isNullable(string fieldName)
+		{	
+			foreach( i, name ; FormatType.tupleOfNames!() )
+			{
+				if( name == fieldName )
+					return _nullableFlags[i];
+			}
+
+			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+		}
+		
+		bool isWriteable(string fieldName)
+		{	
+			foreach( i, name ; FormatType.tupleOfNames!() )
+			{
+				if( name == fieldName )
+					return _writeableFlags[i];
+			}
+
+			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+		}
+		
+		size_t length() @property
+		{	return _values.length;
+		}
+	} // override
+
+}
 
 } //static if( isDatCtrlEnabled )
