@@ -14,6 +14,7 @@ $(LOCALE_RU_RU Базовый интерфейс для записи данны�
 +/
 interface IBaseRecord
 {
+	IBaseDataCell getCell(string fieldName);
 	
 	string getStr(string fieldName);
 	
@@ -56,6 +57,83 @@ interface IBaseRecord
 	$(LOCALE_RU_RU Возвращает количество полей в записи)
 	+/
 	size_t length() @property;
+}
+
+interface IBaseWriteableRecord: IBaseRecord
+{
+	void nullify(string fieldName);
+	
+	void setNullable(string fieldName, bool value) @property;
+	
+	
+}
+
+interface IRecord!(alias RecordFormatT): IBaseRecord
+{
+	auto getEnumFormat(string fieldName)()
+	{	
+		auto dataCell = cast( BaseCell!(FieldFormatType) ) this.getCell(fieldName);
+		return dataCell.getEnumFormat();
+	}
+	
+	template get(string fieldName)
+	{	
+		alias FormatType.getValueType!(fieldName) ValueType;
+		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
+
+		/++
+		$(LOCALE_EN_US Function for getting value for field with name $(D_PARAM fieldName).
+			If field value is null then behaviour is undefined
+		)
+		$(LOCALE_RU_RU Функция получения значения для поля с именем $(D_PARAM fieldName).
+			При пустом значении поля поведение не определено
+		)
+		+/
+		ValueType get()
+		{	
+			auto dataCell = cast( BaseCell!(FieldFormatType) ) this.getCell(fieldName);
+			
+			return dataCell.get();
+		}
+
+		/++
+		$(LOCALE_EN_US Function for getting value for field with name $(D_PARAM fieldName).
+			Parameter $(D_PARAM defaultValue) determines returned value if value
+			for field with name $(D_PARAM fieldName) is null
+		)
+		$(LOCALE_RU_RU Функция получения значения для поля с именем $(D_PARAM fieldName).
+			Параметр $(D_PARAM defaultValue) определяет возвращаемое значение,
+			если значение для поля с именем $(D_PARAM fieldName) является пустым (null)
+		)
+		+/
+		ValueType get(ValueType defaultValue)
+		{	
+			if( this.isNull(fieldName) )
+				return defaultValue;
+			else
+			{
+				auto dataCell = cast( BaseCell!(FieldFormatType) ) this.getCell(fieldName);
+				return dataCell.get();
+			}
+		}
+	}
+
+}
+
+interface IWriteableRecord!(alias RecordFormatT): IRecord!(RecordFormatT), IBaseWriteableRecord
+{
+	template set(string fieldName)
+	{
+		alias FormatType.getValueType!(fieldName) ValueType;
+		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
+		
+		void set(ValueType value)
+		{
+			auto dataCell = cast( WriteableCell!(FieldFormatType) ) this.getCell(fieldName);
+			dataCell.set(value);
+		}
+	
+	}
 }
 
 template Record(alias RecordFormatT)
@@ -252,59 +330,60 @@ template Record(alias RecordFormatT)
 }
 
 
-class IndependentRecord(alias RecordFormatT): IBaseRecord
+class WriteableRecord(alias RecordFormatT): IBaseRecord
 {
 	alias FormatType = RecordFormatT;
 	alias ValueTypes = FormatType.getFieldValueTypes!();
 	
-	pragma(msg, "tupleOfNames: ", FormatType.tupleOfNames!()[0]);
+	//pragma(msg, "tupleOfNames: ", FormatType.tupleOfNames!()[0]);
 protected:
-	Tuple!(ValueTypes) _values;
-	bool[] _nullFlags;
-	bool[] _nullableFlags;
-	bool[] _writeableFlags;
-	
-	size_t[string] _indexes;
+	IBaseCell[] _dataCells;
 
 public:
-	this() {}
+	this() {
 
-	void _readIndexes()
-	{
-		foreach( i, name; FormatType.names )
-		{
-			_indexes[name] = i;
-		}
+	}
+	
+	auto getEnumFormat(string fieldName)()
+	{	return _recordSet.getEnumFormat!(fieldName)();
 	}
 
 	template get(string fieldName)
 	{	
 		alias FormatType.getValueType!(fieldName) ValueType;
-		
+		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
 		alias fieldIndex = FormatType.getFieldIndex!(fieldName);
 
 		ValueType get()
 		{	
-			return _values[fieldIndex];
+			auto dataCell = cast( IWriteableCell!(FieldFormatType) ) _dataCells[fieldIndex];
+			
+			return dataCell.get();
 		}
 
 		ValueType get(ValueType defaultValue)
 		{	
-			return _nullFlags[fieldIndex] ? defaultValue : _values[fieldIndex];
+			if( _nullFlags[fieldIndex] )
+				return defaultValue;
+			else
+			{
+				auto dataCell = cast( IWriteableCell!(FieldFormatType) ) _dataCells[fieldIndex];
+				return dataCell.get();
+			}
 		}
 	}
 	
 	template set(string fieldName)
 	{
 		alias FormatType.getValueType!(fieldName) ValueType;
-		
+		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
 		alias fieldIndex = FormatType.getFieldIndex!(fieldName);
 		
 		void set(ValueType value)
 		{
-			_values[fieldIndex] = value;
-			_nullableFlags[fieldIndex] = false;
-		
+			auto dataCell = cast( IWriteableCell!(FieldFormatType) ) _dataCells[fieldIndex];
+			
+			dataCell.set(value);
 		}
 	
 	}
@@ -312,74 +391,27 @@ public:
 	override 
 	{
 		string getStr(string fieldName)
-		{	
-			if( isNull(fieldName) )
-				return null;
-			else
-			{
-				foreach( i, name ; FormatType.tupleOfNames!() )
-				{
-					if( name == fieldName )
-						return _values[i].to!string;
-				}
-			}
-			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
-			
-			return null;
+		{	return _dataCells[ FormatType.indexes[fieldName] ].getStr();
 		}
-		
 
 		string getStr(string fieldName, string defaultValue)
-		{	
-			if( isNull(fieldName) )
-				return defaultValue;
-			else
-			{
-				foreach( i, name ; FormatType.tupleOfNames!() )
-				{
-					if( name == fieldName )
-						return _values[i].to!string;
-				}
-			}
-			
-			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+		{	return _dataCells[ FormatType.indexes[fieldName] ].getStr(defaultValue);
 		}
 
 		bool isNull(string fieldName)
-		{	
-			foreach( i, name ; FormatType.tupleOfNames!() )
-			{
-				if( name == fieldName )
-					return _nullFlags[i];
-			}
-
-			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+		{	return _dataCells[ FormatType.indexes[fieldName] ].isNull;
 		}
 
 		bool isNullable(string fieldName)
-		{	
-			foreach( i, name ; FormatType.tupleOfNames!() )
-			{
-				if( name == fieldName )
-					return _nullableFlags[i];
-			}
-
-			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+		{	return _dataCells[ FormatType.indexes[fieldName] ].isNullable;
 		}
 		
 		bool isWriteable(string fieldName)
-		{	
-			foreach( i, name ; FormatType.tupleOfNames!() )
-			{
-				if( name == fieldName )
-					return _writeableFlags[i];
-			}
-
-			assert(0, `Field with name "` ~ fieldName ~ `" does not exist!!!`);
+		{	return _dataCells[ FormatType.indexes[fieldName] ].isWriteable;
 		}
 		
 		size_t length() @property
-		{	return _values.length;
+		{	return _dataCells.length;
 		}
 	} // override
 

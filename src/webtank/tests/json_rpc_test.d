@@ -1,6 +1,6 @@
 module webtank.tests.json_rpc_test;
 
-import std.conv, std.string, std.file, std.stdio, std.json;
+import std.conv, std.string, std.file, std.stdio, std.json, std.datetime;
 
 import webtank.datctrl, webtank.db;
 
@@ -29,6 +29,10 @@ void main()
 		writeln( " - " ~ typeid( rec.get!"Жанр"() ).to!string );
 	}
 	
-	auto indRS = new IndependentRecord!( typeof(bookRecFormat) )();
+	auto indRec = new IndependentRecord!( typeof(bookRecFormat) )();
 	
+	indRec.set!("Автор")("Вася");
+	indRec.set!("Цена")(100500);
+	writeln( indRec.get!("Цена") );
+	writeln( Object.sizeof );
 }

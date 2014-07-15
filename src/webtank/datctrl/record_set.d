@@ -11,6 +11,11 @@ import webtank.datctrl.data_field, webtank.datctrl.record, webtank.datctrl.recor
 interface IBaseRecordSet
 {	
 
+	IBaseDataField getField(string fieldName);
+	
+	IBaseRecord opIndex(size_t recordIndex);
+	IBaseRecord getRecordAt(size_t recordIndex);
+
 	string getStrAt(string fieldName, size_t recordIndex);
 	string getStrAt(string fieldName, size_t recordIndex, string defaultValue);
 	
@@ -23,6 +28,13 @@ interface IBaseRecordSet
 	
 }
 
+interface IBaseWriteableRecordSet: IBaseRecordSet
+{
+	void nullifyAt(string fieldName, size_t recordIndex);
+	void setNullable(string fieldName, bool value);
+
+}
+
 interface IRecordSet(alias RecordFormatT): IBaseRecordSet
 {
 	enum bool hasKeyField = RecordFormatT.hasKeyField;
@@ -32,8 +44,8 @@ interface IRecordSet(alias RecordFormatT): IBaseRecordSet
 	
 	pragma(msg, "RecordType: ", RecordType);
 	
-	RecordType opIndex(size_t recordIndex);
-	RecordType getRecordAt(size_t recordIndex);
+	
+
 	
 	static if( hasKeyField )
 	{
@@ -48,12 +60,123 @@ interface IRecordSet(alias RecordFormatT): IBaseRecordSet
 		
 		size_t getRecordIndex(PKValueType key);
 		PKValueType getRecordKey(size_t index);
+		
+		template get(string fieldName)
+		{	
+			alias FormatType.getValueType!(fieldName) ValueType;
+
+			/++
+			$(LOCALE_EN_US
+				Method returns value of cell with field name $(D_PARAM fieldName) and primary key
+				value $(D_PARAM recordKey). If cell value is null then behaviour is undefined
+			)
+			$(LOCALE_RU_RU
+				Метод возвращает значение ячейки с именем поля $(D_PARAM fieldName) и значением
+				первичного ключа $(D_PARAM recordKey). Если значение ячейки пустое (null), то
+				поведение не определено
+			)
+			+/
+			final ValueType get(PKValueType recordKey)
+			{	return getAt!(fieldName)( getRecordIndex(recordKey) ); }
+
+			/++
+			$(LOCALE_EN_US
+				Method returns value of cell with field name $(D_PARAM fieldName) and primary key
+				value $(D_PARAM recordKey). Parameter $(D_PARAM defaultValue) determines return
+				value when cell in null
+			)
+			$(LOCALE_RU_RU
+				Метод возвращает значение ячейки с именем поля $(D_PARAM fieldName) и значением
+				первичного ключа $(D_PARAM recordKey). Параметр $(D_PARAM defaultValue)
+				определяет возвращаемое значение, когда значение ячейки пустое (null)
+			)
+			+/
+			final ValueType get(PKValueType recordKey, ValueType defaultValue)
+			{	return getAt!(fieldName)( getRecordIndex(recordKey), defaultValue ); }
+		}
 	}
 	
 	RecordType front() @property;
 	void popFront();
 	bool empty() @property;
+	
+	template getAt(string fieldName)
+	{	
+		alias ValueType = FormatType.getValueType!(fieldName);
+		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
+		alias fieldIndex = FormatType.getFieldIndex!(fieldName);
+
+		/++
+		$(LOCALE_EN_US
+			Method returns value of cell with field name $(D_PARAM fieldName) and $(D_PARAM recordIndex).
+			Parameter $(D_PARAM defaultValue) determines return value when cell in null
+		)
+		$(LOCALE_RU_RU
+			Метод возвращает значение ячейки с именем поля $(D_PARAM fieldName) и номером записи
+			$(D_PARAM recordIndex). Параметр $(D_PARAM defaultValue) определяет возвращаемое
+			значение, когда значение ячейки пустое (null)
+		)
+		+/
+		final ValueType getAt(size_t recordIndex)
+		{	auto currField = cast(IDataField!(FieldFormatType)) _dataFields[fieldIndex];
+			return currField.get( recordIndex );
+		}
+
+		/++
+		$(LOCALE_EN_US
+			Method returns value of cell with field name $(D_PARAM fieldName) and $(D_PARAM recordIndex).
+			Parameter $(D_PARAM defaultValue) determines return value when cell in null
+		)
+		$(LOCALE_RU_RU
+			Метод возвращает значение ячейки с именем поля $(D_PARAM fieldName) и номером записи
+			$(D_PARAM recordIndex). Параметр $(D_PARAM defaultValue) определяет возвращаемое
+			значение, когда значение ячейки пустое (null)
+		)
+		+/
+		final ValueType getAt(size_t recordIndex, ValueType defaultValue)
+		{	auto currField = cast(IDataField!(FieldFormatType)) _dataFields[fieldIndex];
+			return currField.get( recordIndex, defaultValue );
+		}
+	}
+
 }
+
+interface IWriteableRecordSet(alias RecordFormatT): IRecordSet!(RecordFormatT), IBaseWriteableRecordSet
+{
+	enum bool hasKeyField = RecordFormatT.hasKeyField;
+	alias RecordType = Record!(RecordFormatT);
+	
+	
+	static if( hasKeyField )
+	{
+		alias PKValueType = RecordFormatT.getKeyFieldSpec!().ValueType;
+		
+		void nullify(string fieldName, PKValueType recordKey);
+		void setNullable(string fieldName, PKValueType recordKey, bool value);
+		
+		
+		template set(string fieldName)
+		{
+			final void set(PKValueType recordKey, ValueType value)
+			{
+			
+			
+			}
+		
+		}
+	}
+
+	template setAt(string fieldName)
+	{
+		final void setAt(size_t recordIndex, ValueType value)
+		{
+		
+		
+		}
+	
+	}
+}
+
 
 /++
 $(LOCALE_EN_US Class implements work with record set)
@@ -474,7 +597,7 @@ template RecordSet(alias RecordFormatT)
 class WriteableRecordSet(alias RecordFormatT): RecordSet!(RecordFormatT)
 {
 protected:
-	
+	IBaseDataField[] _dataFields;
 
 public:
 	template set(string fieldName)
@@ -497,15 +620,7 @@ public:
 	
 	}
 	
-	void setNull(string fieldName)(PKValueType recordKey, bool value)
-	{
-	
-	}
-	
-	void setNullAt(string fieldName)(size_t recordIndex, bool value)
-	{
-	
-	}
+
 
 }
 

@@ -157,6 +157,12 @@ interface IBaseDataField
 // 	void isNullable(bool nullable) @property; //Установка возможности быть пустым
 }
 
+
+interface IBaseWriteableDataField
+{
+
+}
+
 /++
 $(LOCALE_EN_US
 	Common template interface for data field
@@ -207,7 +213,7 @@ interface IDataField(FormatT) : IBaseDataField
 	}
 }
 
-interface IWriteableDataField(alias FormatT): IDataField!(FormatT)
+interface IWriteableDataField(alias FormatT): IDataField!(FormatT), IBaseWriteableDataField
 {
 	void set(size_t index, ValueType value);
 	void nullify(size_t index);
