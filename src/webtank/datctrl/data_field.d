@@ -161,7 +161,7 @@ interface IBaseDataField
 interface IBaseWriteableDataField
 {
 	void nullify(size_t index);
-	void setNullable(size_t index, bool value) @property;
+	void setNullable(size_t index, bool value);
 }
 
 /++
@@ -334,15 +334,11 @@ protected:
 			_values[index] = ValueType.init;
 		}
 		
-		void isNullable(bool value) @property
+		void setNullable(bool value) @property
 		{
 			_isNullable = value;
 		}
-		
-		void isWriteable(bool value) @property
-		{
-			_isWriteable = value;
-		}
+
 	
 	} //override
 

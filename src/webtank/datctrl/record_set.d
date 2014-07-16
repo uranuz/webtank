@@ -320,7 +320,7 @@ public:
 	RecordType getRecord(size_t recordIndex)
 	{	
 		static if( hasKeyField )
-			return getRecord( getRecordKey(recordIndex) );
+			return getRecordByKey( getRecordKey(recordIndex) );
 		else
 			return new RecordType(this, recordIndex);
 	}
@@ -614,7 +614,7 @@ public:
 	override {
 		void nullify(string fieldName, size_t recordIndex)
 		{
-			return _dataFields[ FormatType.indexes[fieldName] ].isNull( recordIndex );
+			_dataFields[ FormatType.indexes[fieldName] ].isNull( recordIndex );
 		}
 		
 		

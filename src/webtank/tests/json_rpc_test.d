@@ -28,12 +28,13 @@ void main()
 	//writeln( toJSON( &jBookRS ) );
 	
 	writeln("TestPoint 2");
+	writeln( book_rs[0] );
 	
 	try 
 	{
 		foreach( rec; book_rs )
-		{	write( rec.getStr("Жанр") );
-			writeln( " - " ~ typeid( rec.get!"Жанр"() ).to!string );
+		{	//write( rec.getStr("Жанр") );
+			//writeln( " - " ~ typeid( rec.get!"Жанр"() ).to!string );
 		}
 	}
 	catch( Throwable e )

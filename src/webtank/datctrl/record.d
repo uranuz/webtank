@@ -334,6 +334,8 @@ public:
 }
 
 
+import webtank.datctrl.data_cell;
+
 class WriteableRecord(alias RecordFormatT): IWriteableRecord!(RecordFormatT)
 {
 	alias FormatType = RecordFormatT;
@@ -344,8 +346,12 @@ protected:
 	IBaseWriteableDataCell[] _dataCells;
 
 public:
-	this() {
-
+	this() 
+	{
+		foreach( fldSpec; FormatType._fieldSpecs )
+		{
+			_dataCells ~= new WriteableDataCell!(fldSpec.ValueType)();
+		}
 	}
 	
 	override IBaseWriteableDataCell getCell(string fieldName)
