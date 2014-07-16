@@ -1,5 +1,9 @@
 module webtank.datctrl.data_cell;
 
+import std.conv;
+
+import webtank.datctrl.data_field, webtank.datctrl.enum_format;
+
 
 interface IBaseDataCell
 {
@@ -9,15 +13,17 @@ interface IBaseDataCell
 	
 	bool isNull() @property;
 	
-	string getStr() @property;
+	string getStr();
 	
-	string getStr(string defaultValue) @property;
+	string getStr(string defaultValue);
 
 }
 
-interface IBaseWriteableDataCell
+interface IBaseWriteableDataCell: IBaseDataCell
 {
-
+	void nullify();
+	
+	void setNullable(bool value) @property;
 
 }
 
@@ -44,10 +50,6 @@ interface IWriteableDataCell(FormatT): IDataCell!(FormatT), IBaseWriteableDataCe
 	alias ValueType = DataFieldValueType!(FormatType);
 	
 	void set(ValueType value);
-	
-	void nullify();
-	
-	void isNullable(bool value) @property;
 
 }
 
@@ -61,14 +63,23 @@ protected:
 	ValueType _value;
 	bool _isNull = true;
 	bool _isNullable = true;
+	
+	static if( isEnumFormat!(FormatType) )
+	{
+		FormatType _enumFormat;
+	}
 
 public:
 
+	this() {}
+	
 	this( ValueType value )
 	{
 		_value = value;
 		_isNull = false;
 	}
+	
+	
 	
 	override 
 	{
@@ -89,14 +100,32 @@ public:
 		
 		string getStr() @property
 		{
-			return _isNull : null : _value.to!string;
+			return isNull ? null : _value.to!string;
 		}
 		
 		string getStr(string defaultValue) @property
 		{
-			return _isNull ? defaultValue : _value.to!string;
+			return isNull ? defaultValue : _value.to!string;
 		}
 		
+		
+		ValueType get()
+		{
+			return _value;
+		}
+		
+		ValueType get(ValueType defaultValue)
+		{
+			return isNull ? defaultValue : _value;
+		}
+		
+		static if( isEnumFormat!(FormatType) )
+		{
+			FormatType enumFormat()  @property
+			{
+				return _enumFormat;
+			}
+		}
 		
 		void set(ValueType value)
 		{
@@ -113,7 +142,7 @@ public:
 			}
 		}
 		
-		void isNullable(bool value) @property
+		void setNullable(bool value) @property
 		{
 			_isNullable = value;
 		}
@@ -121,3 +150,11 @@ public:
 
 }
 
+// void main()
+// {
+// 	import std.stdio;
+// 	
+// 	auto cell = new WriteableDataCell!(int)(10);
+// 
+// 	writeln( cell.get() );
+// }

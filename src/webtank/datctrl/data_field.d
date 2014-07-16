@@ -160,7 +160,8 @@ interface IBaseDataField
 
 interface IBaseWriteableDataField
 {
-
+	void nullify(size_t index);
+	void setNullable(size_t index, bool value) @property;
 }
 
 /++
@@ -216,9 +217,7 @@ interface IDataField(FormatT) : IBaseDataField
 interface IWriteableDataField(alias FormatT): IDataField!(FormatT), IBaseWriteableDataField
 {
 	void set(size_t index, ValueType value);
-	void nullify(size_t index);
-	void isNullable(bool value) @property;
-	void isWriteable(bool value) @property;
+
 }
 
 

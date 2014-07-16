@@ -19,17 +19,31 @@ void main()
 		bool, "Переплет"
 	)();
 	
+	writeln("TestPoint 1");
+	
 	string query = `select * from book`;
 	auto book_rs = dbase.query(query).getRecordSet(bookRecFormat);
 	//auto rec = book_rs.front;
 	//auto jBookRS = rec.getStdJSON();
 	//writeln( toJSON( &jBookRS ) );
-	foreach( rec; book_rs )
-	{	write( rec.getStr("Жанр") );
-		writeln( " - " ~ typeid( rec.get!"Жанр"() ).to!string );
+	
+	writeln("TestPoint 2");
+	
+	try 
+	{
+		foreach( rec; book_rs )
+		{	write( rec.getStr("Жанр") );
+			writeln( " - " ~ typeid( rec.get!"Жанр"() ).to!string );
+		}
+	}
+	catch( Throwable e )
+	{
+		writeln(e.msg);
 	}
 	
-	auto indRec = new IndependentRecord!( typeof(bookRecFormat) )();
+	writeln("TestPoint 3");
+	
+	auto indRec = new WriteableRecord!( typeof(bookRecFormat) )();
 	
 	indRec.set!("Автор")("Вася");
 	indRec.set!("Цена")(100500);
