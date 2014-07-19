@@ -11,25 +11,26 @@ import webtank.datctrl.record_format, webtank.datctrl.record_set, webtank.datctr
 
 
 
-auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, const(RecordFormatT) format)
+auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT format)
 {	
 	alias RecordSetT = RecordSet!RecordFormatT;
 	
 	IBaseDataField[] dataFields;
-	foreach( i, fieldName; RecordFormatT.tupleOfNames!() )
+	foreach( fieldName; RecordFormatT.tupleOfNames!() )
 	{	alias FieldFormatDecl = RecordFormatT.getFieldFormatDecl!(fieldName);
 		alias CurrFieldT = DatabaseField!(FieldFormatDecl);
+		alias fieldIndex = RecordFormatT.getFieldIndex!(fieldName);
 		
 		bool isNullable = format.nullableFlags.get(fieldName, true);
 		
 		static if( isEnumFormat!(FieldFormatDecl) )
-		{	if( fieldName in format.enumFormats )
-				dataFields ~= new CurrFieldT( queryResult, i, fieldName, isNullable,  format.enumFormats[fieldName] );
-			else
-				dataFields ~= new CurrFieldT( queryResult, i, fieldName, isNullable );
+		{	
+			alias enumFieldIndex = RecordFormatT.getEnumFormatIndex!(fieldName);
+			pragma(msg, "enumFieldIndex: ", enumFieldIndex );
+			dataFields ~= new CurrFieldT( queryResult, fieldIndex, fieldName, isNullable,  format.enumFormats[enumFieldIndex] );
 		}
 		else
-			dataFields ~= new CurrFieldT( queryResult, i, fieldName, isNullable );
+			dataFields ~= new CurrFieldT( queryResult, fieldIndex, fieldName, isNullable );
 	}
 	auto recordSet = new RecordSetT(dataFields);
 	return recordSet;

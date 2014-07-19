@@ -4,6 +4,8 @@ import std.json, std.conv, std.traits;
 
 import webtank.datctrl.data_field, webtank.db.database, webtank.datctrl.record_format, webtank.datctrl.enum_format;
 
+import webtank.common.conv;
+
 /++
 $(LOCALE_EN_US
 	Function converts values from different real D types to another
@@ -22,8 +24,7 @@ auto fldConv(ValueType)( string value )
 	pragma(msg, "ValueType: ", ValueType);
 	static if( is( ValueType == enum )  )
 	{
-		alias BaseType = OriginalType!(ValueType);
-		return value.to!(BaseType).to!(ValueType);
+		return value.conv!(ValueType);
 	}
 	else static if( is( ValueType == bool ) )
 	{
@@ -77,7 +78,7 @@ public:
 		)
 		{	_queryResult = queryResult;
 			_fieldIndex = fieldIndex;
-			_name = _fieldName;
+			_name = fieldName;
 			_isNullable = isNullable;
 			_enumFormat = enumFormat;
 		}
@@ -87,12 +88,15 @@ public:
 		{	return _enumFormat;
 		}
 	}
+	else
+	{
 
-	this( IDBQueryResult queryResult, size_t fieldIndex, string fieldName, bool isNullable )
-	{	_queryResult = queryResult;
-		_fieldIndex = fieldIndex;
-		_name = fieldName;
-		_isNullable = isNullable;
+		this( IDBQueryResult queryResult, size_t fieldIndex, string fieldName, bool isNullable )
+		{	_queryResult = queryResult;
+			_fieldIndex = fieldIndex;
+			_name = fieldName;
+			_isNullable = isNullable;
+		}
 	}
 
 	override { //Переопределяем интерфейсные методы

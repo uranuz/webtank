@@ -1,5 +1,38 @@
 module webtank.common.conv;
 
+import std.conv, std.traits, std.algorithm;
+
+T conv(T, V)(V value)
+{
+	static if( is( T == enum ) )
+	{
+		auto enumValues = [ EnumMembers!T ];
+		
+		static if( isSomeString!( OriginalType!(T) ) && isSomeString!(V) )
+		{
+			auto tmp = to!(OriginalType!(T))(value);
+			
+			if( !enumValues.canFind(tmp) )
+					throw new ConvException( `Value "` ~ value.to!string ~ `" is not enum value of type "` ~ ValueType.stringof ~ `"!!!` );
+		
+			return cast(T) tmp;
+		}
+		else
+		{
+			return value.to!(T);
+		}
+	}
+	else static if( is( V == enum ) && isSomeString!( OriginalType!(V) ) && isSomeString!(T) )
+	{
+		return (cast(OriginalType!(V)) value).to!T;
+	}
+	else
+	{
+		return value.to!(T);
+	}
+
+}
+
 /++
 $(LOCALE_EN_US
 	Function converts character of hex number to byte

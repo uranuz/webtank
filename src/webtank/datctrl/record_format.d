@@ -22,6 +22,17 @@ struct RecordFormat(Args...)
 	
 	enum bool hasKeyField = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs).length > 0;
 	
+	template getEnumFormat(string fieldName)
+	{
+		alias enumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
+		alias EnumFormatType = _getFieldSpec!(fieldName, EnumFieldSpecs).FormatDecl;
+		
+		EnumFormatType getEnumFormat()
+		{
+			return enumFormats[enumFormatIndex];
+		}
+	}
+	
 	template setEnumFormat(string fieldName)
 	{
 		alias enumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
@@ -181,93 +192,12 @@ struct RecordFormat(Args...)
 		
 		alias getKeyFieldSpec = PKFieldSpecs[0];
 	}
-}
-
-
-template makeRecordFormat(Args...)
-{
-	import std.typetuple;
 	
-	template _MakeFieldSpec( T, string s, alias v )
-	{	
-		alias Spec = FieldSpec!( T, s );
-		alias values = v;
-	}
-
-	template _parseMakeRecordFormatArgs(Args...)
-	{	
-		static if( Args.length == 0 )
-		{	alias _parseMakeRecordFormatArgs = TypeTuple!() ;
-		}
-		else static if(  is( typeof(Args[0]) ) && isEnumFormat!( typeof(Args[0]) )  )
-		{
-			static if( is( typeof( Args[1] ) : string ) )
-				alias _parseMakeRecordFormatArgs = 
-					TypeTuple!( _MakeFieldSpec!(typeof(Args[0]), Args[1], Args[0]), _parseMakeRecordFormatArgs!(Args[2 .. $]) ) ;
-			else
-				alias _parseMakeRecordFormatArgs = 
-					TypeTuple!( _MakeFieldSpec!(typeof(Args[0]), null, Args[0]), _parseMakeRecordFormatArgs!(Args[1 .. $]) ) ;
-		}
-		else static if( is(Args[0]) )
-		{	
-			static if( is( typeof( Args[1] ) : string ) )
-				alias _parseMakeRecordFormatArgs = 
-					TypeTuple!( _MakeFieldSpec!(Args[0], Args[1], Args[0].init), _parseMakeRecordFormatArgs!(Args[2 .. $]) ) ;
-			else
-				alias _parseMakeRecordFormatArgs = 
-					TypeTuple!( _MakeFieldSpec!(Args[0], null, Args[0].init), _parseMakeRecordFormatArgs!(Args[1 .. $]) ) ;
-		}
-		else
-		{	static assert(0, "Attempted to instantiate Tuple with an "
-					~ "invalid argument: " ~ Args[0].stringof);
-		}
-	}
-	
-	enum bool _isEnumFormatMakeFieldSpec(alias MakeSpec) = isEnumFormat!( MakeSpec.Spec.FormatDecl );
-	
-	alias _makeFieldSpecs = _parseMakeRecordFormatArgs!(Args);
-	//pragma(msg, "makeRecordFormat specs: ", _fieldSpecs);
-	alias _enumFormatFieldSpecs = Filter!(_isEnumFormatMakeFieldSpec, _makeFieldSpecs);
-	//pragma(msg, "makeRecordFormat specsLength: ", _enumFormatFieldSpecs);
-	
-	template getEnumFormatValues(MakeSpecs...)
+	template getEnumFormatIndex(string fieldName)
 	{
-		static if( MakeSpecs.length == 0 )
-			alias getEnumFormatValues = TypeTuple!();
-		else static if( MakeSpecs.length == 1 )
-			alias getEnumFormatValues = TypeTuple!( MakeSpecs[0].values );
-		else
-			alias getEnumFormatValues = TypeTuple!( MakeSpecs[0].values, getEnumFormatValues!(MakeSpecs[1..$]) );
-	}
-
-	template expandFieldSpecs(FieldSpecs...)
-	{
-		static if( FieldSpecs.length == 0 )
-			alias expandFieldSpecs = TypeTuple!();
-		else static if( FieldSpecs.length == 1 )
-			alias expandFieldSpecs = 
-				TypeTuple!( FieldSpecs[0].Spec.FormatDecl, FieldSpecs[0].Spec.name );
-		else
-			alias expandFieldSpecs = 
-				TypeTuple!( FieldSpecs[0].Spec.FormatDecl, FieldSpecs[0].Spec.name, expandFieldSpecs!(FieldSpecs[1..$]) );	
-	}
-	
-	
-	alias RecordFormatArgs = expandFieldSpecs!(_makeFieldSpecs);
-	
-	auto makeRecordFormat()
-	{	
-		auto enumFormats = tuple( getEnumFormatValues!(_enumFormatFieldSpecs) );
-		return RecordFormat!(RecordFormatArgs)(null, enumFormats);
-	}
-	
-	auto makeRecordFormat(bool[string] nullableFlags)
-	{	
-		auto enumFormats = tuple( getEnumFormatValues!(_enumFormatFieldSpecs) );
-		return RecordFormat!(RecordFormatArgs)(nullableFlags, enumFormats);
+		alias getEnumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
 	}
 }
-
 
 
 //Шаблон разбирает аргументы и находит соответсвие имен и типов полей

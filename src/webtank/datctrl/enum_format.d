@@ -1,8 +1,9 @@
 module webtank.datctrl.enum_format;
 
-import std.traits, std.range;
+import std.traits, std.range, std.json;
 import std.typecons;
 
+import webtank.common.conv;
 
 /++
 $(LOCALE_EN_US Struct represents format for enumerated type of field)
@@ -30,7 +31,7 @@ struct EnumFormat( T, bool hasNames )
 		{
 			_pairs = pairs;
 			nullString = nullStr;
-		
+
 		}
 		
 		string getName(ValueType value) const
@@ -104,10 +105,15 @@ struct EnumFormat( T, bool hasNames )
 		//Массив значений перечислимого типа
 		private ValueType[] _values;
 		
-		this( ValueType[] values, string nullString )
+		this( ValueType[] values )
 		{
 			_values = values;
-			_nullString = nullString;
+		}
+		
+		this( ValueType[] values, string nullStr )
+		{
+			_values = values;
+			nullString = nullStr;
 		}
 		
 		///Возвращает набор значений перечислимого типа
@@ -128,7 +134,7 @@ struct EnumFormat( T, bool hasNames )
 		}
 	}
 	
-	string getStr(ValueType value)
+	string getStr(ValueType value) const
 	{
 		static if( hasNames )
 		{
@@ -139,8 +145,8 @@ struct EnumFormat( T, bool hasNames )
 			static if( isSomeString!(ValueType) )
 			{
 				import std.algorithm : canFind;
-				static assert( _values.canFind(value), "Value is not present in enum format!" );
-				return value.to!string;
+				assert( _values.canFind(value), "Value is not present in enum format!" );
+				return value.conv!string;
 			}
 			else static if( is( ValueType == enum ) )
 			{
@@ -148,8 +154,8 @@ struct EnumFormat( T, bool hasNames )
 				static if( isSomeString!(BaseType) )
 				{
 					import std.algorithm : canFind;
-					static assert( _values.canFind(value), "Value is not present in enum format!" );
-					return value.to!string;
+					assert( _values.canFind(value), "Value is not present in enum format!" );
+					return value.conv!string;
 				}
 				else
 				{
@@ -160,10 +166,51 @@ struct EnumFormat( T, bool hasNames )
 			else
 			{
 				import std.algorithm : canFind;
-				static assert( _values.canFind(value), "Value is not present in enum format!" );
-				return value.to!string;
+				assert( _values.canFind(value), "Value is not present in enum format!" );
+				return value.conv!string;
 			}
 		}
+	}
+	
+	/++
+	$(LOCALE_EN_US Serializes enumerated field format into std.json)
+	$(LOCALE_RU_RU Сериализует формат перечислимого типа в std.json)
+	+/
+	JSONValue getStdJSON() const
+	{	
+		JSONValue[string] jArray; //Массив полей для формата перечислимого типа
+		
+		//Словарь перечислимых значений (числовой ключ --> строковое имя)
+		JSONValue[string] jEnumNames;
+		
+		//Массив, определяющий порядок перечислимых значений
+		JSONValue[] jEnumKeys;
+		
+		static if( hasNames )
+		{
+			jEnumKeys.length = _pairs.length;
+			
+			foreach( i, pair; _pairs )
+			{
+				jEnumNames[ pair[0].conv!string ] = pair[1];
+				jEnumKeys[i] = pair[0].conv!string;
+			}
+		}
+		else
+		{
+			jEnumKeys.length = _values.length;
+			
+			foreach( i, val; _values )
+			{
+				jEnumNames[ val.conv!string ] = val.conv!string;
+				jEnumKeys[i] = val.conv!string;
+			}
+		}
+		
+		jArray["enum_n"] = jEnumNames;
+		jArray["enum_k"] = jEnumKeys;
+		
+		return JSONValue(jArray);
 	}
 }
 
