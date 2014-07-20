@@ -2,6 +2,7 @@ module webtank.datctrl.enum_format;
 
 import std.traits, std.range, std.json;
 import std.typecons;
+import std.algorithm: canFind;
 
 import webtank.common.conv;
 
@@ -41,7 +42,7 @@ struct EnumFormat( T, bool hasNames )
 				if( pair[0] == value )
 					return pair[1];
 			}
-			assert( 0, "Attempt to get name for value that doesn't exist in EnumFormat object!!" );
+			assert( 0, "Attempt to get name for value *" ~ value.conv!string ~ "* that doesn't exist in EnumFormat object!!" );
 		}
 		
 		ValueType getValue(string name) const
@@ -52,6 +53,16 @@ struct EnumFormat( T, bool hasNames )
 					return pair[0];
 			}
 			assert( 0, "Attempt to get value for name that doesn't exist in EnumFormat object!!" );
+		}
+		
+		bool hasName(string name) const
+		{
+			return _pairs.canFind!"a[1] == b"(name);
+		}
+		
+		bool hasValue(ValueType value) const
+		{
+			return _pairs.canFind!"a[0] == b"(value);
 		}
 		
 		///Возвращает набор имен для перечислимого типа
@@ -116,6 +127,13 @@ struct EnumFormat( T, bool hasNames )
 			nullString = nullStr;
 		}
 		
+		bool hasValue(ValueType value) const
+		{
+			import std.algorithm: canFind;
+			
+			return _pairs.canFind(name);
+		}
+		
 		///Возвращает набор значений перечислимого типа
 		ValueType[] values() @property const
 		{	
@@ -172,6 +190,16 @@ struct EnumFormat( T, bool hasNames )
 		}
 	}
 	
+	string opIndex(ValueType value) const
+	{
+		return getStr(value);
+	}
+	
+	///Оператор in для проверки наличия ключа в наборе значений перечислимого типа
+	bool opBinaryRight(string op)(ValueType value) inout 
+		if( op == "in" )
+	{	return hasValue(value); }
+	
 	/++
 	$(LOCALE_EN_US Serializes enumerated field format into std.json)
 	$(LOCALE_RU_RU Сериализует формат перечислимого типа в std.json)
@@ -214,5 +242,21 @@ struct EnumFormat( T, bool hasNames )
 	}
 }
 
+import std.range: ElementType;
+import std.typecons: isTuple;
+
 enum isEnumFormat(E) = isInstanceOf!(EnumFormat, E);
+
+auto enumFormat(Pair)(Pair[] pairs, string nullStr = null)
+	if( isTuple!(Pair) && Pair.length == 2 )
+{
+	return EnumFormat!( typeof(pairs[0][0]), true )(pairs, nullStr);
+}
+
+auto enumFormat(T)(T[] values, string nullStr = null)
+	if( !isTuple!(T) )
+{
+	return EnumFormat!( T, false )(values, nullStr);
+
+}
 

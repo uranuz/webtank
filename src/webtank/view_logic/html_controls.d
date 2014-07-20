@@ -12,11 +12,25 @@ class HTMLControl
 }
 
 ///Простенький класс для генерации HTML-разметки для выпадающего списка элементов
-class PlainDropDownList: HTMLControl
+class PlainDropDownList(EnumFormatT): HTMLControl
 {	
+	alias ValueType = EnumFormatT.ValueType;
+	
+	this( EnumFormatT format ) const
+	{
+		values = format;
+	}
+	
+	this( EnumFormatT format )
+	{
+		values = format;
+	}
+	
 	///Метод генерирует разметку по заданным параметрам
 	string print()
 	{	
+		import webtank.common.conv;
+		
 		string[string] attrs;
 		
 		if( name.length > 0 )
@@ -30,10 +44,10 @@ class PlainDropDownList: HTMLControl
 		
 		string output = `<select` ~ printHTMLAttributes(attrs) ~ `>`
 			~ `<option value="null"` ~ ( _isNull ? ` selected` : `` ) ~ `>`
-			~ HTMLEscapeText(values.defaultName) ~ `</option>`;
+			~ HTMLEscapeText(values.nullString) ~ `</option>`;
 		
 		foreach( name, key; values )
-		{	output ~= `<option value="` ~ key.to!string ~ `"`
+		{	output ~= `<option value="` ~ key.conv!string ~ `"`
 			~ ( ( !_isNull && key == _currKey  ) ? ` selected` : `` ) ~ `>`
 			~ HTMLEscapeText(name) ~ `</option>`;
 		}
@@ -43,19 +57,19 @@ class PlainDropDownList: HTMLControl
 		return output;
 	}
 	
-	EnumFormat values; ///Значения выпадающего списка (перечислимый тип)
+	EnumFormatT values; ///Значения выпадающего списка (перечислимый тип)
 	
-	int currKey() @property  ///Текущее значение списка
+	ValueType currKey() @property  ///Текущее значение списка
 	{	return _currKey; }
 	
 	///Свойство: текущее значение списка
-	void currKey(int value) @property
+	void currKey(ValueType value) @property
 	{	_currKey = value;
 		_isNull = false;
 	}
 	
 	///Свойство для задания значения через std.typecons.Nullable
-	void currKey(Nullable!(int) value) @property
+	void currKey(Nullable!(ValueType) value) @property
 	{	if( value.isNull() )
 			_isNull = true;
 		else
@@ -70,10 +84,15 @@ class PlainDropDownList: HTMLControl
 
 protected:
 	bool _isNull = true;
-	int _currKey;
+	ValueType _currKey;
 }
 
-enum string[] months = 
+auto plainDropDownList(T)(T enumFormat)
+{
+	return new PlainDropDownList!(T)(enumFormat);
+}
+
+static immutable months = 
 	[	"январь", "февраль", "март", 
 		"апрель", "май", "июнь", 
 		"июль", "август", "сентябрь", 

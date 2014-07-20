@@ -27,7 +27,7 @@ struct RecordFormat(Args...)
 		alias enumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
 		alias EnumFormatType = _getFieldSpec!(fieldName, EnumFieldSpecs).FormatDecl;
 		
-		EnumFormatType getEnumFormat()
+		EnumFormatType getEnumFormat() const
 		{
 			return enumFormats[enumFormatIndex];
 		}
@@ -197,6 +197,21 @@ struct RecordFormat(Args...)
 	{
 		alias getEnumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
 	}
+	
+	template hasField(string fieldName)
+	{
+		enum bool hasField = _getHasField!(fieldName, _fieldSpecs);
+	}
+}
+
+template _getHasField(string fieldName, FieldSpecs...)
+{
+	static if( FieldSpecs.length == 0 )
+		enum bool _getHasField = false;
+	else static if( FieldSpecs[0].name == fieldName  )
+		enum bool _getHasField = true;
+	else
+		enum bool _getHasField = _getHasField!(fieldName, FieldSpecs[1..$]);
 }
 
 

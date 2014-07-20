@@ -81,6 +81,8 @@ interface IRecord(alias RecordFormatT): IBaseRecord
 	{	
 		alias FormatType.getValueType!(fieldName) ValueType;
 		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
+		
+		static assert( RecordFormatT.hasField!(fieldName), `Record doesn't contain field with name "` ~ fieldName ~ `"!!!` );
 
 		/++
 		$(LOCALE_EN_US Function for getting value for field with name $(D_PARAM fieldName).
@@ -118,7 +120,17 @@ interface IRecord(alias RecordFormatT): IBaseRecord
 			}
 		}
 	}
-
+	
+	template getStr(string fieldName)
+	{
+		static assert( RecordFormatT.hasField!(fieldName), `Record doesn't contain field with name "` ~ fieldName ~ `"!!!` );
+		
+		final string getStr()
+		{	return this.getStr(fieldName); }
+		
+		final string getStr(string defaultValue)
+		{	return this.getStr(fieldName, defaultValue); }
+	}
 }
 
 interface IWriteableRecord(alias RecordFormatT): IRecord!(RecordFormatT), IBaseWriteableRecord
@@ -145,7 +157,7 @@ $(LOCALE_RU_RU Класс реализует работу с записью)
 class Record(alias RecordFormatT): IRecord!(RecordFormatT)
 {
 	//Тип формата для записи
-	alias RecordFormatT FormatType;
+	alias FormatType = RecordFormatT ;
 	enum bool hasKeyField = RecordFormatT.hasKeyField;
 	
 	static if( hasKeyField )
@@ -242,7 +254,18 @@ public:
 				return _recordSet.get!(fieldName)(_recordIndex, defaultValue);
 		}
 	}
-
+	
+	template getStr(string fieldName)
+	{
+		static assert( RecordFormatT.hasField!(fieldName), `Record doesn't contain field with name "` ~ fieldName ~ `"!!!` );
+		
+		string getStr()
+		{	return this.getStr(fieldName); }
+		
+		string getStr(string defaultValue)
+		{	return this.getStr(fieldName, defaultValue); }
+	}
+	
 	/++
 	$(LOCALE_EN_US Method returns format for enumerated field with name $(D_PARAM fieldName).
 		If field $(D_PARAM fieldName) is not enumerated this will not compile
@@ -387,6 +410,17 @@ public:
 				return dataCell.get();
 			}
 		}
+	}
+	
+	template getStr(string fieldName)
+	{
+		static assert( RecordFormatT.hasField!(fieldName), `Record doesn't contain field with name "` ~ fieldName ~ `"!!!` );
+		
+		string getStr()
+		{	return this.getStr(fieldName); }
+		
+		string getStr(string defaultValue)
+		{	return this.getStr(fieldName, defaultValue); }
 	}
 	
 	template set(string fieldName)
