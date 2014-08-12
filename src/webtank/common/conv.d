@@ -26,6 +26,25 @@ T conv(T, V)(V value)
 	{
 		return (cast(OriginalType!(V)) value).to!T;
 	}
+	else static if( isOptional!T )
+	{
+		static if( isDynamicArray!(V) )
+		{
+			if( value.length == 0 )
+				return T.init;
+			else
+				return T( value.conv!(OptionalValueType!T)(value) );
+		}
+		else static if( isNullable!(V) )
+		{
+			if( value is null )
+				return T.init;
+			else
+				return T( value.conv!(OptionalValueType!T)(value) );
+		}
+		else
+			return T( value.conv!(OptionalValueType!T)(value) );
+	}
 	else
 	{
 		return value.to!(T);

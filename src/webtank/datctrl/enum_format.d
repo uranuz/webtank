@@ -10,12 +10,10 @@ import webtank.common.conv;
 $(LOCALE_EN_US Struct represents format for enumerated type of field)
 $(LOCALE_RU_RU Структура представляет формат для перечислимого типа поля)
 +/
-struct EnumFormat( T, bool hasNames )
+struct EnumFormat( T, bool withNames )
 {
 	alias ValueType = T;
-
-	//Имя для пустого (отсутствующего) значения null
-	string nullString;
+	alias hasNames = withNames;
 
 	static if( hasNames )
 	{
@@ -28,13 +26,6 @@ struct EnumFormat( T, bool hasNames )
 		
 		}
 		
-		this( Tuple!(ValueType, string)[] pairs, string nullStr )
-		{
-			_pairs = pairs;
-			nullString = nullStr;
-
-		}
-		
 		string getName(ValueType value) const
 		{
 			foreach( ref pair; _pairs )
@@ -42,7 +33,7 @@ struct EnumFormat( T, bool hasNames )
 				if( pair[0] == value )
 					return pair[1];
 			}
-			assert( 0, "Attempt to get name for value *" ~ value.conv!string ~ "* that doesn't exist in EnumFormat object!!" );
+			assert( 0, "Attempt to get name for value *" ~ value.conv!string ~ "* that doesn't exist in EnumFormat object!!" ~ _pairs.conv!string );
 		}
 		
 		ValueType getValue(string name) const
@@ -119,12 +110,6 @@ struct EnumFormat( T, bool hasNames )
 		this( ValueType[] values )
 		{
 			_values = values;
-		}
-		
-		this( ValueType[] values, string nullStr )
-		{
-			_values = values;
-			nullString = nullStr;
 		}
 		
 		bool hasValue(ValueType value) const
@@ -247,16 +232,16 @@ import std.typecons: isTuple;
 
 enum isEnumFormat(E) = isInstanceOf!(EnumFormat, E);
 
-auto enumFormat(Pair)(Pair[] pairs, string nullStr = null)
+auto enumFormat(Pair)(Pair[] pairs)
 	if( isTuple!(Pair) && Pair.length == 2 )
 {
-	return EnumFormat!( typeof(pairs[0][0]), true )(pairs, nullStr);
+	return EnumFormat!( typeof(pairs[0][0]), true )(pairs);
 }
 
-auto enumFormat(T)(T[] values, string nullStr = null)
+auto enumFormat(T)(T[] values)
 	if( !isTuple!(T) )
 {
-	return EnumFormat!( T, false )(values, nullStr);
+	return EnumFormat!( T, false )(values);
 
 }
 

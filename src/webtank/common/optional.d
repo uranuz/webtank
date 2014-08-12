@@ -309,19 +309,3 @@ $(D this) must not be in the null state.
  */
     alias value this;
 }
-
-import std.stdio, std.datetime;
-
-// void main() 
-// {
-// 
-// 	Optional!Date a;
-// 	
-// 	writeln("test");
-// 	
-// 	a = null;
-// 	
-// 	writeln(a.isNull);
-// 	
-// 	
-// }

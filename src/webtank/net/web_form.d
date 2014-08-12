@@ -65,7 +65,7 @@ public:
 	}
 
 	string[] array(string name) @property const
-	{	return _data[name].dup;
+	{	return _data.get(name, null).dup;
 	}
 
 	string get(string name, string defValue) const

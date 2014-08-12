@@ -173,7 +173,7 @@ public:
 			{
 				if( isNull(index) )
 				{	
-					return _enumFormat.nullString;
+					return null;
 				}
 				else
 				{
@@ -182,6 +182,7 @@ public:
 			}
 			else
 			{	
+				//TODO: добавить проверку на соответствие значения базовому типу поля
 				return _queryResult.get(_fieldIndex, index).to!string;
 			}
 		}
@@ -204,6 +205,7 @@ public:
 				}
 				else
 				{	
+					//TODO: добавить проверку на соответствие значения базовому типу поля
 					return _queryResult.get(_fieldIndex, index).to!string;
 				}
 			
