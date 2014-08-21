@@ -2,6 +2,15 @@ module webtank.common.optional;
 
 import std.conv;
 
+class OptionalException : Exception
+{
+	this(string msg, string file = __FILE__, size_t line = __LINE__) 
+		@safe pure nothrow 
+	{
+		super(msg, file, line);
+	}
+}
+
 ///Returns true if T is nullable type
 template isNullable(T)
 {	enum bool isNullable = __traits( compiles, { bool aaa = T.init is null; } );
@@ -38,7 +47,7 @@ template isOptional(O)
 template OptionalValueType(O)
 {	import std.traits;
 	static if( is( O == Optional!(T), T ) )
-		alias T OptionalValueType;
+		alias OptionalValueType = T;
 	else
 		static assert (0, `Type ` ~ fullyQualifiedName!(O) ~ ` is not an instance of Optional!!!` );
 }
@@ -116,9 +125,9 @@ struct Optional(T)
 /**
 Constructor binding $(D this) with $(D value).
  */
-	this(A)( auto ref T value) 
+	this(A)( auto ref T val) 
 		inout /+pure @safe nothrow+/
-	{	_value = value; }
+	{	_value = val; }
 
 /**
 Returns $(D true) if and only if $(D this) is in the null state.
@@ -126,14 +135,6 @@ Returns $(D true) if and only if $(D this) is in the null state.
 	@property bool isNull() 
 		const /+pure @safe nothrow+/
 	{	return _value is null;
-	}
-	
-	/**
-Forces $(D this) to the null state.
- */
-	void nullify()
-		/+pure @safe nothrow+/
-	{	_value = null;
 	}
     
 	bool opEquals(RHS)(auto ref RHS rhs)
@@ -175,7 +176,7 @@ This function is also called for the implicit conversion to $(D T).
 Implicitly converts to $(D T).
 $(D this) must not be in the null state.
  */
-	alias value this;
+	alias values this;
 }
 
 struct Optional(T)
@@ -187,13 +188,13 @@ struct Optional(T)
 /**
 Constructor initializing $(D this) with $(D value).
  */
-	this( A )( auto ref inout(A) value )
+	this( A )( auto ref inout(A) val )
 		inout /+pure @safe nothrow+/
-	{	_value = value;
+	{	_value = val;
 		_isNull = false;
 	}
 	
-	this( A : typeof(null) )( A value ) 
+	this( A : typeof(null) )( A val ) 
 		inout /+pure @safe nothrow+/
 	{	_isNull = true;
 	}
@@ -204,16 +205,6 @@ Returns $(D true) if and only if $(D this) is in the null state.
 	@property bool isNull() 
 		const /+pure @safe nothrow+/
 	{	return _isNull;
-	}
-
-/**
-Forces $(D this) to the null state.
- */
-	void nullify()()
-		/+pure @safe nothrow+/
-	{
-		.destroy(_value);
-		_isNull = true;
 	}
 	
 	int opCmp(RHS)(auto ref inout(RHS) rhs)
@@ -269,10 +260,10 @@ Forces $(D this) to the null state.
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
  */
-	@property ref inout(T) value() 
+	@property ref inout(T) value(int line = __LINE__) 
 		inout /+pure @safe nothrow+/
-	{	enum message = "Attemt to get value of null " ~ typeof(this).stringof ~ "!!!";
-		assert(!isNull, message);
+	{	enum message = "Attemt to get value of null " ~ typeof(this).stringof ~ "!!! ";
+		assert(!isNull, message ~ line.to!string);
 		return _value;
 	}
     
@@ -285,18 +276,36 @@ This function is also called for the implicit conversion to $(D T).
 Assigns $(D value) to the internally-held state. If the assignment
 succeeds, $(D this) becomes non-null.
  */
-	auto ref opAssign( RHS )( auto ref RHS value )
+	auto ref opAssign( RHS )( auto ref RHS rhs )
+		if( !is( RHS == typeof(null) ) )
 		/+pure @safe nothrow+/
-	{	this._value = value;
-		this._isNull = false;
-		return value;
+	{	
+		static if( isOptional!(RHS) )
+		{
+			if( rhs.isNull )
+				_isNull = true;
+			else
+			{
+				_value = rhs.value;
+				_isNull = false;
+			}
+			
+		}
+		else
+		{
+			_value = rhs;
+			_isNull = false;
+		}
+		
+		return rhs;
 	}
 
-	auto ref opAssign( RHS : typeof(null) )( RHS value )
+	auto ref opAssign( RHS )( RHS rhs )
+		if( is( RHS == typeof(null) ) )
 		/+pure @safe nothrow+/
-	{	this._value = T.init;
-		this._isNull = true;
-		return value;
+	{	_value = T.init;
+		_isNull = true;
+		return rhs;
 	}
 	
 // 	string toString() 
@@ -308,4 +317,143 @@ Implicitly converts to $(D T).
 $(D this) must not be in the null state.
  */
     alias value this;
+}
+
+
+import std.exception, std.datetime, std.typetuple;
+
+struct OptionalDate
+{
+protected:
+	Optional!short _year;
+	Optional!ubyte _month;
+	Optional!ubyte _day;
+	
+public:
+	this( Date date )
+	{
+		_year = date.year;
+		_month = date.month;
+		_day = date.day;
+	}
+	
+	alias YearTypeList = TypeTuple!( short, int, Optional!short, Optional!int, typeof(null) );
+	alias MonthOrDayTypeList = TypeTuple!( ubyte, int, Optional!ubyte, Optional!int, typeof(null) );
+	
+	this(Y, M, D)( Y initYear, M initMmonth, D initDay  )
+	{
+		enum bool isYearPred(Type) = is( Y == Type );
+		enum bool isMonthPred(Type) = is( M == Type );
+		enum bool isDayPred(Type) = is( D == Type );
+		
+		static if( 
+			anySatisfy!( isYearPred, YearTypeList ) &&
+			anySatisfy!( isMonthPred, MonthOrDayTypeList ) &&
+			anySatisfy!( isDayPred, MonthOrDayTypeList )
+		)
+		{
+			this.year = initYear;
+			this.month = initMmonth;
+			this.day = initDay;
+		}
+		else
+			static assert(0, `Unsupported ctor argument types for OptionalDate`);
+	}
+	
+	Optional!short year() @property
+		const
+	{	return _year;
+	}
+	
+	void year(Optional!short value) @property
+	{	_year = value;
+	}
+	
+	void year(Optional!int value) @property
+	{
+		if( value.isNull )
+			_year = null;
+		else
+			_year = cast(short) value.value;
+	}
+	
+// 	void year(int value) @property
+// 	{	_year = cast(short) value;
+// 	}
+	
+	Optional!ubyte month() @property
+	{	return _month;
+	}
+	
+	void month(Optional!ubyte value) @property
+	{	_month = value;
+	}
+	
+	void month(Optional!int value) @property
+	{
+		if( value.isNull )
+			_month = null;
+		else
+			_month = cast(ubyte) value.value;
+	}
+	
+// 	void month(int value) @property
+// 	{	_month = cast(ubyte) value;
+// 	}
+	
+	Optional!ubyte day() @property
+		const
+	{	return _day;
+	}
+	
+	void day(Optional!ubyte value) @property
+	{	_day = value;
+	}
+	
+	void day(Optional!int value) @property
+	{
+		if( value.isNull )
+			_day = null;
+		else
+			_day = cast(ubyte) value.value;
+	}
+	
+// 	void day(int value) @property
+// 	{	_day = cast(ubyte) value;
+// 	}
+	
+	bool isDefined() @property
+	{
+		return !_year.isNull && !_month.isNull && !_day.isNull;
+	}
+	
+	bool isNull() @property
+	{
+		return _year.isNull && _month.isNull && _day.isNull;
+	}
+	
+	Date get() 
+	{
+		enforceEx!OptionalException( isDefined, "Attempt to get not fully defined date value of OptionalDate!!!" );
+		return Date(_year, _month, _day);
+	}
+	
+// 	auto ref opAssign( RHS : Date )(auto ref RHS value)
+// 	{
+// 		this = OptionalDate(date);
+// 	}
+	
+	auto ref opAssign( RHS : OptionalDate )(auto ref RHS value)
+	{	this._year = value._year;
+		this._month = value._month;
+		this._day = value._day;
+	}
+	
+	auto ref opAssign( RHS : typeof(null) )( RHS value )
+		/+pure @safe nothrow+/
+	{	_year = null;
+		_month = null;
+		_day = null;
+		return this;
+	}	
 }

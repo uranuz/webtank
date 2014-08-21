@@ -2,6 +2,8 @@ module webtank.common.conv;
 
 import std.conv, std.traits, std.algorithm;
 
+import webtank.common.optional;
+
 T conv(T, V)(V value)
 {
 	static if( is( T == enum ) )
@@ -28,26 +30,27 @@ T conv(T, V)(V value)
 	}
 	else static if( isOptional!T )
 	{
-		static if( isDynamicArray!(V) )
-		{
-			if( value.length == 0 )
-				return T.init;
+		T result;
+		try {
+			static if( isDynamicArray!(V) )
+			{	if( value.length > 0 )
+					result = conv!(OptionalValueType!T)(value);
+			}
+			else static if( isNullable!(V) )
+			{	if( value !is null )
+					result = conv!(OptionalValueType!T)(value);
+			}
 			else
-				return T( value.conv!(OptionalValueType!T)(value) );
+			{	result = conv!(OptionalValueType!T)(value);
+			}
 		}
-		else static if( isNullable!(V) )
-		{
-			if( value is null )
-				return T.init;
-			else
-				return T( value.conv!(OptionalValueType!T)(value) );
-		}
-		else
-			return T( value.conv!(OptionalValueType!T)(value) );
+		catch( ConvException e )
+		{	result = null; }
+		
+		return result;
 	}
 	else
-	{
-		return value.to!(T);
+	{	return value.to!(T);
 	}
 
 }

@@ -2,7 +2,7 @@ module webtank.view_logic.html_controls;
 
 import std.conv, std.datetime, std.array, std.stdio, std.typecons;
 
-import webtank.net.utils, webtank.datctrl.record_format, webtank.datctrl.enum_format;
+import webtank.net.utils, webtank.datctrl.record_format, webtank.datctrl.enum_format, webtank.common.optional;
 
 class HTMLControl
 {
@@ -122,6 +122,14 @@ class ListBox(ValueSetT): HTMLControl
 	{	_selectedValues = [ value ];
 	}
 	
+	///Свойство: текущее значение списка
+	void selectedValue(Optional!ValueType value) @property
+	{	if( value.isNull )
+			_selectedValues = null;
+		else
+			_selectedValues = [ value ];
+	}
+	
 	void selectedValues(ValueType[] values) @property
 	{
 		_selectedValues = values;
@@ -184,15 +192,8 @@ class PlainDatePicker: HTMLControl
 		
 		//Задаём базовые аттрибуты для окошечек календаря
 		foreach( word, ref attrs; attrBlocks )
-		{	if( name.length > 0 ) //Путсые аттрибуты не записываем
-				attrs["name"] = word ~ `_of_` ~ name;
-				
-			if( id.length > 0 )
-				attrs["id"] = word ~ `_of_` ~ id;
-				
-			if( classes.length > 0 )
-				attrs["class"] = HTMLEscapeValue( join(classes, ` `) );
-		}
+			if( name.length > 0 ) //Путсые аттрибуты не записываем
+				attrs["name"] = name ~ `__` ~ word;
 		
 		//Задаём доп. аттрибуты и значения для дня и месяца
 		attrBlocks[`year`]["type"] = `text`;
@@ -202,8 +203,8 @@ class PlainDatePicker: HTMLControl
 		attrBlocks[`year`]["size"] = `4`;
 		attrBlocks[`day`]["size"] = `2`;
 		
-		attrBlocks[`year`]["value"] = _year == 0 ? null : _year.to!string;
-		attrBlocks[`day`]["value"] = _day == 0 ? null : _day.to!string;
+		attrBlocks[`year`]["value"] = _date.year.isNull ? null : _date.year.to!string;
+		attrBlocks[`day`]["value"] = _date.day.isNull ? null : _date.day.to!string;
 		
 		attrBlocks[`year`]["placeholder"] = nullYearName;
 		attrBlocks[`day`]["placeholder"] = nullDayName;
@@ -213,65 +214,41 @@ class PlainDatePicker: HTMLControl
 		string dayInp = `<input` ~ printHTMLAttributes(attrBlocks[`day`]) ~ `>`;
 		
 		string monthInp = `<select` ~ printHTMLAttributes(attrBlocks[`month`]) ~ `>`
-			~ `<option` ~ ( _month == 0 ? `` : ` selected` ) ~ `>`
+			~ `<option` ~ ( _date.month.isNull ? ` selected` : `` ) ~ `>`
 			~ nullMonthName ~ `</option>`;
+			
+		assert( _monthNames.length == 12, `Month names array length must be 12!!!` );
 		
-		foreach( i, month; months )
+		foreach( i, monthName; _monthNames )
 		{	monthInp ~= `<option value="` ~ (i+1).to!string ~ `"`
-			~ ( i+1 == date.month ? ` selected` : `` )
-			~ `>` ~ month ~ `</option>`;
+			~ ( i+1 == _date.month ? ` selected` : `` )
+			~ `>` ~ monthName ~ `</option>`;
 		}
 		monthInp ~= `</select>`;
 		
-		return dayInp ~ ` ` ~ monthInp ~ ` ` ~ yearInp;
+		string[string] blockAttrs;
+		
+		if( id.length > 0 )
+			blockAttrs["id"] = id;
+			
+		if( classes.length > 0 )
+			blockAttrs["class"] = join(classes, ` `);
+		
+		return `<span` ~ printHTMLAttributes(blockAttrs) ~ `>`
+			~ dayInp ~ ` ` ~ monthInp ~ ` ` ~ yearInp ~ `</span>`;
 	}
 	
 	string nullDayName;
 	string nullMonthName;
 	string nullYearName;
 	
-	Date date() @property
-	{	return Date(_year, _month, _day);
-	}
-	
-	void date(Date value) @property
-	{	
-		_year = value.year;
-		_month = value.month;
-		_day = value.day;
-	}
-	
-	void day(int day) @property
-	{	_day = cast(ubyte) day; }
-	
-	void day(Optional!int day) @property
-	{	_day = cast(ubyte) day.get(0); }
-	
-	void month(int month) @property
-	{	_month = cast(ubyte) month; }
-	
-	void month(Optional!int month) @property
-	{	_month = cast(ubyte) month.get(0); }
-	
-	void year(int year) @property
-	{	_year = cast(short) year; }
-	
-	void year(Optional!int year) @property
-	{	_year = cast(short) year.get(0); }
-	
-	bool isNull() @property
-	{	return _year == 0 && _month == 0 && _day == 0; }
-	
-	void nullify()
-	{	_year = 0;
-		_month = 0;
-		_day = 0;
+	ref OptionalDate date() @property
+	{	return _date;
 	}
 
 protected:
-	short _year;
-	ubyte _month;
-	ubyte _day;
+	OptionalDate _date;
+	string[] _monthNames = months.dup;
 }
 
 string printHTMLAttributes(string[string] values)
