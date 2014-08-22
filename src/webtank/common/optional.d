@@ -289,7 +289,6 @@ succeeds, $(D this) becomes non-null.
 				_value = rhs.value;
 				_isNull = false;
 			}
-			
 		}
 		else
 		{
@@ -377,9 +376,9 @@ public:
 			_year = cast(short) value.value;
 	}
 	
-// 	void year(int value) @property
-// 	{	_year = cast(short) value;
-// 	}
+	void year(int value) @property
+	{	_year = cast(short) value;
+	}
 	
 	Optional!ubyte month() @property
 	{	return _month;
@@ -397,9 +396,9 @@ public:
 			_month = cast(ubyte) value.value;
 	}
 	
-// 	void month(int value) @property
-// 	{	_month = cast(ubyte) value;
-// 	}
+	void month(int value) @property
+	{	_month = cast(ubyte) value;
+	}
 	
 	Optional!ubyte day() @property
 		const
@@ -418,9 +417,9 @@ public:
 			_day = cast(ubyte) value.value;
 	}
 	
-// 	void day(int value) @property
-// 	{	_day = cast(ubyte) value;
-// 	}
+	void day(int value) @property
+	{	_day = cast(ubyte) value;
+	}
 	
 	bool isDefined() @property
 	{
@@ -438,10 +437,10 @@ public:
 		return Date(_year, _month, _day);
 	}
 	
-// 	auto ref opAssign( RHS : Date )(auto ref RHS value)
-// 	{
-// 		this = OptionalDate(date);
-// 	}
+	auto ref opAssign( RHS : Date )(auto ref RHS value)
+	{
+		this = OptionalDate(value);
+	}
 	
 	auto ref opAssign( RHS : OptionalDate )(auto ref RHS value)
 	{	this._year = value._year;

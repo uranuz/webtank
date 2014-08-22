@@ -80,7 +80,7 @@ class ListBox(ValueSetT): HTMLControl
 		string output = `<select` ~ printHTMLAttributes(selectAttrs) ~ `>`;
 		
 		if( isNullable )
-			output ~= `<option` ~ ( isNull ? ` selected` : `` ) ~ `>`
+			output ~= `<option value=""` ~ ( isNull ? ` selected` : `` ) ~ `>`
 			~ HTMLEscapeText(nullName) ~ `</option>`;
 		
 		static if( isEnumFormat!(ValueSetType) )
@@ -118,12 +118,15 @@ class ListBox(ValueSetT): HTMLControl
 	{	return _selectedValues[0]; }
 	
 	///Свойство: текущее значение списка
-	void selectedValue(ValueType value) @property
+	void selectedValue(T)(T value) @property
+		if( is( T == ValueType ) )
 	{	_selectedValues = [ value ];
 	}
 	
+	import std.traits: isImplicitlyConvertible;
+	
 	///Свойство: текущее значение списка
-	void selectedValue(Optional!ValueType value) @property
+	void selectedValue(T)(Optional!T value) @property
 	{	if( value.isNull )
 			_selectedValues = null;
 		else
@@ -214,7 +217,7 @@ class PlainDatePicker: HTMLControl
 		string dayInp = `<input` ~ printHTMLAttributes(attrBlocks[`day`]) ~ `>`;
 		
 		string monthInp = `<select` ~ printHTMLAttributes(attrBlocks[`month`]) ~ `>`
-			~ `<option` ~ ( _date.month.isNull ? ` selected` : `` ) ~ `>`
+			~ `<option value=""` ~ ( _date.month.isNull ? ` selected` : `` ) ~ `>`
 			~ nullMonthName ~ `</option>`;
 			
 		assert( _monthNames.length == 12, `Month names array length must be 12!!!` );
