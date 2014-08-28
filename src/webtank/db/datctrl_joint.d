@@ -26,7 +26,6 @@ auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT forma
 		static if( isEnumFormat!(FieldFormatDecl) )
 		{	
 			alias enumFieldIndex = RecordFormatT.getEnumFormatIndex!(fieldName);
-			pragma(msg, "enumFieldIndex: ", enumFieldIndex );
 			dataFields ~= new CurrFieldT( queryResult, fieldIndex, fieldName, isNullable,  format.enumFormats[enumFieldIndex] );
 		}
 		else

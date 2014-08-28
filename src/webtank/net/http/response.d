@@ -10,7 +10,7 @@ class ServerResponse
 	///HTTP заголовки ответа сервера
 	HTTPHeaders headers;
 protected:
-	Appender!(string) _respBody;
+	string _respBody;
 	ResponseCookies _cookies; 
 public:
 	
@@ -45,19 +45,21 @@ public:
 // 	}
 	
 	string getString()
-	{	return _getHeaderStr() ~ _respBody.data();
+	{	return _getHeaderStr() ~ _respBody;
 	}
 	
 	//Пытаемся очистить ответ, возвращает true, если получилось
-// 	bool tryClear()
-// 	{	if( !_headersSent )
-// 		{	_respBody = null;
-// 			headers.clear();
-// 			_cookie.clear();
-// 			return true;
-// 		}
-// 		return false;
-// 	}
+	bool tryClear()
+	{	_respBody = null;
+		headers.clear();
+		_cookies.clear();
+		return true;
+	}
+	
+	bool tryClearBody()
+	{	_respBody = null;
+		return true;
+	}
 	
 	///Куки ответа которыми ответит сервер
 	ResponseCookies cookies() @property
@@ -69,7 +71,7 @@ protected:
 	
 	string _getHeaderStr()
 	{	import std.conv, std.stdio;
-		headers["content-length"] = _respBody.data().length.to!string;
+		headers["content-length"] = _respBody.length.to!string;
 		headers["content-type"] = "text/html; charset=\"utf-8\"";
 		
 		return 

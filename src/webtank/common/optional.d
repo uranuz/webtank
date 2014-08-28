@@ -168,15 +168,11 @@ This function is also called for the implicit conversion to $(D T).
 	{	return isNull ? defaultValue : _value ;
 	}
 	
-// 	string toString() 
-// 		inout /+pure @safe nothrow+/
-// 	{	return _value; }
-
-/**
-Implicitly converts to $(D T).
-$(D this) must not be in the null state.
- */
-	alias values this;
+	string toString() 
+		/+inout pure @safe nothrow+/
+	{	return _value; }
+	
+	alias value this;
 }
 
 struct Optional(T)
@@ -190,6 +186,23 @@ Constructor initializing $(D this) with $(D value).
  */
 	this( A )( auto ref inout(A) val )
 		inout /+pure @safe nothrow+/
+		if( isOptional!(A) )
+	{	
+		if( val.isNull )
+		{
+			_value = typeof(_value).init;
+			_isNull = true;
+		}
+		else
+		{
+			_value = val;
+			_isNull = false;
+		}
+	}
+	
+	this( A )( auto ref inout(A) val )
+		inout /+pure @safe nothrow+/
+		if( !isOptional!(A) && !is( A == typeof(null) ) )
 	{	_value = val;
 		_isNull = false;
 	}
@@ -252,7 +265,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 			_value == rhs._value;
 	}
 
-	bool opEquals( RHS : typeof(null) )( RHS value )
+	bool opEquals( RHS : typeof(null) )( RHS rhs )
 		const /+pure @safe nothrow+/
 	{ return isNull; }
 
@@ -260,10 +273,10 @@ Returns $(D true) if and only if $(D this) is in the null state.
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
  */
-	@property ref inout(T) value(int line = __LINE__) 
+	@property ref inout(T) value() 
 		inout /+pure @safe nothrow+/
 	{	enum message = "Attemt to get value of null " ~ typeof(this).stringof ~ "!!! ";
-		assert(!isNull, message ~ line.to!string);
+		assert(!isNull, message);
 		return _value;
 	}
     
@@ -277,24 +290,29 @@ Assigns $(D value) to the internally-held state. If the assignment
 succeeds, $(D this) becomes non-null.
  */
 	auto ref opAssign( RHS )( auto ref RHS rhs )
-		if( !is( RHS == typeof(null) ) )
+		if( isOptional!RHS )
 		/+pure @safe nothrow+/
 	{	
-		static if( isOptional!(RHS) )
+		if( rhs.isNull )
 		{
-			if( rhs.isNull )
-				_isNull = true;
-			else
-			{
-				_value = rhs.value;
-				_isNull = false;
-			}
+			_value = typeof(_value).init;
+			_isNull = true;
 		}
 		else
 		{
-			_value = rhs;
+			_value = rhs.value;
 			_isNull = false;
 		}
+		
+		return rhs;
+	}
+	
+	auto ref opAssign( RHS )( auto ref RHS rhs )
+		if( !isOptional!RHS && !is( RHS == typeof(null) ) )
+		/+pure @safe nothrow+/
+	{	
+		_value = rhs;
+		_isNull = false;
 		
 		return rhs;
 	}
@@ -307,15 +325,11 @@ succeeds, $(D this) becomes non-null.
 		return rhs;
 	}
 	
-// 	string toString() 
-// 		inout /+pure @safe nothrow+/
-// 	{	return ( isNull ? "null" : _value.to!string ); }
+	string toString() 
+		/+inout pure @safe nothrow+/
+	{	return ( isNull ? null : _value.to!string ); }
 
-/**
-Implicitly converts to $(D T).
-$(D this) must not be in the null state.
- */
-    alias value this;
+	alias value this;
 }
 
 
@@ -434,7 +448,7 @@ public:
 	Date get() 
 	{
 		enforceEx!OptionalException( isDefined, "Attempt to get not fully defined date value of OptionalDate!!!" );
-		return Date(_year, _month, _day);
+		return Date(_year.value, _month.value, _day.value);
 	}
 	
 	auto ref opAssign( RHS : Date )(auto ref RHS value)
@@ -454,5 +468,72 @@ public:
 		_month = null;
 		_day = null;
 		return this;
-	}	
+	}
+	
+	string toString()
+	{	return ( _year.isNull ? "null" : _year.toString() ) ~ `-`
+			~ ( _month.isNull ? "null" : _month.toString() ) ~ `-`
+			~ ( _day.isNull ? "null" : _day.toString() );
+	}
 }
+
+// import std.stdio, std.typecons;
+// 
+// 
+// interface ListControl
+// {
+// 	@property {
+// 		void selValue(int value);
+// 	
+// 		void selValue(ref Optional!int value);
+// 		
+//  		void selValue(ref Optional!byte value);
+// 	}
+// }
+// 
+// 
+// class CheckBoxList: ListControl
+// {
+// 	override @property {
+// 		void selValue(int value)
+// 		{
+// 			writeln("value: int");
+// 		}
+// 	
+// 		void selValue(ref Optional!int value)
+// 		{
+// 			writeln("value: Nullable!int");
+// 		}
+// 		
+// 		void selValue(ref Optional!byte value)
+// 		{
+// 			writeln("value: Nullable!byte");
+// 		}
+// 	}
+// 	
+// }
+// 
+// 
+// void main()
+// {
+// 	//Someone considered to make it of byte type 
+// 	//instead of int to save memory
+// 	Optional!byte myValue; //it is null/uninitialized
+// 	
+// 	//Creating object
+// 	auto checkBoxList = new CheckBoxList;
+// 	
+// 	//Let's assign value to our property
+// 	//You see that types don't match. But let's imagine that it is a complicated project
+// 	//and class implementation and *myValue* located in different modules so programmer don't remember right type
+// 	checkBoxList.selValue = myValue; //This just silently fails in runtime without some compile-time error
+// }
+
+// void main()
+// {
+// 	Optional!ubyte a;
+// 	Optional!int b = a;
+// 	b = a;
+// 	
+// 
+// }

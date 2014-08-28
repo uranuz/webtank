@@ -35,7 +35,7 @@ public:
 				Thread.sleep( dur!("msecs")( 500 ) ); 
 			} catch(std.socket.SocketOSException) {}
 		}
-		listener.listen(1);
+		listener.listen(5);
 		writeln("Сайт стартовал!");
 		
 		while(true) //Цикл приёма соединений через серверный сокет

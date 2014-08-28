@@ -21,7 +21,6 @@ $(LOCALE_RU_RU
 +/
 auto fldConv(ValueType)( string value )
 {	
-	pragma(msg, "ValueType: ", ValueType);
 	static if( is( ValueType == enum )  )
 	{
 		return value.conv!(ValueType);
@@ -46,7 +45,7 @@ auto fldConv(ValueType)( string value )
 	}
 	else
 	{	
-		return std.conv.to!(ValueType)( value );
+		return conv!(ValueType)( value );
 	}
 }
 
@@ -90,7 +89,6 @@ public:
 	}
 	else
 	{
-
 		this( IDBQueryResult queryResult, size_t fieldIndex, string fieldName, bool isNullable )
 		{	_queryResult = queryResult;
 			_fieldIndex = fieldIndex;
@@ -125,7 +123,10 @@ public:
 		{	import std.conv;
 			assert( index <= _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			return ( _isNullable ? _queryResult.isNull( _fieldIndex, index ) : false );
+			return 
+				( _isNullable ? 
+				_queryResult.isNull( _fieldIndex, index ) 
+				: false );
 		}
 		
 		///Метод сериализации формата поля в std.json
@@ -147,9 +148,7 @@ public:
 		
 		///Получение данных из поля по порядковому номеру index
 		ValueType get(size_t index)
-		{	
-			pragma(msg, "get ValueType: ", ValueType);
-			assert( index <=  _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
+		{	assert( index <=  _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index) 
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
 			return fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) );
 		}
@@ -171,6 +170,7 @@ public:
 			
 			static if( isEnumFormat!(FormatType) )
 			{
+				
 				if( isNull(index) )
 				{	
 					return null;

@@ -11,11 +11,8 @@ class HTMLControl
 	string id;  ///HTML-идентификатор поля ввода
 }
 
-///Простенький класс для генерации HTML-разметки для выпадающего списка элементов
-class ListBox(ValueSetT): HTMLControl
-{	
-	alias ValueSetType = ValueSetT;
-	
+template HTMLListControlValueSetSpec(ValueSetType)
+{
 	static if( isEnumFormat!(ValueSetType) )
 	{
 		alias ValueType = ValueSetType.ValueType;
@@ -23,7 +20,7 @@ class ListBox(ValueSetT): HTMLControl
 	}
 	else static if( isArray!(ValueSetType) )
 	{
-		import std.range;
+		import std.range : ElementType;
 		static if( isTuple!( ElementType!(ValueSetType) ) )
 		{
 			static assert( ElementType!(ValueSetType).length == 2, `Tuple must contain 2 elements!` );
@@ -39,15 +36,121 @@ class ListBox(ValueSetT): HTMLControl
 	}
 	else
 		static assert( 0, `Generating drop down list from value set "` ~ ValueSetType.stringof ~ `" is not supported!!!` );
+}
+
+///Простенький класс для генерации HTML-разметки для выпадающего списка элементов
+class HTMLListControl(ValueSetT): HTMLControl
+{	
+	alias ValueSetType = ValueSetT;
+	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
+	alias ValueType = ValueSetSpec.ValueType;
+	enum bool hasNames = ValueSetSpec.hasNames;
 	
 	this( ValueSetT set ) const
 	{
-		valueSet = set;
+		_valueSet = set;
 	}
 	
 	this( ValueSetT set )
 	{
-		valueSet = set;
+		_valueSet = set;
+	}
+	
+	void selectedValue(ValueType value) @property
+	{	_selectedValues = [value];
+	}
+	
+	void selectedValue(Optional!ValueType value) @property
+	{
+		if( value.isNull() )
+			_selectedValues = null;
+		else
+			_selectedValues = [value.value];
+	}
+	
+	private static string _genMethodDecls(string[] types)
+	{
+		string result;
+		
+		foreach( type; types )
+		{
+			result ~= 
+			`void selectedValue(Optional!` ~ type ~ ` value) @property
+			{
+				if( value.isNull() )
+					_selectedValues = null;
+				else
+					_selectedValues = [value.value];
+			}
+			`;
+		}
+		
+		return result;
+	}
+	
+	static if( is( ValueType == int ) )
+	{
+		private enum _intImplicitlyCastedTypes = [
+			"bool", "byte", "ubyte", "short", "ushort", "char", "wchar"
+		];
+		
+		mixin( _genMethodDecls(_intImplicitlyCastedTypes) );
+		
+		//Disable buggy conversion from uint to int
+		mixin( "@disable \r\n" ~_genMethodDecls(["uint"]) );
+	}
+	else static if( is( ValueType == uint) )
+	{
+		mixin( _genMethodDecls(["dchar"]) );
+	}
+
+	bool isNull() @property
+	{	return _selectedValues.length == 0;
+	}
+	
+	bool isNullable() @property
+	{	return _isNullable;
+	}
+	
+	string nullName() @property
+	{	return _nullName;
+	}
+	
+	void nullName(string value) @property
+	{	_nullName = value;
+	}
+	
+	void setNullable(bool value)
+	{	_isNullable = value;
+	}
+	
+	void nullify()
+	{	_selectedValues = null;
+	}
+
+protected:
+	bool _isNullable = true;
+	string _nullName;
+	ValueType[] _selectedValues;
+	ValueSetType _valueSet;
+}
+
+///Простенький класс для генерации HTML-разметки для выпадающего списка элементов
+class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
+{	
+	alias ValueSetType = ValueSetT;
+	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
+	alias ValueType = ValueSetSpec.ValueType;
+	enum bool hasNames = ValueSetSpec.hasNames;
+	
+	this( ValueSetT set ) const
+	{
+		super(set);
+	}
+	
+	this( ValueSetT set )
+	{
+		super(set);
 	}
 	
 	private string _renderItem( ValueType value, string name )
@@ -85,7 +188,7 @@ class ListBox(ValueSetT): HTMLControl
 		
 		static if( isEnumFormat!(ValueSetType) )
 		{
-			foreach( name, value; valueSet )
+			foreach( name, value; _valueSet )
 			{	output ~= _renderItem(value, name);
 			}
 		
@@ -94,13 +197,13 @@ class ListBox(ValueSetT): HTMLControl
 		{
 			static if( hasNames )
 			{
-				foreach( name, value; valueSet )
+				foreach( name, value; _valueSet )
 				{	output ~= _renderItem(value, name);
 				}
 			}
 			else
 			{
-				foreach( value; valueSet )
+				foreach( value; _valueSet )
 				{	output ~= _renderItem(value, value.conv!string);
 				}
 			}
@@ -111,68 +214,199 @@ class ListBox(ValueSetT): HTMLControl
 		return output;
 	}
 	
-	ValueSetT valueSet; ///Значения выпадающего списка (перечислимый тип)
-	string nullName;
-	
-	ValueType selectedValue() @property  ///Текущее значение списка
-	{	return _selectedValues[0]; }
-	
-	///Свойство: текущее значение списка
-	void selectedValue(T)(T value) @property
-		if( is( T == ValueType ) )
-	{	_selectedValues = [ value ];
-	}
-	
-	import std.traits: isImplicitlyConvertible;
-	
-	///Свойство: текущее значение списка
-	void selectedValue(T)(Optional!T value) @property
-	{	if( value.isNull )
-			_selectedValues = null;
-		else
-			_selectedValues = [ value ];
-	}
-	
 	void selectedValues(ValueType[] values) @property
-	{
-		_selectedValues = values;
+	{	_selectedValues = values;
 	}
 	
 	ValueType[] selectedValues() @property
-	{
-		return _selectedValues.dup;
-	}
-	
-	bool isNull() @property
-	{	return _selectedValues.length == 0; }
-	
-	bool isNullable() @property
-	{
-		return _isNullable;
+	{	return _selectedValues.dup;
 	}
 	
 	bool isMultiSelect() @property
-	{
-		return _selectedValues.length > 1;
+	{	return _selectedValues.length > 1 || _isMultiSelect;
 	}
 	
-	void setNullable(bool value)
-	{
-		_isNullable = value;
-	}
-	
-	void nullify()
-	{	_selectedValues = null;
+	void isMultiSelect(bool value) @property
+	{	_isMultiSelect = value;
 	}
 
 protected:
-	bool _isNullable = true;
+	bool _isMultiSelect = false;
 	ValueType[] _selectedValues;
 }
 
 auto listBox(T)(T valueSet)
 {
 	return new ListBox!(T)(valueSet);
+}
+
+class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
+{
+	alias ValueSetType = ValueSetT;
+	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
+	alias ValueType = ValueSetSpec.ValueType;
+	enum bool hasNames = ValueSetSpec.hasNames;
+	
+	this( ValueSetT set ) const
+	{
+		super(set);
+	}
+	
+	this( ValueSetT set )
+	{
+		super(set);
+	}
+	
+	private string _renderItem( ValueType value, string name, string name_attr )
+	{
+		import webtank.common.conv;
+		return `<label><input type="checkbox" name="` ~ HTMLEscapeValue(name_attr) 
+			~ `" value="` ~ value.conv!string ~ `"`
+			~ ( _selectedValues.canFind(value) ? ` checked` : `` ) ~ `>`
+			~ HTMLEscapeText(name) ~ `</label>` ~ "<br>\r\n";
+	}
+	
+	///Метод генерирует разметку по заданным параметрам
+	string print()
+	{	
+		import webtank.common.conv;
+		
+		string[string] spanAttrs;
+			
+		if( id.length > 0 )
+			spanAttrs["id"] = id;
+			
+		if( classes.length > 0 )
+			spanAttrs["class"] = HTMLEscapeValue( join(classes, ` `) );
+			
+		string output = `<span` ~ printHTMLAttributes(spanAttrs) ~ `>`;
+		
+		if( isNullable )
+			output ~= `<label><input type="checkbox" name="` ~ HTMLEscapeValue(this.name) 
+			~ `" value=""` ~ ( isNull ? ` checked` : `` ) ~ `>`
+			~ HTMLEscapeText(nullName) ~ `</label>` ~ "<br>\r\n";
+		
+		static if( isEnumFormat!(ValueSetType) )
+		{
+			foreach( name, value; _valueSet )
+			{	output ~= _renderItem(value, name, this.name);
+			}
+		
+		}
+		else static if( isArray!(ValueSetType) )
+		{
+			static if( hasNames )
+			{
+				foreach( name, value; _valueSet )
+				{	output ~= _renderItem(value, name, this.name);
+				}
+			}
+			else
+			{
+				foreach( value; _valueSet )
+				{	output ~= _renderItem(value, value.conv!string, this.name);
+				}
+			}
+		}
+		
+		output ~= `</span>`;
+		
+		return output;
+	}
+	
+	void selectedValues(ValueType[] values) @property
+	{	_selectedValues = values;
+	}
+	
+	ValueType[] selectedValues() @property
+	{	return _selectedValues.dup;
+	}
+}
+
+auto checkBoxList(T)(T valueSet)
+{
+	return new CheckBoxList!(T)(valueSet);
+}
+
+class RadioButtonList(ValueSetT)
+{
+	alias ValueSetType = ValueSetT;
+	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
+	alias ValueType = ValueSetSpec.ValueType;
+	enum bool hasNames = ValueSetSpec.hasNames;
+	
+	this( ValueSetT set ) const
+	{
+		super(set);
+	}
+	
+	this( ValueSetT set )
+	{
+		super(set);
+	}
+	
+	private string _renderItem( ValueType value, string name, string name_attr )
+	{
+		import webtank.common.conv;
+		return `<label><input type="radio" name="` ~ HTMLEscapeValue(name_attr) 
+			~ `" value="` ~ value.conv!string ~ `"`
+			~ ( _selectedValues.canFind(value) ? ` checked` : `` ) ~ `>`
+			~ HTMLEscapeText(name) ~ `</label>` ~ "<br>\r\n";
+	}
+	
+	///Метод генерирует разметку по заданным параметрам
+	string print()
+	{	
+		import webtank.common.conv;
+		
+		string[string] spanAttrs;
+			
+		if( id.length > 0 )
+			spanAttrs["id"] = id;
+			
+		if( classes.length > 0 )
+			spanAttrs["class"] = HTMLEscapeValue( join(classes, ` `) );
+			
+		string output = `<span` ~ printHTMLAttributes(spanAttrs) ~ `>`;
+		
+		if( isNullable )
+			output ~= `<label><input type="radio" name="` ~ HTMLEscapeValue(this.name) 
+			~ `" value=""` ~ ( isNull ? ` checked` : `` ) ~ `>`
+			~ HTMLEscapeText(nullName) ~ `</label>` ~ "<br>\r\n";
+		
+		static if( isEnumFormat!(ValueSetType) )
+		{
+			foreach( name, value; _valueSet )
+			{	output ~= _renderItem(value, name, this.name);
+			}
+		
+		}
+		else static if( isArray!(ValueSetType) )
+		{
+			static if( hasNames )
+			{
+				foreach( name, value; _valueSet )
+				{	output ~= _renderItem(value, name, this.name);
+				}
+			}
+			else
+			{
+				foreach( value; _valueSet )
+				{	output ~= _renderItem(value, value.conv!string, this.name);
+				}
+			}
+		}
+		
+		output ~= `</span>`;
+		
+		return output;
+	}
+
+}
+
+auto radioButtonList(T)(T valueSet)
+{
+	return new RadioButtonList!(T)(valueSet);
 }
 
 static immutable months = 

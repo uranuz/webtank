@@ -160,8 +160,7 @@ template callJSON_RPC_Method(alias Method)
 					Tuple!(ParamTypes) argTuple;
 // 					pragma(msg, typeof(argTuple));
 					foreach( i, type; ParamTypes )
-					{	pragma(msg, "Current type is ", type, " ", i);
-						static if( is( type : HTTPContext )  )
+					{	static if( is( type : HTTPContext )  )
 						{	argTuple[i] = cast(type) context; //Передаём контекст при необходимости
 							continue;
 						}
@@ -169,7 +168,6 @@ template callJSON_RPC_Method(alias Method)
 						{	if( ParamNames[i] in jValue.object )
 							{	
 								auto dValue = getDLangValue!(type)( jValue.object[ ParamNames[i] ] );
-								pragma(msg, "Typeof dValue is ", typeof(dValue));
 								argTuple[i] = dValue;
 							}
 							else
