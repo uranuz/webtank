@@ -56,6 +56,34 @@ class HTMLListControl(ValueSetT): HTMLControl
 		_valueSet = set;
 	}
 	
+	abstract string _renderItem( ValueType value, string name, string name_attr );
+	
+	string _renderItems()
+	{
+		string output;
+		static if( isEnumFormat!(ValueSetType) )
+		{
+			foreach( name, value; _valueSet )
+				output ~= _renderItem(value, name, this.name);
+		}
+		else static if( isArray!(ValueSetType) )
+		{
+			static if( hasNames )
+			{
+				foreach( name, value; _valueSet )
+					output ~= _renderItem(value, name, this.name);
+			}
+			else
+			{
+				foreach( value; _valueSet )
+					output ~= _renderItem(value, value.conv!string, this.name);
+			}
+		}
+		
+		return output;
+	}
+	
+	
 	void selectedValue(ValueType value) @property
 	{	_selectedValues = [value];
 	}
@@ -153,7 +181,7 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 		super(set);
 	}
 	
-	private string _renderItem( ValueType value, string name )
+	override string _renderItem( ValueType value, string name, string name_attr )
 	{
 		import webtank.common.conv;
 		return `<option value="` ~ value.conv!string ~ `"`
@@ -186,30 +214,7 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 			output ~= `<option value=""` ~ ( isNull ? ` selected` : `` ) ~ `>`
 			~ HTMLEscapeText(nullName) ~ `</option>`;
 		
-		static if( isEnumFormat!(ValueSetType) )
-		{
-			foreach( name, value; _valueSet )
-			{	output ~= _renderItem(value, name);
-			}
-		
-		}
-		else static if( isArray!(ValueSetType) )
-		{
-			static if( hasNames )
-			{
-				foreach( name, value; _valueSet )
-				{	output ~= _renderItem(value, name);
-				}
-			}
-			else
-			{
-				foreach( value; _valueSet )
-				{	output ~= _renderItem(value, value.conv!string);
-				}
-			}
-		}
-		
-		output ~= `</select>`;
+		output ~= _renderItems() ~ `</select>`;
 		
 		return output;
 	}
@@ -257,7 +262,7 @@ class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
 		super(set);
 	}
 	
-	private string _renderItem( ValueType value, string name, string name_attr )
+	override string _renderItem( ValueType value, string name, string name_attr )
 	{
 		import webtank.common.conv;
 		return `<label><input type="checkbox" name="` ~ HTMLEscapeValue(name_attr) 
@@ -286,30 +291,7 @@ class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
 			~ `" value=""` ~ ( isNull ? ` checked` : `` ) ~ `>`
 			~ HTMLEscapeText(nullName) ~ `</label>` ~ "<br>\r\n";
 		
-		static if( isEnumFormat!(ValueSetType) )
-		{
-			foreach( name, value; _valueSet )
-			{	output ~= _renderItem(value, name, this.name);
-			}
-		
-		}
-		else static if( isArray!(ValueSetType) )
-		{
-			static if( hasNames )
-			{
-				foreach( name, value; _valueSet )
-				{	output ~= _renderItem(value, name, this.name);
-				}
-			}
-			else
-			{
-				foreach( value; _valueSet )
-				{	output ~= _renderItem(value, value.conv!string, this.name);
-				}
-			}
-		}
-		
-		output ~= `</span>`;
+		output ~= _renderItems() ~ `</span>`;
 		
 		return output;
 	}
@@ -374,30 +356,7 @@ class RadioButtonList(ValueSetT)
 			~ `" value=""` ~ ( isNull ? ` checked` : `` ) ~ `>`
 			~ HTMLEscapeText(nullName) ~ `</label>` ~ "<br>\r\n";
 		
-		static if( isEnumFormat!(ValueSetType) )
-		{
-			foreach( name, value; _valueSet )
-			{	output ~= _renderItem(value, name, this.name);
-			}
-		
-		}
-		else static if( isArray!(ValueSetType) )
-		{
-			static if( hasNames )
-			{
-				foreach( name, value; _valueSet )
-				{	output ~= _renderItem(value, name, this.name);
-				}
-			}
-			else
-			{
-				foreach( value; _valueSet )
-				{	output ~= _renderItem(value, value.conv!string, this.name);
-				}
-			}
-		}
-		
-		output ~= `</span>`;
+		output ~= _renderItems() ~ `</span>`;
 		
 		return output;
 	}
