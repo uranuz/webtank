@@ -105,7 +105,7 @@ class HTMLListControl(ValueSetT): HTMLControl
 			result ~= 
 			`void selectedValue(Optional!` ~ type ~ ` value) @property
 			{
-				if( value.isNull() )
+				if( value.isNull )
 					_selectedValues = null;
 				else
 					_selectedValues = [value.value];

@@ -84,7 +84,9 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 		jResponseArray["result"] = method( jMessageBody["params"], context );
 		
 		jResponseArray["jsonrpc"] = "2.0";
-		jResponseArray["id"] = jMessageBody["id"];
+		
+		if( "id" in jMessageBody )
+			jResponseArray["id"] = jMessageBody["id"];
 		
 		JSONValue jResponse = jResponseArray;
 		

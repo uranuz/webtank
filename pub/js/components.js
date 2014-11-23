@@ -75,10 +75,123 @@ var webtank = {
 			(window.pageXOffset !== undefined) ? window.pageXOffset : 
 			(document.documentElement || document.body.parentNode || document.body).scrollLeft
 		);
-	}
+	},
 };
 
+var __hasProp = {}.hasOwnProperty;
+var __extends = function(child, parent) {
+	for (var key in parent) {
+		if (__hasProp.call(parent, key)) 
+			child[key] = parent[key];
+	}
+	
+	function ctor() { 
+		this.constructor = child; 
+	}
+	
+	ctor.prototype = parent.prototype;
+	
+	child.prototype = new ctor();
+	child.__super__ = parent.prototype; 
+	
+	return child; 
+};
 
+webtank.WClass = new (function(_super) {
+	function WClass(cssBlockName) {
+		this.cssBlockName = cssBlockName;
+		this._events = {};
+	}
+	
+	WClass.prototype.$el = function(selector) {
+		var 
+			self = this,
+			elems;
+		
+		if( selector.indexOf(".b-") !== -1 )
+			throw new Error("Block selectors are not allowed!!!");
+		
+		elems = this.elems.filter(selector);
+		elems.$on = function(types, selector, data, fn, /*INTERNAL*/ one) {
+			var args = [types];
+			
+			// Types can be a map of types/handlers
+			if ( typeof types === "object" ) {
+				// ( types-Object, selector, data )
+				if ( typeof selector !== "string" ) {
+					// ( types-Object, data )
+					data = data || selector;
+					selector = undefined;
+				}
+				for ( type in types ) {
+					this.$on( type, selector, data, types[ type ], one );
+				}
+				return this;
+			}
+
+			if ( data == null && fn == null ) {
+				// ( types, fn )
+				fn = selector;
+				data = selector = undefined;
+			} else if ( fn == null ) {
+				if ( typeof selector === "string" ) {
+					// ( types, selector, fn )
+					fn = data;
+					data = undefined;
+				} else {
+					// ( types, data, fn )
+					fn = data;
+					data = selector;
+					selector = undefined;
+				}
+			}
+			
+			if( selector != null )
+				args.push( self.__parseSelector(selector) );
+			if( data != null )
+				args.push( data );
+			
+			args.push(function(ev) {
+				fn.call(self, ev, $(this));
+			});
+
+			this.on.apply(this, args);
+		};
+		
+		return elems;
+	};
+
+	WClass.prototype.$on = function() {
+		return $(this).on.apply($(this), arguments);
+	};
+	
+	WClass.prototype.$off = function() {
+		return $(this).off.apply($(this), arguments);
+	};
+	
+	WClass.prototype.$trigger = function() {
+		return $(this).trigger.apply($(this), arguments);
+	};
+	
+	WClass.prototype.$triggerHandler = function() {
+		return $(this).triggerHandler.apply($(this), arguments);
+	};
+	
+	WClass.prototype.__parseSelector = function(selector)
+	{
+		var newSelector = selector;
+		if( selector.indexOf(".b-") !== -1 )
+			throw new Error("Block selectors are not allowed!!!");
+		
+		blockName = ( this.cssBlockName == null || this.cssBlockName.length == 0 ) ? this.elems.selector : this.cssBlockName;
+
+		newSelector = selector.split(".e-").join(blockName + ".e-");
+		
+		return newSelector;
+	}
+	
+	return WClass;
+})();
 
 //Определяем пространство имен для JSON-RPC
 webtank.json_rpc = 
@@ -160,53 +273,6 @@ webtank.json_rpc =
 			return params; 
 	}
 };
-
-webtank.wui = {
-	createModalWindow: function(headerText, topPos, leftPos)
-	{	var 
-			doc = window.document,
-			blackout_div = doc.createElement("div"),
-			window_div = doc.createElement("div"),
-			window_header_div = doc.createElement("div"),
-			content_div = doc.createElement("div"),
-			close_btn = doc.createElement("a"),
-			title = doc.createElement("span"),
-			body = doc.getElementsByTagName("body")[0];
-		
-		blackout_div.className = "modal_window_blackout";
-		window_div.className = "modal_window";
-		window_header_div.className = "modal_window_header";
-		content_div.className = "modal_window_content";
-		title.className = "modal_window_title";
-		close_btn.className = "modal_window_close_btn";
-		
-		close_btn.innerText = "Закрыть";
-		if( headerText )
-			title.innerText = headerText;
-
-		close_btn.onclick = function() {
-			window_div.parentNode.removeChild(window_div);
-			blackout_div.parentNode.removeChild(blackout_div);
-		}
-		
-		//Создаём структуру модального окна
-		window_header_div.appendChild(title);
-		window_header_div.appendChild(close_btn);
-		window_div.appendChild(window_header_div);
-		window_div.appendChild(content_div);
-		
-		body.appendChild(blackout_div);
-		body.appendChild(window_div);
-		
-		if( topPos )
-			window_div.style.top = topPos + "px";
-		if( leftPos )
-			window_div.style.left = leftPos + "px";
-		
-		return window_div;
-	}
-}
-
 
 webtank.datctrl = {
 	Record: function() {
