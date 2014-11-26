@@ -78,6 +78,31 @@ var webtank = {
 	},
 };
 
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function(oThis) {
+    if (typeof this !== 'function') {
+      // ближайший аналог внутренней функции
+      // IsCallable в ECMAScript 5
+      throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
+    }
+
+    var aArgs = Array.prototype.slice.call(arguments, 1),
+        fToBind = this,
+        fNOP    = function() {},
+        fBound  = function() {
+          return fToBind.apply(this instanceof fNOP && oThis
+                 ? this
+                 : oThis,
+                 aArgs.concat(Array.prototype.slice.call(arguments)));
+        };
+
+    fNOP.prototype = this.prototype;
+    fBound.prototype = new fNOP();
+
+    return fBound;
+  };
+}
+
 var __hasProp = {}.hasOwnProperty;
 var __extends = function(child, parent) {
 	for (var key in parent) {
@@ -100,18 +125,17 @@ var __extends = function(child, parent) {
 webtank.WClass = new (function(_super) {
 	function WClass(cssBlockName) {
 		this.cssBlockName = cssBlockName;
-		this._events = {};
 	}
 	
-	WClass.prototype.$el = function(selector) {
+	WClass.prototype.$el = function(elemSelector) {
 		var 
 			self = this,
 			elems;
 		
-		if( selector.indexOf(".b-") !== -1 )
+		if( elemSelector.indexOf(".b-") !== -1 )
 			throw new Error("Block selectors are not allowed!!!");
 		
-		elems = this.elems.filter(selector);
+		elems = this.elems.filter(elemSelector);
 		elems.$on = function(types, selector, data, fn, /*INTERNAL*/ one) {
 			var args = [types];
 			
@@ -275,175 +299,6 @@ webtank.json_rpc =
 };
 
 webtank.datctrl = {
-	Record: function() {
-		var dctl = webtank.datctrl;
-		//Создаём Record
-		return {
-			_fmt: null, //Формат записи (RecordFormat)
-			_d: [], //Данные (массив)
-			//Метод получения значения из записи по имени поля
-			get: function(index) {
-				if( webtank.isUnsigned(index) )
-				{	//Вдруг там массив - лучше выдать копию
-					return webtank.deepCopy( this._d[ index ] );
-				}
-				else
-				{	//Вдруг там массив - лучше выдать копию
-					return webtank.deepCopy( this._d[ this._fmt.getIndex(index) ] );
-				}
-			},
-			getLength: function() {
-				return this._d.length;
-			},
-			getFormat: function() {
-				return webtank.deepCopy( this._fmt );
-			},
-			getKey: function() {
-				return this._d[ this._fmt._keyFieldIndex ];
-			},
-			getKeyFieldIndex: function() {
-				return this._fmt._keyFieldIndex;
-			},
-			set: function() {
-				
-			}
-		};
-	},
-	//
-	RecordSet: function() {
-		var
-			dctl = webtank.datctrl;
-		//Создаём RecordSet
-		return {
-			_fmt: null, //Формат записи (RecordFormat)
-			_d: [], //Данные (двумерный массив)
-			_recIndex: 0,
-			_indexes: {},
-			//Возращает след. запись или null, если их больше нет
-			next: function() {
-				if( this._recIndex >= this._d.length )
-					return null;
-				else {
-					var rec = new dctl.Record();
-					rec._d = webtank.deepCopy( this._d[this._recIndex] );
-					rec._fmt = webtank.deepCopy( this._fmt );
-					this._recIndex++;
-					return rec;
-				}
-			},
-			//Возвращает true, если есть ещё записи, иначе - false
-			hasNext: function() {
-				return (this._recIndex < this._d.length);
-			},
-			//Сброс итератора на начало
-			rewind: function() {
-				this._recIndex = 0;
-			},
-			getFormat: function()
-			{	return webtank.deepCopy(this._fmt);
-			},
-			//Возвращает количество записей в наборе
-			getLength: function() {
-				return this._d.length;
-			},
-			//Возвращает запись по ключу
- 			getRecord: function(key) {
-				if( this._indexes[key] )
-					return this.getRecordAt( this._indexes[key] )
-				else
-					return null;
- 			},
-			//Возвращает запись по порядковому номеру index
-			getRecordAt: function(index) {
-				var rec = new dctl.Record();
-				rec._d = webtank.deepCopy( this._d[this.index] );
-				rec._fmt = webtank.deepCopy( this._fmt );
-			},
-			//Возвращает значение первичного ключа по порядковому номеру index
-			getKey: function(index) {
-				return this._d[ this._fmt._keyFieldIndex ][index];
-			},
-			//Возвращает true, если в наборе имеется запись с ключом key, иначе - false
-			hasKey: function(key) {
-				if( this._indexes[key] === undefined )
-					return false;
-				else
-					return true;
-			},
-			//Возвращает порядковый номер поля первичного ключа в наборе записей
-			getKeyFieldIndex: function() {
-				return this._fmt._keyFieldIndex;
-			},
-			//Добавление записи rec в набор записей
-			append: function(rec) {
-				if( this._fmt.equals(rec._fmt) )
-				{	this._indexes[ rec.getKey() ] = this._d.length;
-					this._d.push(rec._d);
-				}
-				else
-					console.error("Формат записи не совпадает с форматом набора данных!!!");
-			},
-			remove: function(key) {
-				var
-					index = this._indexes[key];
-				
-				if( index !== undefined )
-				{	this._d.splice(index, 1);
-					this._reindex(index);
-				}
-				else
-					console.error("Запись с ключом " + key + " не содержится в наборе данных!!!");
-			},
-			_reindex: function(startIndex) {
-				var
-					i = 0,
-					kfi = this.getKeyFieldIndex();
-				
-				this._indexes = {};
-				
-				for( ; i < this._d.length ; i++ )
-					this._indexes[ this._d[i][ kfi ] ] = i;
-			}
-		};
-	},
-	RecordFormat: function() {
-		var 
-			dctl = webtank.datctrl;
-		//Создаём формат записи
-		return {
-			_f: [],
-			_indexes: {},
-			_keyFieldIndex: 0,
-			//Функция расширяет текущий формат, добавляя к нему format
-			extend: function(format) {
-				for( var i=0; i<format._f.length; i++ )
-				{	this._f.push(format._f[i]);
-					this._indexes[format.n] = format._f.length;
-				}
-			},
-			//Получить индекс поля по имени
-			getIndex: function(name) {
-				return this._indexes[name];
-			},
-			//Получить имя поля по индексу
-			getName: function(index) {
-				return this._f[ index ].n;
-			},
-			//Получить тип поля по имени или индексу
-			getType: function(index) {
-				if( webtank.isUnsigned(index) )
-					return this._f[ index ].t;
-				else
-					return this._f[ this.getFieldIndex(index) ].t;
-			},
-			getKeyFieldIndex: function() {
-				return this._keyFieldIndex;
-			},
-			equals: function(format) {
-				return this._f.length === format._f.length;
-			}
-		}
-	},
 	//трансформирует JSON в Record или RecordSet
 	fromJSON: function(json) {
 		var 
@@ -464,15 +319,12 @@ webtank.datctrl = {
 				fmt._indexes[ jsonObj.f[i].n ] = i;
 				
 			if( jsonObj.t === "record" )
-			{	rec = new dctl.Record();
-				rec._fmt = fmt;
+			{	rec = new dctl.Record(fmt);
 				rec._d = jsonObj.d;
 				return rec;
 			}
 			else if( jsonObj.t === "recordset" )
-			{	rs = new dctl.RecordSet(),
-				
-				rs._fmt = fmt;
+			{	rs = new dctl.RecordSet(fmt),
 				rs._d = jsonObj.d;
 				for( i = 0; i < jsonObj.d.length; i++ )
 					rs._indexes[ jsonObj.d[i][fmt._keyFieldIndex] ] = i;
@@ -480,7 +332,206 @@ webtank.datctrl = {
 				return rs;
 			}
 		}
-			
 	}
-}
+};
+webtank.datctrl.Record = new (function() {
+	var dctl = webtank.datctrl;
+	
+	function Record(format) {
+		this._fmt = new dctl.RecordFormat(format); //Формат записи (RecordFormat)
+		this._d = []; //Данные (массив)
+	};
+	
+	//Метод получения значения из записи по имени поля
+	Record.prototype.get = function(index) {
+		if( webtank.isUnsigned(index) )
+		{	//Вдруг там массив - лучше выдать копию
+			return webtank.deepCopy( this._d[ index ] );
+		}
+		else
+		{	//Вдруг там массив - лучше выдать копию
+			return webtank.deepCopy( this._d[ this._fmt.getIndex(index) ] );
+		}
+	};
+	
+	Record.prototype.getLength = function() {
+		return this._d.length;
+	};
+	
+	Record.prototype.getFormat = function() {
+		return webtank.deepCopy( this._fmt );
+	};
+	
+	Record.prototype.getKey = function() {
+		return this._d[ this._fmt._keyFieldIndex ];
+	};
+	
+	Record.prototype.getKeyFieldIndex = function() {
+		return this._fmt._keyFieldIndex;
+	};
+	
+	Record.prototype.set = function() {
+		
+	};
+	
+	return Record;
+})();
+
+webtank.datctrl.RecordSet = new (function() {
+	var
+		dctl = webtank.datctrl;
+		
+	function RecordSet(format) {
+		this._fmt = new dctl.RecordFormat(format); //Формат записи (RecordFormat)
+		this._d = []; //Данные (двумерный массив)
+		this._recIndex = 0;
+		this._indexes = {};
+	}
+	
+	//Возращает след. запись или null, если их больше нет
+	RecordSet.prototype.next = function() {
+		if( this._recIndex >= this._d.length )
+			return null;
+		else {
+			var rec = new dctl.Record( webtank.deepCopy( this._fmt ) );
+			rec._d = webtank.deepCopy( this._d[this._recIndex] );
+			this._recIndex++;
+			return rec;
+		}
+	};
+	
+	//Возвращает true, если есть ещё записи, иначе - false
+	RecordSet.prototype.hasNext = function() {
+		return (this._recIndex < this._d.length);
+	};
+
+	//Сброс итератора на начало
+	RecordSet.prototype.rewind = function() {
+		this._recIndex = 0;
+	};
+	RecordSet.prototype.getFormat = function()
+	{	return webtank.deepCopy(this._fmt);
+	};
+	
+	//Возвращает количество записей в наборе
+	RecordSet.prototype.getLength = function() {
+		return this._d.length;
+	};
+	
+	//Возвращает запись по ключу
+	RecordSet.prototype.getRecord = function(key) {
+		if( this._indexes[key] == null )
+			return null;
+		else
+			return this.getRecordAt( this._indexes[key] );
+	};
+	
+	//Возвращает запись по порядковому номеру index
+	RecordSet.prototype.getRecordAt = function(index) {
+		var rec = new dctl.Record( webtank.deepCopy( this._fmt ) );
+		rec._d = webtank.deepCopy( this._d[this.index] );
+		return rec;
+	};
+	
+	//Возвращает значение первичного ключа по порядковому номеру index
+	RecordSet.prototype.getKey = function(index) {
+		return this._d[ this._fmt._keyFieldIndex ][index];
+	};
+	
+	//Возвращает true, если в наборе имеется запись с ключом key, иначе - false
+	RecordSet.prototype.hasKey = function(key) {
+		if( this._indexes[key] == null )
+			return false;
+		else
+			return true;
+	};
+	
+	//Возвращает порядковый номер поля первичного ключа в наборе записей
+	RecordSet.prototype.getKeyFieldIndex = function() {
+		return this._fmt._keyFieldIndex;
+	};
+	
+	//Добавление записи rec в набор записей
+	RecordSet.prototype.append = function(rec) {
+		if( this._fmt.equals(rec._fmt) )
+		{	this._indexes[ rec.getKey() ] = this._d.length;
+			this._d.push(rec._d);
+		}
+		else
+			console.error("Формат записи не совпадает с форматом набора данных!!!");
+	};
+	
+	RecordSet.prototype.remove = function(key) {
+		var
+			index = this._indexes[key];
+		
+		if( index !== undefined )
+		{	this._d.splice(index, 1);
+			this._reindex(index);
+		}
+		else
+			console.error("Запись с ключом " + key + " не содержится в наборе данных!!!");
+	};
+	
+	RecordSet.prototype._reindex = function(startIndex) {
+		var
+			i = 0,
+			kfi = this.getKeyFieldIndex();
+		
+		this._indexes = {};
+		
+		for( ; i < this._d.length ; i++ )
+			this._indexes[ this._d[i][ kfi ] ] = i;
+	};
+	
+	return RecordSet;
+})();
+
+webtank.datctrl.RecordFormat = new (function() {
+	var 
+		dctl = webtank.datctrl;
+	
+	function RecordFormat(format)
+	{
+		this._f = format;
+		this._indexes = {};
+		this._keyFieldIndex = 0;
+	}
+
+	//Функция расширяет текущий формат, добавляя к нему format
+	RecordFormat.prototype.extend = function(format) {
+		for( var i=0; i<format._f.length; i++ )
+		{	this._f.push(format._f[i]);
+			this._indexes[format.n] = format._f.length;
+		}
+	};
+	
+	//Получить индекс поля по имени
+	RecordFormat.prototype.getIndex = function(name) {
+		return this._indexes[name];
+	};
+	
+	//Получить имя поля по индексу
+	RecordFormat.prototype.getName = function(index) {
+		return this._f[ index ].n;
+	};
+	
+	//Получить тип поля по имени или индексу
+	RecordFormat.prototype.getType = function(index) {
+		if( webtank.isUnsigned(index) )
+			return this._f[ index ].t;
+		else
+			return this._f[ this.getFieldIndex(index) ].t;
+	};
+	
+	RecordFormat.prototype.getKeyFieldIndex = function() {
+		return this._keyFieldIndex;
+	};
+	
+	RecordFormat.prototype.equals = function(format) {
+		return this._f.length === format._f.length;
+	};
+	
+	return RecordFormat;
+})();
 
