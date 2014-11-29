@@ -303,33 +303,28 @@ webtank.datctrl = {
 	fromJSON: function(json) {
 		var 
 			dctl = webtank.datctrl,
-			jsonObj = json;
+			jsonObj = json,
+			kfi, fmt;
 		
 		if( jsonObj.t === "record" || jsonObj.t === "recordset" )
-		{	var 
-				fmt = new dctl.RecordFormat(),
-				rs,
-				rec,
-				i;
-			
-			fmt._f = jsonObj.f;
-			fmt._keyFieldIndex = jsonObj.kfi || 0;
-			
-			for( i = 0; i < jsonObj.f.length; i++ )
-				fmt._indexes[ jsonObj.f[i].n ] = i;
+		{	
+			kfi = jsonObj.kfi || 0;
+			fmt = new dctl.RecordFormat({
+				fields: jsonObj.f, 
+				keyFieldIndex: kfi
+			});
 				
 			if( jsonObj.t === "record" )
-			{	rec = new dctl.Record(fmt);
-				rec._d = jsonObj.d;
-				return rec;
+			{	return new dctl.Record({
+					format: fmt,
+					data: jsonObj.d
+				});
 			}
 			else if( jsonObj.t === "recordset" )
-			{	rs = new dctl.RecordSet(fmt),
-				rs._d = jsonObj.d;
-				for( i = 0; i < jsonObj.d.length; i++ )
-					rs._indexes[ jsonObj.d[i][fmt._keyFieldIndex] ] = i;
-					
-				return rs;
+			{	return new dctl.RecordSet({
+					format: fmt,
+					data: jsonObj.d
+				});
 			}
 		}
 	}
@@ -337,29 +332,42 @@ webtank.datctrl = {
 webtank.datctrl.Record = new (function() {
 	var dctl = webtank.datctrl;
 	
-	function Record(format) {
-		this._fmt = new dctl.RecordFormat(format); //Формат записи (RecordFormat)
-		this._d = []; //Данные (массив)
+	function Record(opts) {
+		opts = opts || {}
+		if( opts.format instanceof dctl.RecordFormat )
+			this._fmt = opts.format; //Формат записи (RecordFormat)
+		else
+			this._fmt = new dctl.RecordFormat({format: opts.format});
+		
+		if( opts.data instanceof Array )
+			this._d = opts.data;
+		else
+			this._d = []; //Данные (массив)
 	};
 	
 	//Метод получения значения из записи по имени поля
-	Record.prototype.get = function(index) {
+	Record.prototype.get = function(index, defaultValue) {
+		var val;
 		if( webtank.isUnsigned(index) )
 		{	//Вдруг там массив - лучше выдать копию
-			return webtank.deepCopy( this._d[ index ] );
+			val = webtank.deepCopy( this._d[ index ] );
 		}
 		else
 		{	//Вдруг там массив - лучше выдать копию
-			return webtank.deepCopy( this._d[ this._fmt.getIndex(index) ] );
+			val = webtank.deepCopy( this._d[ this._fmt.getIndex(index) ] );
 		}
+		if( val == null )
+			return defaultValue;
+		else
+			return val;
 	};
 	
 	Record.prototype.getLength = function() {
 		return this._d.length;
 	};
 	
-	Record.prototype.getFormat = function() {
-		return webtank.deepCopy( this._fmt );
+	Record.prototype.copyFormat = function() {
+		return this._fmt.copy();
 	};
 	
 	Record.prototype.getKey = function() {
@@ -371,7 +379,19 @@ webtank.datctrl.Record = new (function() {
 	};
 	
 	Record.prototype.set = function() {
-		
+		//Не используй меня. Я пустой!..
+		//...или реализуй меня и используй
+	};
+	
+	Record.prototype.getIsEmpty = function() {
+		return !this._d.length && this._fmt.getIsEmpty();
+	};
+	
+	Record.prototype.copy = function() {
+		return new Record({
+			format: this._fmt.copy(),
+			data: webtank.deepCopy( this._d )
+		});
 	};
 	
 	return Record;
@@ -381,23 +401,31 @@ webtank.datctrl.RecordSet = new (function() {
 	var
 		dctl = webtank.datctrl;
 		
-	function RecordSet(format) {
-		this._fmt = new dctl.RecordFormat(format); //Формат записи (RecordFormat)
-		this._d = []; //Данные (двумерный массив)
+	function RecordSet(opts) {
+		opts = opts || {}
+		if( opts.format != null && opts.fields != null ) {
+			console.error('Format or fields option should be provided but not both!!! Still format is priorite option..');
+		}
+		
+		if( opts.format instanceof dctl.RecordFormat ) {
+			this._fmt = opts.format; //Формат записи (RecordFormat)
+		} else if( opts.fields instanceof Array )
+			this._fmt = new dctl.RecordFormat({fields: opts.fields});
+		
+		if( opts.data instanceof Array )
+			this._d = opts.data;
+		else
+			this._d = []; //Данные (массив)
+		
 		this._recIndex = 0;
-		this._indexes = {};
+		this._reindex(); //Строим индекс
 	}
 	
 	//Возращает след. запись или null, если их больше нет
 	RecordSet.prototype.next = function() {
-		if( this._recIndex >= this._d.length )
-			return null;
-		else {
-			var rec = new dctl.Record( webtank.deepCopy( this._fmt ) );
-			rec._d = webtank.deepCopy( this._d[this._recIndex] );
-			this._recIndex++;
-			return rec;
-		}
+		var rec = this.getRecordAt(this._recIndex);
+		this._recIndex++;
+		return rec;
 	};
 	
 	//Возвращает true, если есть ещё записи, иначе - false
@@ -409,8 +437,8 @@ webtank.datctrl.RecordSet = new (function() {
 	RecordSet.prototype.rewind = function() {
 		this._recIndex = 0;
 	};
-	RecordSet.prototype.getFormat = function()
-	{	return webtank.deepCopy(this._fmt);
+	RecordSet.prototype.copyFormat = function()
+	{	return this._fmt.copy();
 	};
 	
 	//Возвращает количество записей в наборе
@@ -428,14 +456,18 @@ webtank.datctrl.RecordSet = new (function() {
 	
 	//Возвращает запись по порядковому номеру index
 	RecordSet.prototype.getRecordAt = function(index) {
-		var rec = new dctl.Record( webtank.deepCopy( this._fmt ) );
-		rec._d = webtank.deepCopy( this._d[this.index] );
-		return rec;
+		if( index < this._d.length )
+			return new dctl.Record({
+				format: this._fmt,
+				data: this._d[index]
+			});
+		else
+			return null;
 	};
 	
 	//Возвращает значение первичного ключа по порядковому номеру index
 	RecordSet.prototype.getKey = function(index) {
-		return this._d[ this._fmt._keyFieldIndex ][index];
+		return this._d[ this._fmt.getKeyFieldIndex() ][index];
 	};
 	
 	//Возвращает true, если в наборе имеется запись с ключом key, иначе - false
@@ -448,13 +480,16 @@ webtank.datctrl.RecordSet = new (function() {
 	
 	//Возвращает порядковый номер поля первичного ключа в наборе записей
 	RecordSet.prototype.getKeyFieldIndex = function() {
-		return this._fmt._keyFieldIndex;
+		return this._fmt.getKeyFieldIndex();
 	};
 	
 	//Добавление записи rec в набор записей
 	RecordSet.prototype.append = function(rec) {
-		if( this._fmt.equals(rec._fmt) )
-		{	this._indexes[ rec.getKey() ] = this._d.length;
+		if( this.getIsEmpty || this._fmt.equals(rec._fmt) )
+		{	
+			if( this._fmt.getIsEmpty() )
+				this._fmt = rec._fmt.copy();
+			this._indexes[ rec.getKey() ] = this._d.length;
 			this._d.push(rec._d);
 		}
 		else
@@ -484,6 +519,18 @@ webtank.datctrl.RecordSet = new (function() {
 			this._indexes[ this._d[i][ kfi ] ] = i;
 	};
 	
+	RecordSet.prototype.getIsEmpty = function() {
+		return !this._d.length && this._fmt.getIsEmpty();
+	};
+	
+	RecordSet.prototype.copy = function() {
+		return new dctl.RecordSet({
+			format: this._fmt.copy(),
+			data: webtank.deepCopy( this._d ),
+			keyFieldIndex: this._keyFieldIndex
+		});
+	};
+	
 	return RecordSet;
 })();
 
@@ -491,16 +538,37 @@ webtank.datctrl.RecordFormat = new (function() {
 	var 
 		dctl = webtank.datctrl;
 	
-	function RecordFormat(format)
+	function RecordFormat(opts)
 	{
-		this._f = format;
-		this._indexes = {};
-		this._keyFieldIndex = 0;
+		opts = opts || {}
+		if( opts.fields instanceof Array ) 
+		{
+			this._f = opts.fields;
+			this._keyFieldIndex = opts.keyFieldIndex? opts.keyFieldIndex : 0;
+		}
+		else
+		{
+			this._f = [];
+			this._keyFieldIndex = 0;
+		}
+		
+		this._reindex();
 	}
-
+	
+	RecordFormat.prototype._reindex = function() {
+		var key, i;
+		this._indexes = {}
+		for( i = 0; i < this._f.length; i++ )
+		{
+			key = this._f[i].n;
+			if( key != null )
+				this._indexes[key] = i;
+		}
+	};
+	
 	//Функция расширяет текущий формат, добавляя к нему format
 	RecordFormat.prototype.extend = function(format) {
-		for( var i=0; i<format._f.length; i++ )
+		for( var i = 0; i < format._f.length; i++ )
 		{	this._f.push(format._f[i]);
 			this._indexes[format.n] = format._f.length;
 		}
@@ -530,6 +598,17 @@ webtank.datctrl.RecordFormat = new (function() {
 	
 	RecordFormat.prototype.equals = function(format) {
 		return this._f.length === format._f.length;
+	};
+	
+	RecordFormat.prototype.getIsEmpty = function() {
+		return !this._f.length;
+	};
+	
+	RecordFormat.prototype.copy = function() {
+		return new dctl.RecordFormat({
+			fields: webtank.deepCopy( this._f ),
+			keyFieldIndex: this._keyFieldIndex
+		});
 	};
 	
 	return RecordFormat;
