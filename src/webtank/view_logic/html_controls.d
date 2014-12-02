@@ -90,7 +90,7 @@ class HTMLListControl(ValueSetT): HTMLControl
 	
 	void selectedValue(Optional!ValueType value) @property
 	{
-		if( value.isNull() )
+		if( value.isNull )
 			_selectedValues = null;
 		else
 			_selectedValues = [value.value];
@@ -213,7 +213,7 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 		if( isNullable )
 			output ~= `<option value=""` ~ ( isNull ? ` selected` : `` ) ~ `>`
 			~ HTMLEscapeText(nullName) ~ `</option>`;
-		
+
 		output ~= _renderItems() ~ `</select>`;
 		
 		return output;
@@ -237,7 +237,6 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 
 protected:
 	bool _isMultiSelect = false;
-	ValueType[] _selectedValues;
 }
 
 auto listBox(T)(T valueSet)
