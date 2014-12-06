@@ -4,11 +4,30 @@ import std.conv, std.datetime, std.array, std.stdio, std.typecons;
 
 import webtank.net.utils, webtank.datctrl.record_format, webtank.datctrl.enum_format, webtank.common.optional;
 
+static immutable blockPrefix = `b-wui-`;
+static immutable elementPrefix = `e-wui-`;
+
 class HTMLControl
 {
 	string name;  ///Имя поля ввода
 	string[] classes; ///Набор HTML-классов присвоенных списку
 	string id;  ///HTML-идентификатор поля ввода
+	protected string _componentName; ///Название элемента управления в CSS
+	
+	this(string cssName) pure
+	{
+		_componentName = cssName;
+	}
+	
+	string componentName() @property
+	{
+		return _componentName;
+	}
+	
+	string blockName() @property
+	{
+		return blockPrefix ~ _componentName;
+	}
 }
 
 template HTMLListControlValueSetSpec(ValueSetType)
@@ -46,13 +65,13 @@ class HTMLListControl(ValueSetT): HTMLControl
 	alias ValueType = ValueSetSpec.ValueType;
 	enum bool hasNames = ValueSetSpec.hasNames;
 	
-	this( ValueSetT set ) const
+	this( ValueSetT set, string cssName ) pure
 	{
-		_valueSet = set;
-	}
-	
-	this( ValueSetT set )
-	{
+		if( cssName.length > 0 )
+			super(cssName);
+		else
+			super("list_control");
+			
 		_valueSet = set;
 	}
 	
@@ -155,6 +174,10 @@ class HTMLListControl(ValueSetT): HTMLControl
 	void nullify()
 	{	_selectedValues = null;
 	}
+	
+	string print() {
+		return `<div class='` ~ this.blockName ~ `'></div>`;
+	}
 
 protected:
 	bool _isNullable = true;
@@ -171,14 +194,9 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 	alias ValueType = ValueSetSpec.ValueType;
 	enum bool hasNames = ValueSetSpec.hasNames;
 	
-	this( ValueSetT set ) const
+	this( ValueSetT set ) pure
 	{
-		super(set);
-	}
-	
-	this( ValueSetT set )
-	{
-		super(set);
+		super(set, "list_box");
 	}
 	
 	override string _renderItem( ValueType value, string name, string name_attr )
@@ -190,7 +208,7 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 	}
 	
 	///Метод генерирует разметку по заданным параметрам
-	string print()
+	override string print()
 	{	
 		import webtank.common.conv;
 		
@@ -201,9 +219,11 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 			
 		if( id.length > 0 )
 			selectAttrs["id"] = id;
-			
-		if( classes.length > 0 )
-			selectAttrs["class"] = HTMLEscapeValue( join(classes, ` `) );
+		
+		string[] clsList = classes ~ [this.blockName];
+		
+		if( clsList.length > 0 )
+			selectAttrs["class"] = HTMLEscapeValue( join(clsList, ` `) );
 			
 		if( isMultiSelect )
 			selectAttrs["multiple"] = null;
@@ -251,15 +271,11 @@ class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
 	alias ValueType = ValueSetSpec.ValueType;
 	enum bool hasNames = ValueSetSpec.hasNames;
 	
-	this( ValueSetT set ) const
+	this( ValueSetT set ) pure
 	{
-		super(set);
+		super(set, "check_box_list");
 	}
-	
-	this( ValueSetT set )
-	{
-		super(set);
-	}
+
 	
 	override string _renderItem( ValueType value, string name, string name_attr )
 	{
@@ -271,7 +287,7 @@ class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
 	}
 	
 	///Метод генерирует разметку по заданным параметрам
-	string print()
+	override string print()
 	{	
 		import webtank.common.conv;
 		
@@ -280,8 +296,10 @@ class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
 		if( id.length > 0 )
 			spanAttrs["id"] = id;
 			
-		if( classes.length > 0 )
-			spanAttrs["class"] = HTMLEscapeValue( join(classes, ` `) );
+		string[] clsList = classes ~ [this.blockName];
+			
+		if( clsList.length > 0 )
+			spanAttrs["class"] = HTMLEscapeValue( join(clsList, ` `) );
 			
 		string output = `<span` ~ printHTMLAttributes(spanAttrs) ~ `>`;
 		
@@ -316,17 +334,12 @@ class RadioButtonList(ValueSetT)
 	alias ValueType = ValueSetSpec.ValueType;
 	enum bool hasNames = ValueSetSpec.hasNames;
 	
-	this( ValueSetT set ) const
+	this( ValueSetT set ) pure
 	{
-		super(set);
+		super(set, "radio_button_list");
 	}
 	
-	this( ValueSetT set )
-	{
-		super(set);
-	}
-	
-	private string _renderItem( ValueType value, string name, string name_attr )
+	private string _renderItem(V)( ValueType value, string name, string name_attr )
 	{
 		import webtank.common.conv;
 		return `<label><input type="radio" name="` ~ HTMLEscapeValue(name_attr) 
@@ -336,7 +349,7 @@ class RadioButtonList(ValueSetT)
 	}
 	
 	///Метод генерирует разметку по заданным параметрам
-	string print()
+	override string print()
 	{	
 		import webtank.common.conv;
 		
@@ -345,8 +358,10 @@ class RadioButtonList(ValueSetT)
 		if( id.length > 0 )
 			spanAttrs["id"] = id;
 			
-		if( classes.length > 0 )
-			spanAttrs["class"] = HTMLEscapeValue( join(classes, ` `) );
+		string[] clsList = classes ~ [this.blockName];
+			
+		if( clsList.length > 0 )
+			spanAttrs["class"] = HTMLEscapeValue( join(clsList, ` `) );
 			
 		string output = `<span` ~ printHTMLAttributes(spanAttrs) ~ `>`;
 		
@@ -379,6 +394,10 @@ static immutable months =
 ///Состоит из двух текстовых полей (день, год) и выпадающего списка месяцев
 class PlainDatePicker: HTMLControl
 {	
+	this() pure
+	{
+		super("plain_date_picker");
+	}
 	
 	string print()
 	{	
@@ -425,9 +444,11 @@ class PlainDatePicker: HTMLControl
 		
 		if( id.length > 0 )
 			blockAttrs["id"] = id;
+		
+		string[] clsList = classes ~ [this.blockName];
 			
-		if( classes.length > 0 )
-			blockAttrs["class"] = join(classes, ` `);
+		if( clsList.length > 0 )
+			blockAttrs["class"] = join(clsList, ` `);
 		
 		return `<span` ~ printHTMLAttributes(blockAttrs) ~ `>`
 			~ dayInp ~ ` ` ~ monthInp ~ ` ` ~ yearInp ~ `</span>`;
