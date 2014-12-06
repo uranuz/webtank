@@ -333,17 +333,22 @@ webtank.datctrl.Record = new (function() {
 	var dctl = webtank.datctrl;
 	
 	function Record(opts) {
-		opts = opts || {}
-		if( opts.format instanceof dctl.RecordFormat )
+		opts = opts || {};
+		if( opts.format != null && opts.fields != null ) {
+			console.error('Format or fields option should be provided but not both!!! Still format is priorite option..');
+		}
+		
+		if( opts.format instanceof dctl.RecordFormat ) {
 			this._fmt = opts.format; //Формат записи (RecordFormat)
-		else
-			this._fmt = new dctl.RecordFormat({format: opts.format});
+		} else {
+			this._fmt = new dctl.RecordFormat({fields: opts.fields});
+		}
 		
 		if( opts.data instanceof Array )
 			this._d = opts.data;
 		else
 			this._d = []; //Данные (массив)
-	};
+	}
 	
 	//Метод получения значения из записи по имени поля
 	Record.prototype.get = function(index, defaultValue) {
@@ -409,8 +414,9 @@ webtank.datctrl.RecordSet = new (function() {
 		
 		if( opts.format instanceof dctl.RecordFormat ) {
 			this._fmt = opts.format; //Формат записи (RecordFormat)
-		} else if( opts.fields instanceof Array )
+		} else {
 			this._fmt = new dctl.RecordFormat({fields: opts.fields});
+		}
 		
 		if( opts.data instanceof Array )
 			this._d = opts.data;
