@@ -4,8 +4,10 @@ import std.conv, std.datetime, std.array, std.stdio, std.typecons;
 
 import webtank.net.utils, webtank.datctrl.record_format, webtank.datctrl.enum_format, webtank.common.optional;
 
+//Block, Element, Modifier (BEM) concept prefixes for element classes
 static immutable blockPrefix = `b-wui-`;
 static immutable elementPrefix = `e-wui-`;
+static immutable modifierPrefix = `m-wui-`;
 
 class HTMLControl
 {
@@ -75,30 +77,31 @@ class HTMLListControl(ValueSetT): HTMLControl
 		_valueSet = set;
 	}
 	
-	abstract string _renderItem( ValueType value, string name, string name_attr );
+	abstract string _renderItem( ValueType value, string name_attr );
+	abstract string _renderNullItem();
 	
 	string _renderItems()
 	{
 		string output;
-		static if( isEnumFormat!(ValueSetType) )
-		{
-			foreach( name, value; _valueSet )
-				output ~= _renderItem(value, name, this.name);
-		}
-		else static if( isArray!(ValueSetType) )
-		{
-			static if( hasNames )
-			{
-				foreach( name, value; _valueSet )
-					output ~= _renderItem(value, name, this.name);
-			}
-			else
-			{
-				foreach( value; _valueSet )
-					output ~= _renderItem(value, value.conv!string, this.name);
-			}
-		}
 		
+		if( isNullable )
+			output ~= _renderNullItem();
+		
+		foreach( name, value; _valueSet )
+		{
+			static if( isEnumFormat!(ValueSetType) )
+			{
+				output ~= _renderItem(value, name);
+			}
+			else static if( isArray!(ValueSetType) )
+			{
+				static if( hasNames )
+					output ~= _renderItem(value, name);
+				else
+					output ~= _renderItem(value, value.conv!string);
+			}
+		}
+
 		return output;
 	}
 	
@@ -196,22 +199,50 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 	
 	this( ValueSetT set ) pure
 	{
-		super(set, "list_box");
+		super(set, "ListBox");
 	}
 	
-	override string _renderItem( ValueType value, string name, string name_attr )
+	override string _renderItem( ValueType value, string name_attr )
+	{	return _customRenderItem(value, name_attr);
+	}
+	
+	override string _renderNullItem()
+	{	return _customRenderItem( null, HTMLEscapeText(nullName) );
+	}
+	
+	string _customRenderItem(V)(V value, string name_attr) 
 	{
 		import webtank.common.conv;
-		return `<option value="` ~ value.conv!string ~ `"`
-				~ ( _selectedValues.canFind(value) ? ` selected` : `` ) ~ `>`
-				~ HTMLEscapeText(name) ~ `</option>`;
+		string[string] optAttrs = [ `name`: this.name ];
+		string[] optClasses = [ 
+			blockName,
+			elementPrefix ~ `ListItem`
+		];
+
+		static if( is( V == typeof(null) ) ) 
+		{
+			optAttrs[`value`] = ``; //Лучше явно задать
+			optClasses ~= [ modifierPrefix ~ `isNullValue` ];
+			
+			if( this.isNull )
+				optAttrs[`selected`] = ``;
+		}
+		else
+		{
+			optAttrs[`value`] = value.conv!string;
+			
+			if( _selectedValues.canFind(value) )
+				optAttrs[`selected`] = ``;
+		}
+		optAttrs[`class`] = optClasses.join(` `);
+		
+		return `<option` ~ printHTMLAttributes(optAttrs) ~ `>` ~ HTMLEscapeText(name_attr) ~ `</option>`;
 	}
 	
 	///Метод генерирует разметку по заданным параметрам
 	override string print()
 	{	
 		import webtank.common.conv;
-		
 		string[string] selectAttrs;
 		
 		if( name.length > 0 )
@@ -228,15 +259,7 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 		if( isMultiSelect )
 			selectAttrs["multiple"] = null;
 			
-		string output = `<select` ~ printHTMLAttributes(selectAttrs) ~ `>`;
-		
-		if( isNullable )
-			output ~= `<option value=""` ~ ( isNull ? ` selected` : `` ) ~ `>`
-			~ HTMLEscapeText(nullName) ~ `</option>`;
-
-		output ~= _renderItems() ~ `</select>`;
-		
-		return output;
+		return `<select` ~ printHTMLAttributes(selectAttrs) ~ `>` ~ _renderItems() ~ `</select>`;
 	}
 	
 	void selectedValues(ValueType[] values) @property
@@ -264,7 +287,7 @@ auto listBox(T)(T valueSet)
 	return new ListBox!(T)(valueSet);
 }
 
-class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
+class CheckableInputList(ValueSetT, bool isRadio): HTMLListControl!(ValueSetT)
 {
 	alias ValueSetType = ValueSetT;
 	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
@@ -273,19 +296,83 @@ class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
 	
 	this( ValueSetT set ) pure
 	{
-		super(set, "check_box_list");
+		static if( isRadio )
+			super(set, "RadioButtonList");
+		else
+			super(set, "CheckBoxList");
+	}
+	
+	override string _renderItem( ValueType value, string name_attr )
+	{	return _customRenderItem(value, name_attr);
+	}
+	
+	override string _renderNullItem()
+	{	return _customRenderItem( null, HTMLEscapeText(nullName) );
+	}
+	
+	string _customRenderItem(V)(V value, string name_attr) 
+	{
+		static if( isRadio )
+		{
+			enum inputType = `radio`;
+		}
+		else
+		{
+			enum inputType = `checkbox`;
+		}
+		
+		import webtank.common.conv;
+		string[string] inputAttrs = [ 
+			`name`: this.name,
+			`type`: inputType
+		];
+		string[string] labelAttrs;
+		string[string] listItemAttrs;
+		string[string] labelTextAttrs;
+		
+		string[] inputClasses = [ 
+			this.blockName,
+			elementPrefix ~ `ListItem_input`
+		];
+		string[] labelClasses = [
+			this.blockName,
+			elementPrefix ~ `ListItem_label`
+		];
+		string[] listItemClasses = [
+			this.blockName,
+			elementPrefix ~ `ListItem`
+		];
+		string[] labelTextClasses = [
+			this.blockName,
+			elementPrefix ~ `ListItem_labelText`
+		];
+
+		static if( is( V == typeof(null) ) ) 
+		{
+			inputAttrs[`value`] = ``; //Лучше явно задать
+			listItemClasses ~= [ modifierPrefix ~ `isNullValue` ];
+			
+			if( this.isNull )
+				inputAttrs[`checked`] = ``;
+		}
+		else
+		{
+			inputAttrs[`value`] = value.conv!string;
+			
+			if( _selectedValues.canFind(value) )
+				inputAttrs[`checked`] = ``;
+		}
+		inputAttrs[`class`] = inputClasses.join(` `);
+		labelAttrs[`class`] = labelClasses.join(` `);
+		listItemAttrs[`class`] = listItemClasses.join(` `);
+		labelTextAttrs[`class`] = labelTextClasses.join(` `);
+		
+		return `<div` ~ printHTMLAttributes(listItemAttrs) ~ `><label` ~ printHTMLAttributes(labelAttrs) 
+			~ `><input` ~ printHTMLAttributes(inputAttrs) ~ `>`
+			~ `<span` ~ printHTMLAttributes(labelTextAttrs) ~ `>` 
+			~ HTMLEscapeText(name_attr) ~ `</span></label></div>` ~ "\r\n";
 	}
 
-	
-	override string _renderItem( ValueType value, string name, string name_attr )
-	{
-		import webtank.common.conv;
-		return `<label><input type="checkbox" name="` ~ HTMLEscapeValue(name_attr) 
-			~ `" value="` ~ value.conv!string ~ `"`
-			~ ( _selectedValues.canFind(value) ? ` checked` : `` ) ~ `>`
-			~ HTMLEscapeText(name) ~ `</label>` ~ "<br>\r\n";
-	}
-	
 	///Метод генерирует разметку по заданным параметрам
 	override string print()
 	{	
@@ -301,82 +388,31 @@ class CheckBoxList(ValueSetT): HTMLListControl!(ValueSetT)
 		if( clsList.length > 0 )
 			spanAttrs["class"] = HTMLEscapeValue( join(clsList, ` `) );
 			
-		string output = `<span` ~ printHTMLAttributes(spanAttrs) ~ `>`;
-		
-		if( isNullable )
-			output ~= `<label><input type="checkbox" name="` ~ HTMLEscapeValue(this.name) 
-			~ `" value=""` ~ ( isNull ? ` checked` : `` ) ~ `>`
-			~ HTMLEscapeText(nullName) ~ `</label>` ~ "<br>\r\n";
-		
-		output ~= _renderItems() ~ `</span>`;
-		
-		return output;
+		return `<span` ~ printHTMLAttributes(spanAttrs) ~ `>` ~ _renderItems() ~ `</span>`;
 	}
 	
-	void selectedValues(ValueType[] values) @property
-	{	_selectedValues = values;
-	}
-	
-	ValueType[] selectedValues() @property
-	{	return _selectedValues.dup;
+	static if( !isRadio )
+	{
+		void selectedValues(ValueType[] values) @property
+		{	_selectedValues = values;
+		}
+		
+		ValueType[] selectedValues() @property
+		{	return _selectedValues.dup;
+		}
 	}
 }
 
+alias CheckBoxList(ValueSetT) = CheckableInputList!(ValueSetT, false);
+alias RadioButtonList(ValueSetT) = CheckableInputList!(ValueSetT, true);
+
+///Функция-помощник для создания списка флагов
 auto checkBoxList(T)(T valueSet)
 {
 	return new CheckBoxList!(T)(valueSet);
 }
 
-class RadioButtonList(ValueSetT)
-{
-	alias ValueSetType = ValueSetT;
-	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
-	alias ValueType = ValueSetSpec.ValueType;
-	enum bool hasNames = ValueSetSpec.hasNames;
-	
-	this( ValueSetT set ) pure
-	{
-		super(set, "radio_button_list");
-	}
-	
-	private string _renderItem(V)( ValueType value, string name, string name_attr )
-	{
-		import webtank.common.conv;
-		return `<label><input type="radio" name="` ~ HTMLEscapeValue(name_attr) 
-			~ `" value="` ~ value.conv!string ~ `"`
-			~ ( _selectedValues.canFind(value) ? ` checked` : `` ) ~ `>`
-			~ HTMLEscapeText(name) ~ `</label>` ~ "<br>\r\n";
-	}
-	
-	///Метод генерирует разметку по заданным параметрам
-	override string print()
-	{	
-		import webtank.common.conv;
-		
-		string[string] spanAttrs;
-			
-		if( id.length > 0 )
-			spanAttrs["id"] = id;
-			
-		string[] clsList = classes ~ [this.blockName];
-			
-		if( clsList.length > 0 )
-			spanAttrs["class"] = HTMLEscapeValue( join(clsList, ` `) );
-			
-		string output = `<span` ~ printHTMLAttributes(spanAttrs) ~ `>`;
-		
-		if( isNullable )
-			output ~= `<label><input type="radio" name="` ~ HTMLEscapeValue(this.name) 
-			~ `" value=""` ~ ( isNull ? ` checked` : `` ) ~ `>`
-			~ HTMLEscapeText(nullName) ~ `</label>` ~ "<br>\r\n";
-		
-		output ~= _renderItems() ~ `</span>`;
-		
-		return output;
-	}
-
-}
-
+///Функция-помощник для создания списка радиокнопок
 auto radioButtonList(T)(T valueSet)
 {
 	return new RadioButtonList!(T)(valueSet);
@@ -396,7 +432,7 @@ class PlainDatePicker: HTMLControl
 {	
 	this() pure
 	{
-		super("plain_date_picker");
+		super("PlainDatePicker");
 	}
 	
 	string print()
@@ -406,7 +442,7 @@ class PlainDatePicker: HTMLControl
 		
 		//Задаём базовые аттрибуты для окошечек календаря
 		foreach( word, ref attrs; attrBlocks )
-			if( name.length > 0 ) //Путсые аттрибуты не записываем
+			if( name.length > 0 ) //Пустые аттрибуты не записываем
 				attrs["name"] = name ~ `__` ~ word;
 		
 		//Задаём доп. аттрибуты и значения для дня и месяца
