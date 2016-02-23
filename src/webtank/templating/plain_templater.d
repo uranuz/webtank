@@ -1,26 +1,5 @@
 module webtank.templating.plain_templater;
 
-/**
-	Пример шаблона:
-*/
-dstring testTemplateStr = `
-	<html>
-	<head>
-	<title>{{browserTitle}}</title>
-	<meta charset="{{encoding}}">
-	<link rel="stylesheet" type="text/css" href="{{stylesheet}}"/>
-	</head>
-	{{?page_title:=hello}}
-	{{?user_name:=vasya}}
-		
-	<body>
-	<div id="header">{{header}}</div>
-	<div id="sidebar">{{sidebar}}</div>
-	<div id="content">{{content}}</div>
-	<div id="footer">{{footer}}</div>
-	</body>
-	</html>`d;
-
 class Element
 {	immutable(size_t) prePos;
 	immutable(size_t) sufPos;
@@ -61,6 +40,14 @@ public:
 		_lexValues = lexems;
 		_sourceStr = std.utf.toUTF32(templateStr);
 		_parseTemplateStr();
+	}
+	
+	bool hasElement(string name)
+	{
+		import std.utf;
+	
+		dstring markNameUTF32 = std.string.strip( std.utf.toUTF32(name) );
+		return cast(bool)(markNameUTF32 in _namedEls);
 	}
 
 private:
@@ -197,7 +184,6 @@ private:
 	}
 }
 
-
 class PlainTemplater
 {	
 private:
@@ -216,9 +202,17 @@ public:
 		_tpl = tpl;
 	}
 	
+	bool hasElement(string name)
+	{
+		return _tpl.hasElement(name);
+	}
+	
 	//Устанавливает замещающее значение value для метки с именем markName
 	void set(string markName, string value)
 	{	import std.utf;
+		if( !hasElement(markName) )
+			return; //Не засоряем контекст неиспользуемыми данными
+	
 		dstring markNameUTF32 = std.string.strip( std.utf.toUTF32(markName) );
 		dstring valueUTF32 = std.utf.toUTF32( value );
 		
@@ -273,39 +267,42 @@ public:
 	
 	PlainTemplater get(string fileName)
 	{
-		import std.file: read, exists, FileException;
-
+		return new PlainTemplater( getTemplate(fileName) );
+	}
+	
+	PlainTemplate getTemplate(string fileName)
+	{
 		static if( useCache )
 		{
-			PlainTemplate tpl;
-			
 			if( fileName in _tpls )
 			{
-				tpl = _tpls[fileName];
+				return _tpls[fileName];
 			}
 			else
 			{
-				if( !exists(fileName) )
-					throw new FileException(fileName, "Template file '" ~ fileName ~ "' not found!");
-				
 				synchronized( _mutex )
 				{
-					string templateStr = cast(string) read( fileName );
-					tpl = new PlainTemplate(templateStr);
+					PlainTemplate tpl = _loadTemplate(fileName);
 					_tpls[fileName] = tpl;
+					return tpl;
 				}
 			}
-			
-			return new PlainTemplater( tpl );
 		}
 		else
 		{
-			if( !exists(fileName) )
-				throw new FileException(fileName, "Template file '" ~ fileName ~ "' not found!");
-			
-			string templateStr = cast(string) read( fileName );
-			return new PlainTemplater( templateStr );
+			return _loadTemplate(fileName);
 		}
+	}
+	
+	PlainTemplate _loadTemplate(string fileName)
+	{
+		import std.file: read, exists, FileException;
+		
+		if( !exists(fileName) )
+			throw new FileException(fileName, "Template file '" ~ fileName ~ "' not found!");
+		
+		string templateStr = cast(string) read( fileName );
+		return new PlainTemplate( templateStr );
 	}
 
 }

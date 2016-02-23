@@ -104,7 +104,7 @@ if (!Function.prototype.bind) {
 }
 
 var __hasProp = {}.hasOwnProperty;
-var __extends = function(child, parent) {
+function __extends(child, parent) {
 	for (var key in parent) {
 		if (__hasProp.call(parent, key)) 
 			child[key] = parent[key];
@@ -117,104 +117,110 @@ var __extends = function(child, parent) {
 	ctor.prototype = parent.prototype;
 	
 	child.prototype = new ctor();
-	child.__super__ = parent.prototype; 
+	child.__super__ = parent.prototype;
 	
 	return child; 
-};
+}
+
+function __mixinProto(dst, src) {
+	for( key in src ) {
+		//Don't copy Object's built in properties
+		if( (typeof {}[key] == "undefined") || ({}[key] != src[key]) )
+			dst.prototype[key] = src[key];
+	}
+	
+	return dst;
+}
+
 
 webtank.WClass = new (function(_super) {
 	function WClass(cssBlockName) {
 		this.cssBlockName = cssBlockName;
 	}
 	
-	WClass.prototype.$el = function(elemSelector) {
-		var 
-			self = this,
-			elems;
-		
-		if( elemSelector.indexOf(".b-") !== -1 )
-			throw new Error("Block selectors are not allowed!!!");
-		
-		elems = this.elems.filter(elemSelector);
-		elems.$on = function(types, selector, data, fn, /*INTERNAL*/ one) {
-			var args = [types];
+	return __mixinProto(WClass, {
+		$el: function(elemSelector) {
+			var 
+				self = this,
+				elems;
 			
-			// Types can be a map of types/handlers
-			if ( typeof types === "object" ) {
-				// ( types-Object, selector, data )
-				if ( typeof selector !== "string" ) {
-					// ( types-Object, data )
-					data = data || selector;
-					selector = undefined;
-				}
-				for ( type in types ) {
-					this.$on( type, selector, data, types[ type ], one );
-				}
-				return this;
-			}
-
-			if ( data == null && fn == null ) {
-				// ( types, fn )
-				fn = selector;
-				data = selector = undefined;
-			} else if ( fn == null ) {
-				if ( typeof selector === "string" ) {
-					// ( types, selector, fn )
-					fn = data;
-					data = undefined;
-				} else {
-					// ( types, data, fn )
-					fn = data;
-					data = selector;
-					selector = undefined;
-				}
-			}
+			if( elemSelector.indexOf(".b-") !== -1 )
+				throw new Error("Block selectors are not allowed!!!");
 			
-			if( selector != null )
-				args.push( self.__parseSelector(selector) );
-			if( data != null )
-				args.push( data );
+			elems = this.elems.filter(elemSelector);
+			elems.$on = function(types, selector, data, fn, /*INTERNAL*/ one) {
+				var args = [types];
+				
+				// Types can be a map of types/handlers
+				if ( typeof types === "object" ) {
+					// ( types-Object, selector, data )
+					if ( typeof selector !== "string" ) {
+						// ( types-Object, data )
+						data = data || selector;
+						selector = undefined;
+					}
+					for ( type in types ) {
+						this.$on( type, selector, data, types[ type ], one );
+					}
+					return this;
+				}
+
+				if ( data == null && fn == null ) {
+					// ( types, fn )
+					fn = selector;
+					data = selector = undefined;
+				} else if ( fn == null ) {
+					if ( typeof selector === "string" ) {
+						// ( types, selector, fn )
+						fn = data;
+						data = undefined;
+					} else {
+						// ( types, data, fn )
+						fn = data;
+						data = selector;
+						selector = undefined;
+					}
+				}
+				
+				if( selector != null )
+					args.push( self.__parseSelector(selector) );
+				if( data != null )
+					args.push( data );
+				
+				args.push(function(ev) {
+					fn.call(self, ev, $(this));
+				});
+
+				this.on.apply(this, args);
+			};
 			
-			args.push(function(ev) {
-				fn.call(self, ev, $(this));
-			});
+			return elems;
+		},
+		$on: function() {
+			return $(this).on.apply($(this), arguments);
+		},
+		$off: function() {
+			return $(this).off.apply($(this), arguments);
+		},
+		$trigger: function() {
+			return $(this).trigger.apply($(this), arguments);
+		},
+		$triggerHandler: function() {
+			return $(this).triggerHandler.apply($(this), arguments);
+		},
+		__parseSelector: function(selector)
+		{
+			var newSelector = selector;
+			if( selector.indexOf(".b-") !== -1 )
+				throw new Error("Block selectors are not allowed!!!");
+			
+			blockName = ( this.cssBlockName == null || this.cssBlockName.length == 0 ) ? this.elems.selector : this.cssBlockName;
 
-			this.on.apply(this, args);
-		};
-		
-		return elems;
-	};
-
-	WClass.prototype.$on = function() {
-		return $(this).on.apply($(this), arguments);
-	};
-	
-	WClass.prototype.$off = function() {
-		return $(this).off.apply($(this), arguments);
-	};
-	
-	WClass.prototype.$trigger = function() {
-		return $(this).trigger.apply($(this), arguments);
-	};
-	
-	WClass.prototype.$triggerHandler = function() {
-		return $(this).triggerHandler.apply($(this), arguments);
-	};
-	
-	WClass.prototype.__parseSelector = function(selector)
-	{
-		var newSelector = selector;
-		if( selector.indexOf(".b-") !== -1 )
-			throw new Error("Block selectors are not allowed!!!");
-		
-		blockName = ( this.cssBlockName == null || this.cssBlockName.length == 0 ) ? this.elems.selector : this.cssBlockName;
-
-		newSelector = selector.split(".e-").join(blockName + ".e-");
-		
-		return newSelector;
-	}
-	
-	return WClass;
+			newSelector = selector.split(".e-").join(blockName + ".e-");
+			
+			return newSelector;
+		}
+	});
 })();
 
 //Определяем пространство имен для JSON-RPC
@@ -329,7 +335,8 @@ webtank.datctrl = {
 		}
 	}
 };
-webtank.datctrl.Record = new (function() {
+
+webtank.datctrl.Record = (function() {
 	var dctl = webtank.datctrl;
 	
 	function Record(opts) {
@@ -350,59 +357,52 @@ webtank.datctrl.Record = new (function() {
 			this._d = []; //Данные (массив)
 	}
 	
-	//Метод получения значения из записи по имени поля
-	Record.prototype.get = function(index, defaultValue) {
-		var val;
-		if( webtank.isUnsigned(index) )
-		{	//Вдруг там массив - лучше выдать копию
-			val = webtank.deepCopy( this._d[ index ] );
+	return __mixinProto(Record, {
+		//Метод получения значения из записи по имени поля
+		get: function(index, defaultValue) {
+			var val;
+			if( webtank.isUnsigned(index) )
+			{	//Вдруг там массив - лучше выдать копию
+				val = webtank.deepCopy( this._d[ index ] );
+			}
+			else
+			{	//Вдруг там массив - лучше выдать копию
+				val = webtank.deepCopy( this._d[ this._fmt.getIndex(index) ] );
+			}
+			if( val == null )
+				return defaultValue;
+			else
+				return val;
+		},
+		getLength: function() {
+			return this._d.length;
+		},
+		copyFormat: function() {
+			return this._fmt.copy();
+		},
+		getKey: function() {
+			return this._d[ this._fmt._keyFieldIndex ];
+		},
+		getKeyFieldIndex: function() {
+			return this._fmt._keyFieldIndex;
+		},
+		set: function() {
+			//Не используй меня. Я пустой!..
+			//...или реализуй меня и используй
+		},
+		getIsEmpty: function() {
+			return !this._d.length && this._fmt.getIsEmpty();
+		},
+		copy: function() {
+			return new Record({
+				format: this._fmt.copy(),
+				data: webtank.deepCopy( this._d )
+			});
 		}
-		else
-		{	//Вдруг там массив - лучше выдать копию
-			val = webtank.deepCopy( this._d[ this._fmt.getIndex(index) ] );
-		}
-		if( val == null )
-			return defaultValue;
-		else
-			return val;
-	};
-	
-	Record.prototype.getLength = function() {
-		return this._d.length;
-	};
-	
-	Record.prototype.copyFormat = function() {
-		return this._fmt.copy();
-	};
-	
-	Record.prototype.getKey = function() {
-		return this._d[ this._fmt._keyFieldIndex ];
-	};
-	
-	Record.prototype.getKeyFieldIndex = function() {
-		return this._fmt._keyFieldIndex;
-	};
-	
-	Record.prototype.set = function() {
-		//Не используй меня. Я пустой!..
-		//...или реализуй меня и используй
-	};
-	
-	Record.prototype.getIsEmpty = function() {
-		return !this._d.length && this._fmt.getIsEmpty();
-	};
-	
-	Record.prototype.copy = function() {
-		return new Record({
-			format: this._fmt.copy(),
-			data: webtank.deepCopy( this._d )
-		});
-	};
-	
-	return Record;
+	});
 })();
 
-webtank.datctrl.RecordSet = new (function() {
+webtank.datctrl.RecordSet = (function() {
 	var
 		dctl = webtank.datctrl;
 		
@@ -427,120 +427,107 @@ webtank.datctrl.RecordSet = new (function() {
 		this._reindex(); //Строим индекс
 	}
 	
-	//Возращает след. запись или null, если их больше нет
-	RecordSet.prototype.next = function() {
-		var rec = this.getRecordAt(this._recIndex);
-		this._recIndex++;
-		return rec;
-	};
-	
-	//Возвращает true, если есть ещё записи, иначе - false
-	RecordSet.prototype.hasNext = function() {
-		return (this._recIndex < this._d.length);
-	};
-
-	//Сброс итератора на начало
-	RecordSet.prototype.rewind = function() {
-		this._recIndex = 0;
-	};
-	RecordSet.prototype.copyFormat = function()
-	{	return this._fmt.copy();
-	};
-	
-	//Возвращает количество записей в наборе
-	RecordSet.prototype.getLength = function() {
-		return this._d.length;
-	};
-	
-	//Возвращает запись по ключу
-	RecordSet.prototype.getRecord = function(key) {
-		if( this._indexes[key] == null )
-			return null;
-		else
-			return this.getRecordAt( this._indexes[key] );
-	};
-	
-	//Возвращает запись по порядковому номеру index
-	RecordSet.prototype.getRecordAt = function(index) {
-		if( index < this._d.length )
-			return new dctl.Record({
-				format: this._fmt,
-				data: this._d[index]
+	return __mixinProto(RecordSet, {
+		//Возращает след. запись или null, если их больше нет
+		next: function() {
+			var rec = this.getRecordAt(this._recIndex);
+			this._recIndex++;
+			return rec;
+		},
+		//Возвращает true, если есть ещё записи, иначе - false
+		hasNext: function() {
+			return (this._recIndex < this._d.length);
+		},
+		//Сброс итератора на начало
+		rewind: function() {
+			this._recIndex = 0;
+		},
+		copyFormat: function()
+		{	return this._fmt.copy();
+		},
+		//Возвращает количество записей в наборе
+		getLength: function() {
+			return this._d.length;
+		},
+		//Возвращает запись по ключу
+		getRecord: function(key) {
+			if( this._indexes[key] == null )
+				return null;
+			else
+				return this.getRecordAt( this._indexes[key] );
+		},
+		//Возвращает запись по порядковому номеру index
+		getRecordAt: function(index) {
+			if( index < this._d.length )
+				return new dctl.Record({
+					format: this._fmt,
+					data: this._d[index]
+				});
+			else
+				return null;
+		},
+		//Возвращает значение первичного ключа по порядковому номеру index
+		getKey: function(index) {
+			return this._d[ this._fmt.getKeyFieldIndex() ][index];
+		},
+		//Возвращает true, если в наборе имеется запись с ключом key, иначе - false
+		hasKey: function(key) {
+			if( this._indexes[key] == null )
+				return false;
+			else
+				return true;
+		},
+		//Возвращает порядковый номер поля первичного ключа в наборе записей
+		getKeyFieldIndex: function() {
+			return this._fmt.getKeyFieldIndex();
+		},
+		//Добавление записи rec в набор записей
+		append: function(rec) {
+			if( this.getIsEmpty || this._fmt.equals(rec._fmt) )
+			{	
+				if( this._fmt.getIsEmpty() )
+					this._fmt = rec._fmt.copy();
+				this._indexes[ rec.getKey() ] = this._d.length;
+				this._d.push(rec._d);
+			}
+			else
+				console.error("Формат записи не совпадает с форматом набора данных!!!");
+		},
+		remove: function(key) {
+			var
+				index = this._indexes[key];
+			
+			if( index !== undefined )
+			{	this._d.splice(index, 1);
+				this._reindex(index);
+			}
+			else
+				console.error("Запись с ключом " + key + " не содержится в наборе данных!!!");
+		},
+		_reindex: function(startIndex) {
+			var
+				i = 0,
+				kfi = this.getKeyFieldIndex();
+			
+			this._indexes = {};
+			
+			for( ; i < this._d.length ; i++ )
+				this._indexes[ this._d[i][ kfi ] ] = i;
+		},
+		getIsEmpty: function() {
+			return !this._d.length && this._fmt.getIsEmpty();
+		},
+		copy: function() {
+			return new dctl.RecordSet({
+				format: this._fmt.copy(),
+				data: webtank.deepCopy( this._d ),
+				keyFieldIndex: this._keyFieldIndex
 			});
-		else
-			return null;
-	};
-	
-	//Возвращает значение первичного ключа по порядковому номеру index
-	RecordSet.prototype.getKey = function(index) {
-		return this._d[ this._fmt.getKeyFieldIndex() ][index];
-	};
-	
-	//Возвращает true, если в наборе имеется запись с ключом key, иначе - false
-	RecordSet.prototype.hasKey = function(key) {
-		if( this._indexes[key] == null )
-			return false;
-		else
-			return true;
-	};
-	
-	//Возвращает порядковый номер поля первичного ключа в наборе записей
-	RecordSet.prototype.getKeyFieldIndex = function() {
-		return this._fmt.getKeyFieldIndex();
-	};
-	
-	//Добавление записи rec в набор записей
-	RecordSet.prototype.append = function(rec) {
-		if( this.getIsEmpty || this._fmt.equals(rec._fmt) )
-		{	
-			if( this._fmt.getIsEmpty() )
-				this._fmt = rec._fmt.copy();
-			this._indexes[ rec.getKey() ] = this._d.length;
-			this._d.push(rec._d);
 		}
-		else
-			console.error("Формат записи не совпадает с форматом набора данных!!!");
-	};
-	
-	RecordSet.prototype.remove = function(key) {
-		var
-			index = this._indexes[key];
-		
-		if( index !== undefined )
-		{	this._d.splice(index, 1);
-			this._reindex(index);
-		}
-		else
-			console.error("Запись с ключом " + key + " не содержится в наборе данных!!!");
-	};
-	
-	RecordSet.prototype._reindex = function(startIndex) {
-		var
-			i = 0,
-			kfi = this.getKeyFieldIndex();
-		
-		this._indexes = {};
-		
-		for( ; i < this._d.length ; i++ )
-			this._indexes[ this._d[i][ kfi ] ] = i;
-	};
-	
-	RecordSet.prototype.getIsEmpty = function() {
-		return !this._d.length && this._fmt.getIsEmpty();
-	};
-	
-	RecordSet.prototype.copy = function() {
-		return new dctl.RecordSet({
-			format: this._fmt.copy(),
-			data: webtank.deepCopy( this._d ),
-			keyFieldIndex: this._keyFieldIndex
-		});
-	};
-	
-	return RecordSet;
+	});
 })();
 
-webtank.datctrl.RecordFormat = new (function() {
+webtank.datctrl.RecordFormat = (function() {
 	var 
 		dctl = webtank.datctrl;
 	
@@ -561,62 +548,287 @@ webtank.datctrl.RecordFormat = new (function() {
 		this._reindex();
 	}
 	
-	RecordFormat.prototype._reindex = function() {
-		var key, i;
-		this._indexes = {}
-		for( i = 0; i < this._f.length; i++ )
-		{
-			key = this._f[i].n;
-			if( key != null )
-				this._indexes[key] = i;
+	return __mixinProto(RecordFormat, {
+		_reindex: function() {
+			var key, i;
+			this._indexes = {}
+			for( i = 0; i < this._f.length; i++ )
+			{
+				key = this._f[i].n;
+				if( key != null )
+					this._indexes[key] = i;
+			}
+		},
+		//Функция расширяет текущий формат, добавляя к нему format
+		extend: function(format) {
+			for( var i = 0; i < format._f.length; i++ )
+			{	this._f.push(format._f[i]);
+				this._indexes[format.n] = format._f.length;
+			}
+		},
+		//Получить индекс поля по имени
+		getIndex: function(name) {
+			return this._indexes[name];
+		},
+		//Получить имя поля по индексу
+		getName: function(index) {
+			return this._f[ index ].n;
+		},
+		//Получить тип поля по имени или индексу
+		getType: function(index) {
+			if( webtank.isUnsigned(index) )
+				return this._f[ index ].t;
+			else
+				return this._f[ this.getFieldIndex(index) ].t;
+		},
+		getKeyFieldIndex: function() {
+			return this._keyFieldIndex;
+		},
+		equals: function(format) {
+			return this._f.length === format._f.length;
+		},
+		getIsEmpty: function() {
+			return !this._f.length;
+		},
+		copy: function() {
+			return new dctl.RecordFormat({
+				fields: webtank.deepCopy( this._f ),
+				keyFieldIndex: this._keyFieldIndex
+			});
 		}
-	};
-	
-	//Функция расширяет текущий формат, добавляя к нему format
-	RecordFormat.prototype.extend = function(format) {
-		for( var i = 0; i < format._f.length; i++ )
-		{	this._f.push(format._f[i]);
-			this._indexes[format.n] = format._f.length;
-		}
-	};
-	
-	//Получить индекс поля по имени
-	RecordFormat.prototype.getIndex = function(name) {
-		return this._indexes[name];
-	};
-	
-	//Получить имя поля по индексу
-	RecordFormat.prototype.getName = function(index) {
-		return this._f[ index ].n;
-	};
-	
-	//Получить тип поля по имени или индексу
-	RecordFormat.prototype.getType = function(index) {
-		if( webtank.isUnsigned(index) )
-			return this._f[ index ].t;
-		else
-			return this._f[ this.getFieldIndex(index) ].t;
-	};
-	
-	RecordFormat.prototype.getKeyFieldIndex = function() {
-		return this._keyFieldIndex;
-	};
-	
-	RecordFormat.prototype.equals = function(format) {
-		return this._f.length === format._f.length;
-	};
-	
-	RecordFormat.prototype.getIsEmpty = function() {
-		return !this._f.length;
-	};
-	
-	RecordFormat.prototype.copy = function() {
-		return new dctl.RecordFormat({
-			fields: webtank.deepCopy( this._f ),
-			keyFieldIndex: this._keyFieldIndex
-		});
-	};
-	
-	return RecordFormat;
+	});
 })();
 
+
+webtank.templating = {};
+
+webtank.templating.plain_templater = {
+	Element: (function() {
+		function Element(prePos, sufPos, matchOpPos) {
+			this.prePos = prePos || 0;
+			this.sufPos = sufPos || 0;
+			this.matchOpPos = matchOpPos || null;
+		}
+		
+		return __mixinProto(Element, {
+			isVar: function() {
+				return this.matchOpPos != null;
+			}
+		});
+	})(),
+	defaultLexemes: { 
+		markPre: "{{", markSuf: "}}", 
+		varPre: "{{?", matchOp: ":=", varSuf: "}}"
+	},
+	//Fills PlainTemplater instance data from Record instance
+	fillFromRecord: function(tp, rec) {
+		var i = 0, len = rec.getLength();
+		for( ; i < len; ++i ) {
+			tp.set( rec._tpl.getName(i), rec.get(i) );
+		}
+	}
+};
+
+
+webtank.templating.plain_templater.PlainTemplate = (function() {
+	var 
+		tplr = webtank.templating.plain_templater;
+	
+	function PlainTemplate() {
+		this._namedEls = {}; //Map of arrays of Element's
+		this._indexedEls = []; //Array of Element's'
+		this._sourceStr = ""; //Template string
+		this._lexValues = tplr.defaultLexemes;
+	}
+	
+	return __mixinProto(PlainTemplate, {
+		getString: function(values) {
+			var 
+				result = "", textStart = 0, markName = "",
+				i = 0, len = this._indexedEls.length, el;
+			
+			for( ; i < len; ++i )
+			{
+				el = this._indexedEls[i];
+				if( el.isVar() )
+				{
+					throw new Exception("Not implemented yet!"); //TODO; Implement it!
+				}
+				else
+				{
+					markName = this._getName(el);
+					result += 
+						this._sourceStr.substring(textStart, el.prePos)
+						+ ( values[markName] || "" );
+					textStart = el.sufPos + this._lexValues.markSuf.length;
+				}
+			}
+			result += this._sourceStr.substr(textStart);
+			return result;
+		},
+		init: function(sourceStr, indexedElements) {
+			this._sourceStr = sourceStr;
+			this._indexedEls = indexedElements;
+			this._fillNamedElements();
+		},
+		hasElement: function(name) {
+			return this._namedEls.hasOwnProperty(name);
+		},
+		_getName: function(elem) {
+			return this._sourceStr.substring( 
+				elem.prePos + this._lexValues.markPre.length, elem.sufPos  );
+		},
+		_fillNamedElements: function() {
+			var 
+				i = 0, len = this._indexedEls.length, curEl, markName;
+			
+			for( ; i < len; ++i )
+			{
+				curEl = this._indexedEls[i];
+				markName = this._getName(curEl);
+				if( this._namedEls[markName] )
+					this._namedEls[markName].push(curEl);
+				else
+					this._namedEls[markName] = [curEl];
+			}
+		}
+	});
+})();
+
+webtank.templating.plain_templater.PlainTemplater = (function() {
+	var tplr = webtank.templating.plain_templater;
+	
+	function PlainTemplater(template) {
+		this._tpl = template; 
+		this._values = {};
+	}
+	
+	return __mixinProto(PlainTemplater, {
+		hasElement: function(name) {
+			return this._tpl.hasElement(name);
+		},
+		set: function(markName, value) {
+			if( !this._tpl.hasElement(markName) )
+				return;
+			
+			this._values[markName] = value;
+		},
+		setMult: function(dict) {
+			for( name in dict ) {
+				if( !dict.hasOwnProperty(name) || !this.hasElement(name) )
+					continue;
+				
+				this._values[name] = dict[name];
+			}
+		},
+		get: function(markName) {
+			throw new Error("Not implemented yet!");
+		},
+		getString: function() {
+			return this._tpl.getString(this._values);
+		}
+	});
+})();
+
+webtank.templating.plain_templater.TemplateService = (function() {
+	var tplr = webtank.templating.plain_templater;
+	
+	function TemplateService(uri, method, templates) {
+		this._remoteURI = uri || "";
+		this._methodName = method || "";
+		this._initTemplateNames = templates || [];
+		this._templates = {};
+	}
+	
+	return __mixinProto(TemplateService, {
+		// templates - имена требуемых шаблонов (массив)
+		// callback - ф-ция обработки результата
+		getMultAsync: function(names, callback) {
+			var 
+				self = this,
+				namesToLoad = this._chooseToLoad(names);
+
+			if( typeof callback !== 'function' || callback == null )
+				throw Error("Callback must be a function!");
+			
+			if( !namesToLoad.length ) {
+				this._tplLoadHandler( {}, names, callback );
+			} else {
+				webtank.json_rpc.invoke({
+					uri: this._remoteURI,
+					method: this._methodName,
+					params: {templates: namesToLoad},
+					success: function(data) { self._tplLoadHandler(data, names, callback); }
+				});
+			}
+		},
+		getAsync: function(name, callback) {
+			return this.getMultAsync([name], function(data, names) {
+				if( callback )
+					callback(data[names[0]], names[0]);
+			});
+		},
+		_chooseToLoad: function(names) {
+			var 
+				namesToLoad = [], i = 0;
+			
+			if( !(names instanceof Array) )
+				throw Error("List of template names must be array of strings");
+			
+			for( ; i < names.length; ++i )
+			{
+				if( !this._templates.hasOwnProperty(names[i]) )
+					namesToLoad.push(names[i]);
+			}
+			
+			return namesToLoad;
+		},
+		_tplLoadHandler: function(data, requiredNames, callback) {
+			var 
+				templates = {}, tpl, jElems, elems = [], i = 0;
+			for( name in data )
+			{
+				if( !data.hasOwnProperty(name) )
+					continue;
+				
+				tpl = new tplr.PlainTemplate();
+				jElems = data[name].elems;
+				for( ; i < jElems.length; ++i )
+				{
+					elems.push( new tplr.Element(
+						jElems[i].prePos, 
+						jElems[i].sufPos, 
+						jElems[i].matchOpPos
+					));
+				}
+				
+				tpl.init( data[name].src, elems );
+				this._templates[name] = tpl;
+			}
+			templates = this.getMultFromCache(requiredNames);
+			
+			if( callback )
+				callback(templates, requiredNames);
+		},
+		getMultFromCache: function(names) {
+			var templates = {}, i = 0;
+			for( ; i < names.length; ++i ) {
+				templates[ names[i] ] = this.getFromCache( names[i] );
+			}
+			return templates;
+		},
+		getFromCache: function(name) {
+			if( this._templates.hasOwnProperty(name) )
+				return this._templates[name];
+			else
+				throw new Error("Cannot get template '" + name + "' from cache!")
+		},
+		getTemplater: function(name) {
+			var tpl = this._templates[name];
+			if( tpl )
+				return new tplr.PlainTemplater(tpl);
+			else
+				throw new Error( "There is no template in cache!" );
+		}
+	});
+})();

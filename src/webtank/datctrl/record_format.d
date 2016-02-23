@@ -56,27 +56,36 @@ struct RecordFormat(Args...)
 		return result;
 	}
 	+/
+	
+	private static immutable(string[]) _names = ((){
+		string[] result;
+		foreach( spec; _fieldSpecs )
+			result ~= spec.name;
+		return result;
+	})();
 
 	/++
 	$(LOCALE_EN_US Property returns array of field names for record format)
 	$(LOCALE_RU_RU Свойство возвращает массив имен полей для формата записи)
 	+/
-	static pure string[] names() @property
-	{	string[] result;
-		foreach( spec; _fieldSpecs )
-			result ~= spec.name;
-		return result;
+	static pure immutable(string[]) names() @property
+	{	return _names;
 	}
 
+	private static immutable(size_t[string]) _indexes;
+	
+	shared static this()
+	{
+		foreach( i, spec; _fieldSpecs )
+			_indexes[spec.name] = i;
+	}
+	
 	/++
 	$(LOCALE_EN_US Property returns AA of indexes of fields, indexed by their names)
 	$(LOCALE_RU_RU Свойство возвращает словарь номеров полей данных, индексируемых их именами)
 	+/
-	static pure size_t[string] indexes() @property
-	{	size_t[string] result;
-		foreach( i, spec; _fieldSpecs )
-			result[spec.name] = i;
-		return result;
+	static pure immutable(size_t[string]) indexes() @property
+	{	return _indexes;
 	}
 	
 	//Внутреннее "хранилище" разобранной информации о полях записи
