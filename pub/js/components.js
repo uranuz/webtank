@@ -309,16 +309,11 @@ webtank.datctrl = {
 	fromJSON: function(json) {
 		var 
 			dctl = webtank.datctrl,
-			jsonObj = json,
-			kfi, fmt;
+			jsonObj = json, fmt;
 		
 		if( jsonObj.t === "record" || jsonObj.t === "recordset" )
 		{	
-			kfi = jsonObj.kfi || 0;
-			fmt = new dctl.RecordFormat({
-				fields: jsonObj.f, 
-				keyFieldIndex: kfi
-			});
+			fmt = dctl.recordFormatFromJSON(jsonObj);
 				
 			if( jsonObj.t === "record" )
 			{	return new dctl.Record({
@@ -333,6 +328,31 @@ webtank.datctrl = {
 				});
 			}
 		}
+	},
+	recordFormatFromJSON: function(jsonObj) {
+		var 
+			dctl = webtank.datctrl, 
+			kfi = jsonObj.kfi || 0,
+			jFormats = jsonObj.f, 
+			enumFormats = {},
+			i = 0, jFmt;
+			
+		for( ; i < jFormats.length; ++i )
+		{
+			jFmt = jFormats[i];
+			if( jFmt.enum )
+			{
+				enumFormats[i] = new dctl.EnumFormat({
+					items: jFmt.enum
+				});
+			}
+		}
+		
+		return new dctl.RecordFormat({
+			fields: jFormats,
+			enumFormats: enumFormats,
+			keyFieldIndex: kfi
+		});
 	}
 };
 
@@ -531,19 +551,19 @@ webtank.datctrl.RecordFormat = (function() {
 	var 
 		dctl = webtank.datctrl;
 	
-	function RecordFormat(opts)
-	{
+	function RecordFormat(opts) {
 		opts = opts || {}
-		if( opts.fields instanceof Array ) 
-		{
+		if( opts.fields instanceof Array ) {
 			this._f = opts.fields;
 			this._keyFieldIndex = opts.keyFieldIndex? opts.keyFieldIndex : 0;
 		}
-		else
-		{
+		else {
 			this._f = [];
 			this._keyFieldIndex = 0;
 		}
+		
+		//Expected to be mapping from field index to enum format
+		this._enum = opts.enumFormats || {};
 		
 		this._reindex();
 	}
@@ -599,6 +619,41 @@ webtank.datctrl.RecordFormat = (function() {
 	});
 })();
 
+webtank.datctrl.EnumFormat = (function() { 
+	//TODO: Please, implement me;)
+	
+	function EnumFormat(opts) {
+		this._items = opts.items || [];
+		this._names = {};
+		this._reindex();
+	}
+	
+	return __mixinProto(EnumFormat, {
+		getName: function(value) {
+			return this._names[value] || null;
+		},
+		getValue: function(name) {
+			var i = 0, curItem;
+			for( ; i < this._items.length; ++i ) {
+				curItem = this._items[i];
+				if( curItem.n = name )
+					return curItem.v;
+			}
+			return null;
+		},
+		getStr: function(value) {
+			return this.getName(value);
+		},
+		_reindex: function() {
+			var i = 0, curItem;
+			for( ; i < this._items.length; ++i ) {
+				curItem = this._items[i];
+				this._names[ curItem.v ] = curItem.n;
+			}
+		}
+	});
+})();
+
 
 webtank.templating = {};
 
@@ -622,9 +677,18 @@ webtank.templating.plain_templater = {
 	},
 	//Fills PlainTemplater instance data from Record instance
 	fillFromRecord: function(tp, rec) {
-		var i = 0, len = rec.getLength();
+		var 
+			dctl = webtank.datctrl,
+			i = 0, len = rec.getLength(), enumFmt, text = "";
 		for( ; i < len; ++i ) {
-			tp.set( rec._tpl.getName(i), rec.get(i) );
+			text = "";
+			enumFmt = rec._fmt._enum[i];
+			if( enumFmt instanceof dctl.EnumFormat ) {
+				text = enumFmt.getStr( rec.get(i) );
+			} else {
+				text = rec.get(i);
+			}
+			tp.set( rec._fmt.getName(i), text );
 		}
 	}
 };

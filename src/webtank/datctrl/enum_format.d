@@ -193,35 +193,35 @@ struct EnumFormat( T, bool withNames )
 	{	
 		JSONValue[string] jArray; //Массив полей для формата перечислимого типа
 		
-		//Словарь перечислимых значений (числовой ключ --> строковое имя)
-		JSONValue[string] jEnumNames;
-		
-		//Массив, определяющий порядок перечислимых значений
-		JSONValue[] jEnumKeys;
+		//Массив элементов перечислимого типа
+		JSONValue[] jEnumItems;
 		
 		static if( hasNames )
 		{
-			jEnumKeys.length = _pairs.length;
+			jEnumItems.length = _pairs.length;
+			JSONValue[string] jEnumItem;
 			
 			foreach( i, pair; _pairs )
 			{
-				jEnumNames[ pair[0].conv!string ] = pair[1];
-				jEnumKeys[i] = pair[0].conv!string;
+				jEnumItems[i] = [ 
+					"v": JSONValue( pair[0].conv!string ), 
+					"n": JSONValue( pair[1] ) 
+				];
 			}
 		}
 		else
 		{
-			jEnumKeys.length = _values.length;
+			jEnumItems.length = _values.length;
 			
 			foreach( i, val; _values )
 			{
-				jEnumNames[ val.conv!string ] = val.conv!string;
-				jEnumKeys[i] = val.conv!string;
+				jEnumItems[i] = [ 
+					"v": JSONValue( val.conv!string ), 
+				];
 			}
 		}
 		
-		jArray["enum_n"] = jEnumNames;
-		jArray["enum_k"] = jEnumKeys;
+		jArray["enum"] = jEnumItems;
 		
 		return JSONValue(jArray);
 	}
