@@ -178,6 +178,16 @@ class HTMLListControl(ValueSetT): HTMLControl
 	{	_selectedValues = null;
 	}
 	
+	void addItemClass(string cls)
+	{
+		_itemClasses ~= cls;
+	}
+	
+	void addItemClasses(string[] classes)
+	{
+		_itemClasses ~= classes;
+	}
+	
 	string print() {
 		return `<div class='` ~ this.blockName ~ `'></div>`;
 	}
@@ -187,6 +197,7 @@ protected:
 	string _nullName;
 	ValueType[] _selectedValues;
 	ValueSetType _valueSet;
+	string[] _itemClasses;
 }
 
 ///Простенький класс для генерации HTML-разметки для выпадающего списка элементов
@@ -212,7 +223,7 @@ class ListBox(ValueSetT): HTMLListControl!(ValueSetT)
 	
 	string _customRenderItem(V)(V value, string name_attr) 
 	{
-		import webtank.common.conv;
+		import webtank.common.conv, std.algorithm: canFind;
 		string[string] optAttrs = [ `name`: this.name ];
 		string[] optClasses = [ 
 			blockName,
@@ -321,7 +332,7 @@ class CheckableInputList(ValueSetT, bool isRadio): HTMLListControl!(ValueSetT)
 			enum inputType = `checkbox`;
 		}
 		
-		import webtank.common.conv;
+		import webtank.common.conv, std.algorithm: canFind;
 		string[string] inputAttrs = [ 
 			`name`: this.name,
 			`type`: inputType
@@ -338,6 +349,8 @@ class CheckableInputList(ValueSetT, bool isRadio): HTMLListControl!(ValueSetT)
 			this.blockName,
 			elementPrefix ~ `ListItem_label`
 		];
+		labelClasses ~= this._itemClasses;
+		
 		string[] listItemClasses = [
 			this.blockName,
 			elementPrefix ~ `ListItem`
@@ -502,6 +515,7 @@ protected:
 	OptionalDate _date;
 	string[] _monthNames = months.dup;
 }
+
 
 string printHTMLAttributes(string[string] values)
 {	string result;

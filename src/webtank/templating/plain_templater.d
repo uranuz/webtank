@@ -36,17 +36,18 @@ class PlainTemplate
 	
 public:
 	this( string templateStr, immutable(dstring[LexemeType]) lexems = defaultLexems )
-	{	import std.utf;
+	{	import std.utf: toUTF32;
 		_lexValues = lexems;
-		_sourceStr = std.utf.toUTF32(templateStr);
+		_sourceStr = toUTF32(templateStr);
 		_parseTemplateStr();
 	}
 	
 	bool hasElement(string name)
 	{
-		import std.utf;
+		import std.utf: toUTF32;
+		import std.string: strip;
 	
-		dstring markNameUTF32 = std.string.strip( std.utf.toUTF32(name) );
+		dstring markNameUTF32 = strip( toUTF32(name) );
 		return cast(bool)(markNameUTF32 in _namedEls);
 	}
 
@@ -156,8 +157,9 @@ private:
 	}
 	
 	public string getString(const dstring[dstring] values, size_t extraSize = 0) const
-	{	import std.utf;
+	{	import std.utf: toUTF32, toUTF8;
 		import std.array: appender;
+		import std.string: strip;
 		
 		auto result = appender!dstring();
 		result.reserve( _sourceStr.length + extraSize );
@@ -171,7 +173,7 @@ private:
 				textStart = el.sufPos + lexLen(LexemeType.varSuf);
 			}
 			else
-			{	markName = std.string.strip( 
+			{	markName = strip( 
 					_sourceStr[ el.prePos + lexLen(LexemeType.markPre) .. el.sufPos ]
 				);
 				result ~= _sourceStr[textStart .. el.prePos] ~ values.get(markName, null);
@@ -179,7 +181,7 @@ private:
 			}
 		}
 		result ~= _sourceStr[textStart .. $];
-		return std.utf.toUTF8( result.data() );
+		return toUTF8( result.data() );
 		//return std.utf.toUTF8( result );
 	}
 }
@@ -209,12 +211,13 @@ public:
 	
 	//Устанавливает замещающее значение value для метки с именем markName
 	void set(string markName, string value)
-	{	import std.utf;
+	{	import std.utf: toUTF32, toUTF8;
+		import std.string: strip;
 		if( !hasElement(markName) )
 			return; //Не засоряем контекст неиспользуемыми данными
 	
-		dstring markNameUTF32 = std.string.strip( std.utf.toUTF32(markName) );
-		dstring valueUTF32 = std.utf.toUTF32( value );
+		dstring markNameUTF32 = strip( toUTF32(markName) );
+		dstring valueUTF32 = toUTF32( value );
 		
 		//Собираем оценку хранимых данных
 		//Если по новой задаем переменную, то вычитаем предыдущий размер данных из оценки размера
@@ -230,13 +233,13 @@ public:
 	
 	//Получение значения из переменной с именем name
 	string get(string name) const
-	{	import std.utf;
-		dstring nameUTF32 = std.utf.toUTF32(name);
+	{	import std.utf: toUTF32, toUTF8;
+		dstring nameUTF32 = toUTF32(name);
 		if( (nameUTF32 in _tpl._namedEls) && (_tpl._namedEls[nameUTF32].length > 0) )
 		{	auto el = _tpl._namedEls[nameUTF32][0];
 			if( el.isVar )
 				return 
-					std.utf.toUTF8( _tpl._sourceStr[ ( el.matchOpPos + _tpl.lexLen(LexemeType.matchOp) ) .. el.sufPos ] );
+					toUTF8( _tpl._sourceStr[ ( el.matchOpPos + _tpl.lexLen(LexemeType.matchOp) ) .. el.sufPos ] );
 			else 
 				return null;
 		}
@@ -249,6 +252,18 @@ public:
 		return _tpl.getString(_values, _extraDataSizeEval);
 	}
 
+}
+
+void setHTMLText(PlainTemplater tpl, string markName, string value)
+{
+	import webtank.net.utils: HTMLEscapeText;
+	tpl.set( markName, HTMLEscapeText( value ) );
+}
+
+void setHTMLValue(PlainTemplater tpl, string markName, string value)
+{
+	import webtank.net.utils: HTMLEscapeValue;
+	tpl.set( markName, HTMLEscapeValue( value ) );
 }
 
 class PlainTemplateCache(bool useCache = true)

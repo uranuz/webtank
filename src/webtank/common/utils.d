@@ -200,3 +200,12 @@ unittest
  	//static assert( is( typeof(a1) == int[string] ) );
 	//static assert( is( typeof(a2) == int[string] ) );
 }
+
+
+V* getPtrOrSet(K, V)( ref V[K] aa, K key, lazy V defVal = V.init ) @trusted 
+{
+	if( V* aaElem = key in aa )
+		return aaElem;
+	else
+		return &( aa[key] = defVal );
+}

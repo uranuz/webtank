@@ -1,6 +1,6 @@
 module webtank.db.database_field;
 
-import std.json, std.conv, std.traits;
+import std.json, std.conv, std.traits, std.datetime;
 
 import webtank.datctrl.data_field, webtank.db.database, webtank.datctrl.record_format, webtank.datctrl.enum_format;
 
