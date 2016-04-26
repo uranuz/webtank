@@ -47,3 +47,19 @@
 .b-wt-CheckBoxList.e-wt-item_caption {
 	
 }
+
+.b-wt-PlainDatePicker.e-wt-day_field {
+	width: 4rem;
+}
+
+.b-wt-PlainDatePicker.e-wt-year_field {
+	width: 6rem;
+}
+
+.b-wt-PlainDatePicker.e-wt-day_field,
+.b-wt-PlainDatePicker.e-wt-month_field,
+.b-wt-PlainDatePicker.e-wt-year_field {
+	padding: .25rem .5rem;
+	line-height: 1rem;
+	font-size: 1rem;
+}

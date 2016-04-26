@@ -431,6 +431,13 @@ public:
 		}
 	
 	} //static if( hasKeyField )
+	else
+	{
+		size_t keyFieldIndex() @property
+		{
+			assert( false, `RecordSet has no key field!` );
+		}
+	}
 	
 	
 
