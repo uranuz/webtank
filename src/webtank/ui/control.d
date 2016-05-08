@@ -4,7 +4,11 @@ module webtank.ui.control;
 interface UIControl
 {
 	///Название элемента интерфейса
-	string controlName() @property;
+	string controlName() const @property;
+	void controlName(string name) @property;
+
+	///Название типа элемента интерфейса (свойство для чтения)
+	string controlTypeName() const @property;
 }
 
 ///Элемент пользовательского интерфейса на базе HTML
@@ -15,44 +19,97 @@ interface HTMLControl: UIControl
 	///могут строиться на базе этого значения с добавлением каких-либо префиксов
 	///или суффиксов
 	void dataFieldName( string value ) @property;
+	string dataFieldName() const @property;
 	
 	///Добавление классов для элементов внутри компонента
-	void addElementClasses( string element, string classes );
+	void addElementHTMLClasses( string element, string classes );
+
+	///Путь для поиска шаблонов компонента
+	//void templatesPath( string path ) @property;
 	
 	///Выполняет создание верстки для элемента интерфейса
 	string print();
 }
 
-///HTML-элемент пользовательского интерфейса 
-///с применением методологии "Блок-Элемент-Модификатор" (БЭМ)
-interface BEMControl: HTMLControl
+///HTML-элемент пользовательского интерфейса с применением методологии
+///верстки "Экземпляр-Тема-Элемент-Модификатор" (ITEM)
+interface ITEMControl: HTMLControl
 {
-	///Возвращает имя блока по методологии БЭМ для данного элемента интерфейса
-	string blockName() @property;
+	///Возвращает HTML класс "экземпляра" блока по методологии ITEM
+	///для данного элемента интерфейса
+	string instanceHTMLClass() const @property;
+
+	///Добавляет дополнительные классы тем оформления блока
+	void addThemeHTMLClasses( string themes );
+
 }
 
-mixin template AddClassesImpl()
+mixin template ITEMControlBaseImpl()
 {
-	override void addElementClasses( string element, string classes )
+	public override {
+		string controlName() const @property
+		{
+			return _controlName;
+		}
+
+		void controlName(string name) @property
+		{
+			_controlName = name;
+		}
+
+		string instanceHTMLClass() const @property
+		{
+			return wtInstanceHTMLClassPrefix ~ _controlName;
+		}
+
+		void dataFieldName(string value) @property
+		{
+			_dataFieldName = value;
+		}
+
+		string dataFieldName() const @property
+		{
+			return _dataFieldName;
+		}
+
+		void addThemeHTMLClasses( string themes )
+		{
+			import std.string: split;
+			_themeHTMLClasses ~= themes.split(' ');
+		}
+	}
+
+protected:
+	string _controlName;
+	string[] _themeHTMLClasses;
+	string _dataFieldName;
+}
+
+mixin template AddElementHTMLClassesImpl()
+{
+	public override void addElementHTMLClasses( string element, string classes )
 	{
 		import std.array: split;
 		import std.algorithm: canFind;
 		import webtank.common.utils: getPtrOrSet;
-		
+
 		if( !this._allowedElemsForClasses.canFind(element) ) //Unregistered elements are ignored
 			return;
-		
-		auto classesPtr = _elementClasses.getPtrOrSet(element);
+
+		auto classesPtr = _elementHTMLClasses.getPtrOrSet(element);
 		*classesPtr ~= classes.split(' ');
 	}
-	
-	protected {
-		string[][string] _elementClasses;
-	}
 
+protected:
+	string[][string] _elementHTMLClasses;
 }
 
 //Block, Element, Modifier (BEM) concept prefixes for element classes
-static immutable blockPrefix = `b-wt-`;
-static immutable elementPrefix = `e-wt-`;
-static immutable modifierPrefix = `m-wt-`;
+///Prefix for Webtank instance class, used for manipulating block elements via JavaScript
+static immutable wtInstanceHTMLClassPrefix = `i-`;
+///Prefix for Webtank theme class, used to set styling for block elements with CSS
+static immutable wtThemeHTMLClassPrefix = `t-wt-`;
+///Prefix for Webtank element class, used for addressing ceratain elements in JavaScript or CSS
+static immutable wtElementHTMLClassPrefix = `e-`;
+///Prefix for Webtank modifier class, used to modify elements or whole block via CSS
+static immutable wtModifierHTMLClassPrefix = `m-wt-`;

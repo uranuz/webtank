@@ -38,37 +38,28 @@ template HTMLListControlValueSetSpec(ValueSetType)
 		static assert( 0, `Generating drop down list from value set "` ~ ValueSetType.stringof ~ `" is not supported!!!` );
 }
 
-class ListControl(ValueSetT): BEMControl
+class ListControl(ValueSetT): ITEMControl
 {
+	mixin ITEMControlBaseImpl;
+
 public:
 	alias ValueSetType = ValueSetT;
 	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
 	alias ValueType = ValueSetSpec.ValueType;
 	enum bool hasNames = ValueSetSpec.hasNames;
 	
-	this( ValueSetT set, string ctrlName ) pure
+	this( ValueSetT set, string ctrlTypeName ) pure
 	{
 		_valueSet = set;
-		_controlName = ctrlName;
+		_controlTypeName = ctrlTypeName;
 	}
 	
-	override string controlName() @property
+	override string controlTypeName() const @property
 	{
 		return _controlName;
 	}
 	
-	override void dataFieldName(string value) @property
-	{
-		_inputName = value;
-	}
-	
-	override string blockName() @property
-	{
-		return blockPrefix ~ _controlName;
-	}
-	
-	override abstract void addElementClasses( string element, string classes );
-	
+	abstract void addElementHTMLClasses( string element, string classes );
 	abstract string _renderItem( ValueType value, string name_attr );
 	abstract string _renderNullItem();
 	
@@ -175,7 +166,7 @@ public:
 	}
 	
 protected:
-	string _controlName;
+	string _controlTypeName;
 	string _inputName;
 	bool _isNullable = true;
 	string _nullText;
@@ -185,8 +176,6 @@ protected:
 
 class CheckableInputList(ValueSetT, bool isRadio): ListControl!(ValueSetT)
 {
-	mixin AddClassesImpl;
-
 public:
 	alias ValueSetType = ValueSetT;
 	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
@@ -196,6 +185,8 @@ public:
 	private static immutable _allowedElemsForClasses = [
 		"item_input", "item_label", "list_item", "item_caption", "block"
 	];
+
+	mixin AddElementHTMLClassesImpl;
 	
 	this( ValueSetT set ) pure
 	{
@@ -231,40 +222,36 @@ public:
 		tpl.setHTMLText( "caption_text", name_attr );
 		
 		string[][string] elemClasses = [
-			"block": [
-				this.blockName,
-				elementPrefix ~ `block`
-			],
 			"list_item": [
-				this.blockName,
-				elementPrefix ~ `list_item`
-			],
+				this.instanceHTMLClass,
+				wtElementHTMLClassPrefix ~ `list_item`
+			] ~ _themeHTMLClasses,
 			"item_input": [ 
-				this.blockName,
-				elementPrefix ~ `item_input`
-			],
+				this.instanceHTMLClass,
+				wtElementHTMLClassPrefix ~ `item_input`
+			] ~ _themeHTMLClasses,
 			"item_label": [
-				this.blockName,
-				elementPrefix ~ `item_label`
-			],
+				this.instanceHTMLClass,
+				wtElementHTMLClassPrefix ~ `item_label`
+			] ~ _themeHTMLClasses,
 			"item_caption": [
-				this.blockName,
-				elementPrefix ~ `item_caption`
-			]
+				this.instanceHTMLClass,
+				wtElementHTMLClassPrefix ~ `item_caption`
+			] ~ _themeHTMLClasses
 		];
 		
 		import webtank.common.utils: getPtrOrSet;
 		
 		foreach( elemName; _allowedElemsForClasses )
 		{
-			if( auto classesPtr = elemName in _elementClasses )
+			if( auto classesPtr = elemName in _elementHTMLClasses )
 				*elemClasses.getPtrOrSet(elemName) ~= *classesPtr;
 		}
 
 		static if( is( V == typeof(null) ) ) 
 		{
 			tpl.setHTMLValue( "input_value", null ); //Лучше явно задать
-			elemClasses["wrapper"] ~= [ modifierPrefix ~ `isNullValue` ];
+			elemClasses["wrapper"] ~= [ wtModifierHTMLClassPrefix ~ `is-null_value` ];
 			
 			tpl.setHTMLValue( "input_checked", 
 				this.isNull ? "checked" : null );
@@ -291,9 +278,10 @@ public:
 		import webtank.common.conv;
 		auto tpl = getPlainTemplater( "ui/checkable_input_list.html" );
 		
-		string[] blockClasses = [this.blockName];
+		string[] blockClasses = [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ "block" ]
+			~ _themeHTMLClasses;
 		
-		if( auto elemPtr = "block" in _elementClasses )
+		if( auto elemPtr = "block" in _elementHTMLClasses )
 		{
 			blockClasses ~= *elemPtr;
 		}
@@ -323,20 +311,24 @@ alias RadioButtonList(ValueSetT) = CheckableInputList!(ValueSetT, true);
 ///Функция-помощник для создания списка флагов
 auto checkBoxList(T)(T valueSet)
 {
-	return new CheckBoxList!(T)(valueSet);
+	auto ctrl = new CheckBoxList!(T)(valueSet);
+	ctrl.addThemeHTMLClasses( "t-wt-CheckBoxList" );
+
+	return ctrl;
 }
 
 ///Функция-помощник для создания списка радиокнопок
 auto radioButtonList(T)(T valueSet)
 {
-	return new RadioButtonList!(T)(valueSet);
+	auto ctrl = new RadioButtonList!(T)(valueSet);
+	ctrl.addThemeHTMLClasses( "t-wt-RadioButtonList" );
+
+	return ctrl;
 }
 
 ///Простенький класс для генерации HTML-разметки для выпадающего списка элементов
 class ListBox(ValueSetT): ListControl!(ValueSetT)
 {	
-	mixin AddClassesImpl;
-
 public:
 	alias ValueSetType = ValueSetT;
 	alias ValueSetSpec = HTMLListControlValueSetSpec!ValueSetType;
@@ -346,6 +338,8 @@ public:
 	private static immutable _allowedElemsForClasses = [
 		"select", "option"
 	];
+
+	mixin AddElementHTMLClassesImpl;
 	
 	this( ValueSetT set ) pure
 	{
@@ -364,36 +358,32 @@ public:
 	{
 		auto tpl = getPlainTemplater( "ui/checkable_input_list_item.html" );
 
-		tpl.setHTMLValue( "option_name", _inputName );
+		tpl.setHTMLValue( "option_name", _dataFieldName );
 		
 		string[][string] elemClasses = [
-			"block": [
-				this.blockName,
-				elementPrefix ~ `block`
-			],
 			"list_item": [
-				this.blockName,
-				elementPrefix ~ `list_item`
-			],
+				this.instanceHTMLClass,
+				wtElementHTMLClassPrefix ~ `list_item`
+			] ~ _themeHTMLClasses,
 			"item_input": [ 
-				this.blockName,
-				elementPrefix ~ `item_input`
-			],
+				this.instanceHTMLClass,
+				wtElementHTMLClassPrefix ~ `item_input`
+			] ~ _themeHTMLClasses,
 			"item_label": [
-				this.blockName,
-				elementPrefix ~ `item_label`
-			],
+				this.instanceHTMLClass,
+				wtElementHTMLClassPrefix ~ `item_label`
+			] ~ _themeHTMLClasses,
 			"item_caption": [
-				this.blockName,
-				elementPrefix ~ `item_caption`
-			]
+				this.instanceHTMLClass,
+				wtElementHTMLClassPrefix ~ `item_caption`
+			] ~ _themeHTMLClasses
 		];
 		
 		import webtank.common.utils: getPtrOrSet;
 		
 		foreach( elemName; _allowedElemsForClasses )
 		{
-			if( auto classesPtr = elemName in _elementClasses )
+			if( auto classesPtr = elemName in _elementHTMLClasses )
 				*elemClasses.getPtrOrSet(elemName) ~= *classesPtr;
 		}
 		
@@ -402,7 +392,7 @@ public:
 		static if( is( V == typeof(null) ) ) 
 		{
 			tpl.setHTMLValue( "option_value", null ); //Лучше явно задать
-			elemClasses["option_cls"] ~= [ modifierPrefix ~ `isNullValue` ];
+			elemClasses["option_cls"] ~= [ wtModifierHTMLClassPrefix ~ `is-null_value` ];
 			tpl.setHTMLText( "option_text", _nullText );
 			tpl.setHTMLValue( "option_selected", this.isNull ? `selected` : null );
 		}
@@ -429,9 +419,10 @@ public:
 		import webtank.common.conv;
 		string[string] selectAttrs;
 		
-		string[] selectClasses = [this.blockName];
+		string[] selectClasses = [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ "block" ]
+			~ _themeHTMLClasses;
 		
-		if( auto elemPtr = "select" in _elementClasses )
+		if( auto elemPtr = "select" in _elementHTMLClasses )
 		{
 			selectClasses ~= *elemPtr;
 		}
@@ -465,5 +456,8 @@ protected:
 
 auto listBox(T)(T valueSet)
 {
-	return new ListBox!(T)(valueSet);
+	auto ctrl = new ListBox!(T)(valueSet);
+	ctrl.addThemeHTMLClasses( "t-wt-ListBox" );
+
+	return ctrl;
 }

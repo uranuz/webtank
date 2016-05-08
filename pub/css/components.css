@@ -28,38 +28,42 @@
 	color: blue;
 }
 
-.b-wt-CheckBoxList.e-wt-block {
-	
-}
-
-.b-wt-CheckBoxList.e-wt-list_item {
-	
-}
-
-.b-wt-CheckBoxList.e-wt-item_input {
-	
-}
-
-.b-wt-CheckBoxList.e-wt-item_label {
-	
-}
-
-.b-wt-CheckBoxList.e-wt-item_caption {
-	
-}
-
-.b-wt-PlainDatePicker.e-wt-day_field {
+.t-wt-PlainDatePicker.e-day_field {
 	width: 4rem;
 }
 
-.b-wt-PlainDatePicker.e-wt-year_field {
+.t-wt-PlainDatePicker.e-year_field {
 	width: 6rem;
 }
 
-.b-wt-PlainDatePicker.e-wt-day_field,
-.b-wt-PlainDatePicker.e-wt-month_field,
-.b-wt-PlainDatePicker.e-wt-year_field {
+.t-wt-PlainDatePicker.e-day_field,
+.t-wt-PlainDatePicker.e-month_field,
+.t-wt-PlainDatePicker.e-year_field {
 	padding: .25rem .5rem;
 	line-height: 1rem;
 	font-size: 1rem;
+}
+
+.t-wt-CheckBoxList.e-block {
+	display: block;
+	position: relative;
+	height: 120px;
+	overflow-y: scroll;
+	border: solid silver 2px;
+}
+
+.t-wt-CheckBoxList.e-list_item {
+
+}
+
+.t-wt-CheckBoxList.e-item_input {
+
+}
+
+.t-wt-CheckBoxList.e-item_label {
+
+}
+
+.t-wt-CheckBoxList.e-item_caption {
+
 }

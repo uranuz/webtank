@@ -14,19 +14,20 @@ static immutable months =
 		"октябрь", "ноябрь", "декабрь"
 	];
 
-class PlainDatePicker: BEMControl
+class PlainDatePicker: ITEMControl
 {
 	private static immutable _allowedElemsForClasses = [
 		"block", "row", "day_field", "month_field", "year_field"
 	];
 	
-	mixin AddClassesImpl;
+	mixin ITEMControlBaseImpl;
+	mixin AddElementHTMLClassesImpl;
 	
 private:
-	static immutable _controlName = "PlainDatePicker";
-	string _inputName;
-	OptionalDate _date;
+	static immutable _controlTypeName = "PlainDatePicker";
 	static immutable _dateWords = [ "day", "month", "year" ];
+
+	OptionalDate _date;
 	string _nullDayText;
 	string _nullMonthText;
 	string _nullYearText;
@@ -34,37 +35,27 @@ private:
 public:
 	this() {}
 	
-	override string controlName() @property
+	override string controlTypeName() const @property
 	{
-		return _controlName;
-	}
-
-	override void dataFieldName(string value) @property
-	{
-		_inputName = value;
+		return _controlTypeName;
 	}
 	
-	override string blockName() @property
-	{
-		return blockPrefix ~ _controlName;
-	}
-	
-	void date( OptionalDate value )
+	void date( OptionalDate value ) @property
 	{
 		_date = value;
 	}
 	
-	void nullDayText( string value )
+	void nullDayText( string value ) @property
 	{
 		_nullDayText = value;
 	}
 	
-	void nullMonthText( string value )
+	void nullMonthText( string value ) @property
 	{
 		_nullMonthText = value;
 	}
 	
-	void nullYearText( string value )
+	void nullYearText( string value ) @property
 	{
 		_nullYearText = value;
 	}
@@ -75,25 +66,25 @@ public:
 		auto itemTpl = getPlainTemplater( "ui/plain_date_picker_month.html" );
 		
 		string[][string] elemClasses = [
-			"block": [ this.blockName, elementPrefix ~ `block`  ],
-			"row": [ this.blockName, elementPrefix ~ `row` ],
-			"day_field": [ this.blockName, elementPrefix ~ `day_field` ],
-			"month_field": [ this.blockName, elementPrefix ~ `month_field` ],
-			"month_item": [ this.blockName, elementPrefix ~ `month_item` ],
-			"year_field": [ this.blockName, elementPrefix ~ `year_field` ]
+			"block": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `block` ] ~ _themeHTMLClasses,
+			"row": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `row` ] ~ _themeHTMLClasses,
+			"day_field": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `day_field` ] ~ _themeHTMLClasses,
+			"month_field": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `month_field` ] ~ _themeHTMLClasses,
+			"month_item": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `month_item` ] ~ _themeHTMLClasses,
+			"year_field": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `year_field` ] ~ _themeHTMLClasses
 		];
 
 		import webtank.common.utils: getPtrOrSet;
 		
 		foreach( elemName; _allowedElemsForClasses )
 		{
-			if( auto classesPtr = elemName in _elementClasses )
+			if( auto classesPtr = elemName in _elementHTMLClasses )
 				*elemClasses.getPtrOrSet(elemName) ~= *classesPtr;
 		}
 		
 		//Задаём имена полей
 		foreach( word; _dateWords )
-			tpl.setHTMLValue( word ~ "_field_name",  _inputName ~ `__` ~ word );
+			tpl.setHTMLValue( word ~ "_field_name",  _dataFieldName ~ `__` ~ word );
 
 		tpl.setHTMLValue( "day_value", _date.day.isNull ? null : _date.day.text );
 		tpl.setHTMLValue( "day_placeholder", _nullDayText );
@@ -129,4 +120,14 @@ public:
 		return tpl.getString();
 	}
 }
- 
+
+import webtank.common.optional: OptionalDate;
+
+///Функция-помощник для создания простого компонента выбора даты
+auto plainDatePicker( OptionalDate optDate = OptionalDate() )
+{
+	auto ctrl = new PlainDatePicker();
+	ctrl.addThemeHTMLClasses( "t-wt-PlainDatePicker" );
+
+	return ctrl;
+}
