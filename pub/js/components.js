@@ -75,7 +75,7 @@ var webtank = {
 			(window.pageXOffset !== undefined) ? window.pageXOffset : 
 			(document.documentElement || document.body.parentNode || document.body).scrollLeft
 		);
-	},
+	}
 };
 
 if (!Function.prototype.bind) {
@@ -133,12 +133,12 @@ function __mixinProto(dst, src) {
 }
 
 
-webtank.WClass = new (function(_super) {
-	function WClass(cssBlockName) {
+webtank.ITEMControl = new (function(_super) {
+	function ITEMControl(cssBlockName) {
 		this.cssBlockName = cssBlockName;
 	}
 	
-	return __mixinProto(WClass, {
+	return __mixinProto(ITEMControl, {
 		$el: function(elemSelector) {
 			var 
 				self = this,
