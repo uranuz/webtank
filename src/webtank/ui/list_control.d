@@ -167,7 +167,6 @@ public:
 	
 protected:
 	string _controlTypeName;
-	string _inputName;
 	bool _isNullable = true;
 	string _nullText;
 	ValueType[] _selectedValues;
@@ -217,7 +216,7 @@ public:
 			static immutable inputType = `checkbox`;
 		}
 		
-		tpl.setHTMLValue( "input_name", this._inputName );
+		tpl.setHTMLValue( "input_name", this._dataFieldName );
 		tpl.setHTMLValue( "input_type", inputType );
 		tpl.setHTMLText( "caption_text", name_attr );
 		
@@ -414,7 +413,7 @@ public:
 	{	
 		auto tpl = getPlainTemplater( "ui/checkable_input_list_item.html" );
 		
-		tpl.setHTMLValue( "select_name", _inputName );
+		tpl.setHTMLValue( "select_name", _dataFieldName );
 		
 		import webtank.common.conv;
 		string[string] selectAttrs;

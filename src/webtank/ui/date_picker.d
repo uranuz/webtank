@@ -127,6 +127,7 @@ import webtank.common.optional: OptionalDate;
 auto plainDatePicker( OptionalDate optDate = OptionalDate() )
 {
 	auto ctrl = new PlainDatePicker();
+	ctrl.date = optDate;
 	ctrl.addThemeHTMLClasses( "t-wt-PlainDatePicker" );
 
 	return ctrl;

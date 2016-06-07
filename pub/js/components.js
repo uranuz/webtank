@@ -134,11 +134,41 @@ function __mixinProto(dst, src) {
 
 
 webtank.ITEMControl = new (function(_super) {
-	function ITEMControl(cssBlockName) {
-		this.cssBlockName = cssBlockName;
+	function ITEMControl(opts) {
+		opts = opts || {}
+		this._controlName = opts.controlName;
+		this._controlTypeName = opts.controlTypeName;
+		this._elemsCache = null;
+		this._cssBlockName = opts.cssBlockName;
 	}
 	
 	return __mixinProto(ITEMControl, {
+
+		//Возвращает имя экземпляра компонента интерфейса
+		controlName: function() {
+			return this._controlName;
+		},
+
+		//Возвращает имя типа компонента интерфейса
+		controlTypeName: function() {
+			return this._controlTypeName;
+		},
+
+		//Возвращает HTML-класс экземпляра компонента интерфейса
+		instanceHTMLClass: function() {
+			return this._controlName ? 'i-' + this._controlName : undefined;
+		},
+
+		//Возвращает jQuery-список HTML-элементов с классами экземпляра
+		//компонента интерфейса.
+		//Это protected-метод для использования только в производных классах
+		_elems: function( update ) {
+			if( this._elemsCache == null || update === true ) {
+				this._elemsCache = $( '.' + this.instanceHTMLClass() );
+			}
+			return this._elemsCache;
+		},
+
 		$el: function(elemSelector) {
 			var 
 				self = this,
@@ -214,7 +244,7 @@ webtank.ITEMControl = new (function(_super) {
 			if( selector.indexOf(".b-") !== -1 )
 				throw new Error("Block selectors are not allowed!!!");
 			
-			blockName = ( this.cssBlockName == null || this.cssBlockName.length == 0 ) ? this.elems.selector : this.cssBlockName;
+			blockName = ( this._cssBlockName == null || this._cssBlockName.length == 0 ) ? this.elems.selector : this._cssBlockName;
 
 			newSelector = selector.split(".e-").join(blockName + ".e-");
 			
