@@ -225,7 +225,7 @@ public:
 				this.instanceHTMLClass,
 				wtElementHTMLClassPrefix ~ `list_item`
 			] ~ _themeHTMLClasses,
-			"item_input": [ 
+			"item_input": [
 				this.instanceHTMLClass,
 				wtElementHTMLClassPrefix ~ `item_input`
 			] ~ _themeHTMLClasses,
@@ -252,7 +252,7 @@ public:
 			tpl.setHTMLValue( "input_value", null ); //Лучше явно задать
 			elemClasses["wrapper"] ~= [ wtModifierHTMLClassPrefix ~ `is-null_value` ];
 			
-			tpl.setHTMLValue( "input_checked", 
+			tpl.setHTMLValue( "input_checked",
 				this.isNull ? "checked" : null );
 		}
 		else
@@ -261,7 +261,7 @@ public:
 			import std.algorithm: canFind;
 			
 			tpl.setHTMLValue( "input_value", value.conv!string );
-			tpl.setHTMLValue( "input_checked", 
+			tpl.setHTMLValue( "input_checked",
 				_selectedValues.canFind(value) ? "checked" : null );
 		}
 		
@@ -355,26 +355,14 @@ public:
 	
 	string _customRenderItem(V)(V value, string name_attr) 
 	{
-		auto tpl = getPlainTemplater( "ui/checkable_input_list_item.html" );
+		auto tpl = getPlainTemplater( "ui/list_box_item.html" );
 
 		tpl.setHTMLValue( "option_name", _dataFieldName );
 		
 		string[][string] elemClasses = [
-			"list_item": [
+			"option": [
 				this.instanceHTMLClass,
-				wtElementHTMLClassPrefix ~ `list_item`
-			] ~ _themeHTMLClasses,
-			"item_input": [ 
-				this.instanceHTMLClass,
-				wtElementHTMLClassPrefix ~ `item_input`
-			] ~ _themeHTMLClasses,
-			"item_label": [
-				this.instanceHTMLClass,
-				wtElementHTMLClassPrefix ~ `item_label`
-			] ~ _themeHTMLClasses,
-			"item_caption": [
-				this.instanceHTMLClass,
-				wtElementHTMLClassPrefix ~ `item_caption`
+				wtElementHTMLClassPrefix ~ `option`
 			] ~ _themeHTMLClasses
 		];
 		
@@ -411,7 +399,7 @@ public:
 	///Метод генерирует разметку по заданным параметрам
 	override string print()
 	{	
-		auto tpl = getPlainTemplater( "ui/checkable_input_list_item.html" );
+		auto tpl = getPlainTemplater( "ui/list_box.html" );
 		
 		tpl.setHTMLValue( "select_name", _dataFieldName );
 		
