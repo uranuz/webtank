@@ -182,7 +182,7 @@ public:
 	enum bool hasNames = ValueSetSpec.hasNames;
 	
 	private static immutable _allowedElemsForClasses = [
-		"item_input", "item_label", "list_item", "item_caption", "block"
+		"item_input", "item_label", "list_item", "item_caption", "block", "container"
 	];
 
 	mixin AddElementHTMLClassesImpl;
@@ -279,14 +279,18 @@ public:
 		
 		string[] blockClasses = [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ "block" ]
 			~ _themeHTMLClasses;
+		string[] containerClasses = [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ "container" ]
+			~ _themeHTMLClasses;
 		
 		if( auto elemPtr = "block" in _elementHTMLClasses )
-		{
 			blockClasses ~= *elemPtr;
-		}
+
+		if( auto elemPtr = "container" in _elementHTMLClasses )
+			containerClasses ~= *elemPtr;
 		
 		tpl.set( "list_items", _renderItems() );
 		tpl.setHTMLValue( "block_cls", blockClasses.join(` `) );
+		tpl.setHTMLValue( "container_cls", containerClasses.join(` `) );
 
 		return tpl.getString();
 	}
