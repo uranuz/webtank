@@ -246,6 +246,11 @@ public:
 		else 
 			return null;
 	}
+
+	void clearData()
+	{
+		_values = null;
+	}
 	
 	string getString() const
 	{

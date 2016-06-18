@@ -20,30 +20,32 @@ void fillFrom(Rec)( PlainTemplater tpl, Rec rec, FillAttrs attrs = FillAttrs() )
 		
 		if( rec.isNull(fieldName) )
 		{
-			if( fieldName in attrs.defaults )
-				tpl.set( fieldName, attrs.defaults[fieldName] );
+			if( auto defVal = fieldName in attrs.defaults )
+				tpl.set( fieldName, *defVal );
+			else
+				// Даже если пусто, то все-равно нужно записать null в шаблон
+				tpl.set( fieldName, null );
 		}
 		else
 		{
+			string value;
 			static if( isEnumFormat!(fieldFormatDecl) )
 			{
-				//auto enumFormat = rec.getEnumFormat!(fieldName)();
-				//string value = enumFormat.getName( rec.get!(fieldName)() );
-				string value = rec.getStr!(fieldName)();
+				value = rec.getStr!(fieldName)();
 			}
 			else static if( isSomeString!( fieldType ) ) //Needs escaping
 			{
 				import std.algorithm: canFind;
-				string value = rec.get!(fieldName)().to!string;
+				value = rec.get!(fieldName)().to!string;
 				
 				if( !attrs.noEscaped.canFind(fieldName) )
 					value = HTMLEscapeValue( value );
 			}
 			else
 			{
-				string value = rec.get!(fieldName)().to!string;
+				value = rec.get!(fieldName)().to!string;
 			}
-			tpl.set(fieldName, value);
+			tpl.set( fieldName, value );
 		}
 	}
 }
