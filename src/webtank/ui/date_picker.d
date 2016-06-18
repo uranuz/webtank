@@ -24,7 +24,7 @@ class PlainDatePicker: ITEMControl
 	mixin AddElementHTMLClassesImpl;
 	
 private:
-	static immutable _controlTypeName = "PlainDatePicker";
+	static immutable _controlTypeName = "webtank.ui.PlainDatePicker";
 	static immutable _dateWords = [ "day", "month", "year" ];
 
 	OptionalDate _date;
