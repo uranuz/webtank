@@ -213,6 +213,49 @@ struct RecordFormat(Args...)
 	}
 }
 
+
+alias NullableFlag = Flag!("nullable");
+
+/**
+	static immutable fmt = makeRecordFormat!(
+
+	) (
+		t!("nullableFlags", "enumFormats")(
+			[ "name": NullableFlag.yes ],
+			t!("готовность", "статус", "видТуризма") (
+				готовность,
+				статус,
+				видТуризма
+			)
+		)
+	);
+
+	static immutable fmt = makeRecordFormat!(
+
+	) (  );
+
+	alias
+
+
+*/
+
+
+template makeRecordFormat(Opts...)
+{
+	alias MethodArgs = ;
+	alias
+
+	auto makeRecordFormat(MethodArgs methodArgs)
+	{
+		foreach( MethodArg; MethodArgs )
+		{
+
+
+		}
+	}
+
+}
+
 template _getHasField(string fieldName, FieldSpecs...)
 {
 	static if( FieldSpecs.length == 0 )
@@ -301,7 +344,10 @@ template _filterFieldSpecs(FieldSpecs...)
 {	//Фильтрация по типам полей
 	//Элементы кортежа FilterFieldTypes должны иметь тип FieldType
 	template ByTypes(FilterFieldTypes...)
-	{	static if( FieldSpecs.length == 0 )
+	{
+		static assert( FilterFieldTypes.length > 0, "Field types list must be provided!" );
+
+		static if( FieldSpecs.length == 0 )
 			alias ByTypes = TypeTuple!();
 		else
 			alias ByTypes = TypeTuple!(
