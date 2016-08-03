@@ -187,7 +187,6 @@ public:
 //  		event.threadId = thisTid;
 
 		writeEvent( event );
-
 	}
 
 
@@ -275,36 +274,64 @@ $(LOCALE_RU_RU
 +/
 class FileLogger: Logger
 {	
-	import std.stdio, std.concurrency, std.file;
+	import std.stdio, std.concurrency, std.datetime, std.conv, std.path;
 protected:
 	LogLevel _logLevel;
-	string _logFileName;
+	string _filePrefix;
+	Date _fileDate;
+	File _file;
+
 public:
 	
-	this( string logFileName, LogLevel logLevel )
-	{	/+_logFile = File( logFileName, "a" );+/
-		_logFileName = logFileName;
-		_logLevel = logLevel;
+	this( string fileName, LogLevel logLevel )
+	{
+		_init( fileName, logLevel );
 	}
 
-	this( string logFileName, LogLevel logLevel ) shared
-	{	/+_logFile = File( logFileName, "a" );+/
-		_logFileName = logFileName;
+	this( string fileName, LogLevel logLevel ) shared
+	{
+		synchronized {
+			(cast(FileLogger) this)._init( fileName, logLevel );
+		}
+	}
+
+	private void _init()( string fileName, LogLevel logLevel )
+	{
+		_filePrefix = fileName;
 		_logLevel = logLevel;
+		_fileDate =  cast(Date) Clock.currTime();
+		_file = _getLogFile(true);
+	}
+
+	private auto _getLogFile()( bool force = false )
+	{
+		Date currDate = cast(Date) Clock.currTime();
+		if( currDate.day != _fileDate.day || force )
+		{
+			_file.close();
+
+			string fileName = stripExtension(_filePrefix) ~ "_" ~ _fileDate.toISOExtString() ~ extension(_filePrefix);
+			_file = File( fileName, "a" );
+			_fileDate = currDate;
+		}
+		assert( _file.isOpen(), "Error while writing to log file!!!" );
+		return _file;
 	}
 	
 	///Добавление записи в лог
 	override void writeEvent(LogEvent event)
-	{	import std.conv, std.datetime;
+	{
 		if( ( cast(int) event.type ) < ( cast(int) _logLevel ) )
-		{	/+assert( _logFile.isOpen(), "Error while writing to log file!!!" );+/
+		{
 			string message = 
 				"//---------------------------------------\r\n"
 				~ event.timestamp.toISOExtString() 
 				~ " [" ~ std.conv.to!string( event.type ) ~ "] " ~ event.file ~ "(" 
 				~ std.conv.to!string( event.line ) ~ ") " ~ event.prettyFuncName ~ ": " ~ event.title ~ "\r\n"
 				~ event.text ~ "\r\n";
-			std.file.append(_logFileName, message);
+			auto logFile = _getLogFile();
+			logFile.write( message );
+			logFile.flush(); // Сразу сбрасываем в файл
 		}
 	}
 

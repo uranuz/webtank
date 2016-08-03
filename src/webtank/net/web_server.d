@@ -10,11 +10,13 @@ class WebServer
 protected:
 	ushort _port = 8082;
 	IHTTPHandler _handler;
+	Logger _logger;
 	
 public:
-	this(ushort port, IHTTPHandler handler) 
+	this(ushort port, IHTTPHandler handler, Logger logger)
 	{	_port = port;
 		_handler = handler;
+		_logger = logger;
 	}
 	
 	void start()
@@ -41,7 +43,7 @@ public:
 		
 		while(true) //Цикл приёма соединений через серверный сокет
 		{	Socket currSock = listener.accept(); //Принимаем соединение
-			auto workingThread = new WorkingThread(currSock, _handler);
+			auto workingThread = new WorkingThread(currSock, _handler, _logger);
 			workingThread.start();
 		}
 		
@@ -52,7 +54,7 @@ import std.socket, std.conv;
 
 import webtank.net.http.request, webtank.net.http.response, webtank.net.http.headers;
 
-immutable(size_t) startBufLength = 1024;
+immutable(size_t) startBufLength = 10_240;
 immutable(size_t) messageBodyLimit = 4_194_304;
 
 //Функция принимает запрос из сокета и возвращает экземпляр ServerRequest
@@ -119,11 +121,13 @@ class WorkingThread: Thread
 protected:
 	Socket _socket;
 	IHTTPHandler _handler;
+	Logger _logger;
 	
 public:
-	this(Socket sock, IHTTPHandler handler)
+	this(Socket sock, IHTTPHandler handler, Logger logger)
 	{	_socket = sock;
 		_handler = handler;
+		_logger = logger;
 		super(&_work);
 	}
 
@@ -173,40 +177,49 @@ ServerResponse makeErrorResponse( Throwable exc )
 	return response;
 }
 
+string makeErrorMsg( Throwable exc )
+{
+	return "Exception occurred in file: " ~ exc.file ~ " (" ~ exc.line.to!string ~ "):\r\n" ~ exc.msg ~ "\r\nTraceback info:\r\n" ~ exc.info.to!string;
+}
+
 // Реализация приема и обработки запроса из сокета
 mixin template ProcessRequestImpl()
 {
 	private void _processRequest(Socket sock)
 	{
-		ServerRequest request;
-
-		try {
-			request = receiveHTTPRequest(sock);
-		}
-		catch( Throwable exc )
+		try
 		{
-			sock.send( makeErrorResponse( exc ).getString() );
-			return;
-		}
+			ServerRequest request = receiveHTTPRequest(sock);
 
-		if( request is null )
-			return;
+			if( request is null )
+			{
+				this._logger.crit( `request is null` );
+				return;
+			}
 
-		auto context = new HTTPContext( request, new ServerResponse() );
+			auto context = new HTTPContext( request, new ServerResponse() );
 
-		try {
 			//Запуск обработки HTTP-запроса
 			this._handler.processRequest( context );
+
+			//Наш сервер не поддерживает соединение
+			context.response.headers["connection"] = "close";
+			sock.send( context.response.getString() ); //Главное - отправка результата клиенту
+		}
+		catch( Exception exc )
+		{
+			this._logger.crit( makeErrorMsg(exc) ); //Хотим знать, что случилось
+			sock.send( makeErrorResponse(exc).getString() );
+
+			return; // На эксепшоне не падаем - а тихо-мирно завершаемся
 		}
 		catch( Throwable exc )
 		{
-			sock.send( makeErrorResponse( exc ).getString() );
-			return;
-		}
+			this._logger.fatal( makeErrorMsg(exc) ); //Хотим знать, что случилось
+			sock.send( makeErrorResponse(exc).getString() );
 
-		//Наш сервер не поддерживает соединение
-		context.response.headers["connection"] = "close";
-		sock.send( context.response.getString() ); //Главное - отправка результата клиенту
+			throw exc; // С Throwable не связываемся - и просто роняем Thread
+		}
 
 		scope(exit)
 		{
@@ -217,6 +230,8 @@ mixin template ProcessRequestImpl()
 	}
 }
 
+import webtank.common.logger: Logger;
+
 // Web-сервер, использующий стандартный пул задач Phobos
 class WebServer2
 {
@@ -226,12 +241,14 @@ protected:
 	TaskPool _taskPool;
 	size_t _threadCount;
 	ushort _port = 8082;
+	Logger _logger;
 
 public:
-	this(ushort port, IHTTPHandler handler, size_t threadCount = 5)
+	this( ushort port, IHTTPHandler handler, Logger logger, size_t threadCount = 5 )
 	{	_port = port;
 		_handler = handler;
 		_threadCount = threadCount;
+		_logger = logger;
 	}
 
 	void _initServer()
@@ -260,12 +277,23 @@ public:
 	{
 		while( true )
 		{
-			Socket client = _listener.accept();
-			if( client is null )
-				continue;
+			try
+			{
+				Socket client = _listener.accept();
+				if( client is null )
+				{
+					this._logger.crit( `accepted socket is null` );
+					continue;
+				}
 
-			auto newTask = task( &this._processRequest, client );
-			_taskPool.put( newTask );
+				auto newTask = task( &this._processRequest, client );
+				_taskPool.put( newTask );
+			}
+			catch( Throwable exc )
+			{
+				this._logger.fatal( makeErrorMsg(exc) );
+				throw exc;
+			}
 		}
 	}
 
@@ -276,5 +304,4 @@ public:
 	}
 
 	mixin ProcessRequestImpl;
-
 }
