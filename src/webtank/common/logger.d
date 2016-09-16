@@ -309,10 +309,9 @@ public:
 		if( currDate.day != _fileDate.day || force )
 		{
 			_file.close();
-
+			_fileDate = currDate;
 			string fileName = stripExtension(_filePrefix) ~ "_" ~ _fileDate.toISOExtString() ~ extension(_filePrefix);
 			_file = File( fileName, "a" );
-			_fileDate = currDate;
 		}
 		assert( _file.isOpen(), "Error while writing to log file!!!" );
 		return _file;
@@ -331,8 +330,13 @@ public:
 				~ event.text ~ "\r\n";
 			auto logFile = _getLogFile();
 			logFile.write( message );
-			logFile.flush(); // Сразу сбрасываем в файл
+			logFile.flush(); // Сразу сбрасываем С-буфер в файл
 		}
+	}
+
+	~this() {
+		_getLogFile().flush();
+		_getLogFile().close();
 	}
 
 protected:
