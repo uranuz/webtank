@@ -48,6 +48,10 @@
 }
 
 .t-wt-CheckBoxList.e-block {
+
+}
+
+.t-wt-CheckBoxList.e-scroll_box {
 	display: block;
 	position: relative;
 	height: 120px;

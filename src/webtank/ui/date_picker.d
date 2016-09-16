@@ -64,24 +64,7 @@ public:
 	{
 		auto tpl = getPlainTemplater( "ui/plain_date_picker.html" );
 		auto itemTpl = getPlainTemplater( "ui/plain_date_picker_month.html" );
-		
-		string[][string] elemClasses = [
-			"block": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `block` ] ~ _themeHTMLClasses,
-			"row": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `row` ] ~ _themeHTMLClasses,
-			"day_field": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `day_field` ] ~ _themeHTMLClasses,
-			"month_field": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `month_field` ] ~ _themeHTMLClasses,
-			"month_item": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `month_item` ] ~ _themeHTMLClasses,
-			"year_field": [ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ `year_field` ] ~ _themeHTMLClasses
-		];
 
-		import webtank.common.utils: getPtrOrSet;
-		
-		foreach( elemName; _allowedElemsForClasses )
-		{
-			if( auto classesPtr = elemName in _elementHTMLClasses )
-				*elemClasses.getPtrOrSet(elemName) ~= *classesPtr;
-		}
-		
 		//Задаём имена полей
 		foreach( word; _dateWords )
 			tpl.setHTMLValue( word ~ "_field_name",  _dataFieldName ~ `__` ~ word );
@@ -91,14 +74,12 @@ public:
 		
 		tpl.setHTMLValue( "year_value", _date.year.isNull ? null : _date.year.text );
 		tpl.setHTMLValue( "year_placeholder", _nullYearText );
-		
-		import std.array: join;
 
 		string items;
 		itemTpl.setHTMLValue( "month_item_value", null );
 		itemTpl.setHTMLText( "month_item_text", _nullMonthText );
 		itemTpl.setHTMLValue( "month_item_selected", _date.month.isNull ? "selected" : null );
-		itemTpl.setHTMLValue( "month_item_cls", elemClasses.get("month_item", null).join(' ') );
+		itemTpl.setHTMLValue( "month_item_cls", _printHTMLClasses("month_item") );
 		
 		items ~= itemTpl.getString();
 		
@@ -107,13 +88,13 @@ public:
 			itemTpl.setHTMLValue( "month_item_value", (i + 1).text );
 			itemTpl.setHTMLText( "month_item_text", month );
 			itemTpl.setHTMLValue( "month_item_selected", i+1 == _date.month ? "selected" : null );
-			itemTpl.setHTMLValue( "month_item_cls", elemClasses.get("month_item", null).join(' ') );
+			itemTpl.setHTMLValue( "month_item_cls", _printHTMLClasses("month_item") );
 			
 			items ~= itemTpl.getString();
 		}
 		
-		foreach( elemName, elemClass; elemClasses )
-			tpl.setHTMLValue( elemName ~ "_cls", elemClass.join(` `) );
+		foreach( elem; ["block", "row", "day_field", "month_field", "year_field"] )
+			tpl.setHTMLValue( elem ~ "_cls", _printHTMLClasses(elem) );
 		
 		tpl.set( "month_list", items );
 		

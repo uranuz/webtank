@@ -7,6 +7,9 @@ import webtank.templating.plain_templater, webtank.datctrl.record, webtank.datct
 ///По-умолчанию строковые поля обрабатываются через HTMLEscape
 void fillFrom(Rec)( PlainTemplater tpl, Rec rec, FillAttrs attrs = FillAttrs() )
 {
+	if( rec is null )
+		return;
+
 	import std.conv: to;
 	import std.traits: isSomeString;
 	import webtank.net.utils: HTMLEscapeValue;

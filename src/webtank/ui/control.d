@@ -100,6 +100,20 @@ mixin template AddElementHTMLClassesImpl()
 		*classesPtr ~= classes.split(' ');
 	}
 
+	protected string[] _getHTMLClasses( string element )
+	{
+		return
+			[ this.instanceHTMLClass, wtElementHTMLClassPrefix ~ element ]
+			~ _elementHTMLClasses.get( element, null )
+			~ this._themeHTMLClasses;
+	}
+
+	protected string _printHTMLClasses( string element )
+	{
+		import std.string: join;
+		return this._getHTMLClasses(element).join(' ');
+	}
+
 protected:
 	string[][string] _elementHTMLClasses;
 }
