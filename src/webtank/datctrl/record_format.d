@@ -239,7 +239,7 @@ alias NullableFlag = Flag!("nullable");
 
 */
 
-
+/*
 template makeRecordFormat(Opts...)
 {
 	alias MethodArgs = ;
@@ -255,6 +255,7 @@ template makeRecordFormat(Opts...)
 	}
 
 }
+*/
 
 template _getHasField(string fieldName, FieldSpecs...)
 {
