@@ -1,6 +1,6 @@
 module webtank.db.postgresql;
 
-pragma(lib, "pq");
+//pragma(lib, "pq");
 
 import std.string, std.exception, std.conv;
 

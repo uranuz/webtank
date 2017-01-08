@@ -13,7 +13,7 @@ enum EventOption
 {
 	/++
 	$(LOCALE_EN_US Synchronized event object access)
-	$(LOCALE_RU_RU Синхронизированный лоступ к объекту события)
+	$(LOCALE_RU_RU Синхронизированный доступ к объекту события)
 	+/
 	synchronized_,
 

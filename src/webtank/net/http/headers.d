@@ -38,7 +38,7 @@ class HTTPHeadersParser
 	///Returns HTTPHeaders instance if headers were parsed correctly or null otherwise
 	///Возвращает экземпляр HTTPHeaders если заголовки прочитаны верно или иначе null 
 	HTTPHeaders getHeaders()
-	{	if( _isEndReached ) 
+	{	if( _isEndReached )
 			return new HTTPHeaders(_headers);
 		else
 			return null;
@@ -47,10 +47,32 @@ class HTTPHeadersParser
 	///Returns interal buffer data related to HTTP message body
 	///Возвращает данные внутреннего буфера, относящиеся к телу HTTP-запроса
 	string bodyData() @property
-	{	if( _isEndReached ) 
-			return _data[_headersLength..$];
+	{
+		import std.conv: to, ConvException;
+		if( _isEndReached )
+		{
+			return _data[ _headersLength.. (_headersLength + this.contentLength) ];
+		}
 		else
 			return null;
+	}
+
+	size_t contentLength() @property
+	{
+		import std.conv: to, ConvException;
+		if( _isEndReached )
+		{
+			if( "content-length" in _headers )
+			{
+				try
+				{
+					return _headers["content-length"].to!size_t;
+				}
+				catch( ConvException ex ) {}
+			}
+		}
+
+		return 0;
 	}
 	
 	///Returns interal buffer data related to HTTP headers
@@ -77,7 +99,7 @@ protected:
 	void _splitLines()
 	{	if(_isEndReached) 
 			return; //Если заголовки уже закончились, то ничего не делаем
-		
+
 		for( ; _pos < _data.length; _pos++ )
 		{	if( _pos+2 < _data.length )
 			{	if( _data[_pos.._pos+2] == "\r\n" )  //Разбираем строки по переносу
@@ -85,7 +107,8 @@ protected:
 					_currLineStart = _pos + 2; //Начало текущей строки
 					if( _pos+4 < _data.length ) //Обнаруживаем конец заголовков
 					{	if( _data[_pos.._pos+4] == "\r\n\r\n" )
-						{	_headersLength = _pos + 4;
+						{
+							_headersLength = _pos + 4;
 							_isEndReached = true;
 							break;
 						}
@@ -97,21 +120,35 @@ protected:
 	
 	void _parseLines()
 	{	//Разбор заголовков
-		foreach( n, var; _dataLines[_parsedLinesCount..$] )
+		foreach( n, var; _dataLines )
 		{	import std.string;
-			if( n == 1 )
+			if( n == 0 )
 			{	//Разбираем первую строку
 				import std.array;
 				auto startLineAttr = split(_dataLines[0], " ");
 				if( startLineAttr.length == 3 )
-				{	string HTTPMethod = toLower( strip( startLineAttr[0] ) );
-					//TODO: Добавить проверку начальной строки
-					//Проверить методы по списку
-					//Проверить URI (не знаю как)
-					//Проверить версию HTTP. Поддерживаем 1.0, 1.1 (0.9 фтопку)
-					_headers["method"] = startLineAttr[0];
-					_headers["request-uri"] = startLineAttr[1];
-					_headers["http-version"] = startLineAttr[2];
+				{
+					import std.algorithm: startsWith;
+					if( startsWith( startLineAttr[0], "HTTP/" ) )
+					{
+						_headers["status-line"] = _dataLines[0];
+						_headers["http-version"] = startLineAttr[0];
+						_headers["status-code"] = startLineAttr[1];
+						_headers["reason-phrase"] = startLineAttr[2..$].join(" ");
+					}
+					else
+					{
+						string HTTPMethod = toLower( strip( startLineAttr[0] ) );
+						//TODO: Добавить проверку начальной строки
+						//Проверить методы по списку
+						//Проверить URI (не знаю как)
+						//Проверить версию HTTP. Поддерживаем 1.0, 1.1 (0.9 фтопку)
+						_headers["request-line"] = _dataLines[0];
+						_headers["method"] = startLineAttr[0];
+						_headers["request-uri"] = startLineAttr[1];
+						_headers["http-version"] = startLineAttr[2];
+					}
+
 				}
 				else //Плохой запрос
 				{	throw new HTTPException(
@@ -120,7 +157,7 @@ protected:
 					); 
 				}
 			}
-			else if( n > 1 )
+			else if( n > 0 )
 			{	bool isHeaderDelimFound = false;
 				for( size_t j = 0; j < var.length; j++ )
 				{	if( j+2 < var.length )
@@ -170,8 +207,8 @@ class HTTPHeaders
 {	
 	///HTTP request headers constructor
 	///Конструктор для заголовков запроса
-	this(string[string] headers)
-	{	_isRequest = true;
+	this(string[string] headers, bool isRequest = true)
+	{	_isRequest = isRequest;
 		_headers = headers.dup;
 	}
 	
@@ -195,6 +232,20 @@ class HTTPHeaders
 				_headers["http-version"] ~ " " 
 				~ _headers["status-code"] ~ " "
 				~ _headers.get("reason-phrase", "") ~ "\r\n";
+	}
+
+	size_t contentLength() @property
+	{
+		import std.conv: to, ConvException;
+		if( "content-length" in _headers )
+		{
+			try
+			{
+				return _headers["content-length"].to!size_t;
+			}
+			catch( ConvException ex ) {}
+		}
+		return 0;
 	}
 	
 	///Method for getting HTTP headers as string (separated by "\r\n")
@@ -248,11 +299,3 @@ protected:
 	bool _isRequest;
 }
 
-// void main()
-// {	auto headers = new Headers;
-// 	string headerStr = "GET / HTTP/1.1\r\nHost: translate.google.ru\r\nConnection: keep-alive\r\nCache-Control: max-age=0\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.71 Safari/537.36\r\nX-Chrome-Variations: COu1yQEIh7bJAQiptskBCJqEygEIqYXKAQi3hcoB\r\nAccept-Encoding: gzip,deflate,sdch\r\nAccept-Language: ru-RU,ru;q=0.8,en-US;q=0.6,en;q=0.4\r\n\r\n";
-// 	headers.appendData(headerStr);
-// 	headers.process();
-// 	import std.stdio;
-// 	writeln(headers._headers);
-// }

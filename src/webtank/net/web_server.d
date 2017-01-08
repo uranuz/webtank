@@ -2,7 +2,7 @@ module webtank.net.web_server;
 
 import std.socket, std.string, std.conv, core.thread, std.stdio, std.datetime;
 
-import webtank.net.http.handler, webtank.net.http.context, webtank.net.http.http;
+import webtank.net.http.handler, webtank.net.http.context, webtank.net.http.http, webtank.net.http.reader;
 
 // Web-сервер порождающий поток на каждое входящее соединение
 class WebServer
@@ -53,67 +53,6 @@ public:
 import std.socket, std.conv;
 
 import webtank.net.http.request, webtank.net.http.response, webtank.net.http.headers;
-
-immutable(size_t) startBufLength = 10_240;
-immutable(size_t) messageBodyLimit = 4_194_304;
-
-//Функция принимает запрос из сокета и возвращает экземпляр ServerRequest
-//или кидается исключениями при ошибках
-ServerRequest receiveHTTPRequest(Socket sock)
-{	
-// 	size_t bytesRead;
-	char[] startBuf;
-	startBuf.length = startBufLength;
-	
-	//Читаем из сокета в буфер
-// 	bytesRead = 
-	sock.receive(startBuf);
-	//TODO: Проверить сколько байт прочитано
-	
-	auto headersParser = new HTTPHeadersParser(startBuf.idup);
-	
-	auto headers = headersParser.getHeaders();
-	
-	if( headers is null )
-		throw new HTTPException(
-			"Request headers buffer is too large or is empty or malformed!!!",
-			400 //400 Bad Request
-		);
-	
-	//Определяем длину тела запроса
-	size_t contentLength = 0;
-	if( headers["content-length"] !is null )
-	{	try {
-			contentLength = headers["content-length"].to!size_t;
-		} catch(Exception e) { contentLength = 0; }
-	}
-	
-	//Проверяем размер тела запроса
-	if( contentLength > messageBodyLimit )
-	{
-		throw new HTTPException(
-			"Content length is too large!!!",
-			413 //413 Request Entity Too Large
-		);
-	}
-	
-	string messageBody;
-	char[] bodyBuf;
-	size_t extraBytesInHeaderBuf = startBufLength - headersParser.headerData.length;
-	//Нужно определить сколько ещё нужно прочитать
-	if( contentLength > extraBytesInHeaderBuf )
-	{
-		bodyBuf.length = contentLength - extraBytesInHeaderBuf + 100;
-		size_t received = sock.receive(bodyBuf);
-		messageBody = headersParser.bodyData ~ bodyBuf[0..received].idup;
-	}
-	else
-	{
-		messageBody = headersParser.bodyData[0..contentLength];
-	}
-	
-	return new ServerRequest( headers, messageBody, sock.remoteAddress, sock.localAddress );
-}
 
 //Рабочий процесс веб-сервера
 class WorkingThread: Thread
@@ -189,7 +128,8 @@ mixin template ProcessRequestImpl()
 	{
 		try
 		{
-			ServerRequest request = receiveHTTPRequest(sock);
+			auto receivedData = readHTTPDataFromSocket(sock);
+			ServerRequest request = new ServerRequest( receivedData.headers, receivedData.messageBody, sock.remoteAddress, sock.localAddress );
 
 			if( request is null )
 			{
