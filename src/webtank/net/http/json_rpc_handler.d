@@ -90,7 +90,7 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 		
 		JSONValue jResponse = jResponseArray;
 		
-		context.response ~= toJSON( &jResponse );
+		context.response ~= toJSON(jResponse);
 		
 		return HTTPHandlingResult.handled;
 	}
