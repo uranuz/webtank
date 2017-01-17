@@ -1,8 +1,8 @@
 module webtank.net.web_server;
 
-import std.socket, std.string, std.conv, core.thread, std.stdio, std.datetime;
+import std.socket, std.string, std.conv, core.thread, std.datetime;
 
-import webtank.net.http.handler, webtank.net.http.context, webtank.net.http.http, webtank.net.http.reader;
+import webtank.net.http.handler, webtank.net.http.context, webtank.net.http.http;
 
 // Web-сервер порождающий поток на каждое входящее соединение
 class WebServer
@@ -20,26 +20,31 @@ public:
 	}
 	
 	void start()
-	{	Socket listener = new TcpSocket;
-		scope(exit) 
-		{	listener.shutdown(SocketShutdown.BOTH);
+	{
+		import std.stdio: writeln;
+
+		Socket listener = new TcpSocket;
+		scope(exit)
+		{
+			listener.shutdown(SocketShutdown.BOTH);
 			listener.close();
 		}
 		assert(listener.isAlive);
 		
 		bool isNotBinded = true;
-		writeln("Пытаемся привязать серверный сокет к порту " ~ _port.to!string );
-		while( isNotBinded )  //Заставляем ОСь дать нам порт
-		{	try {
+		writeln( "Попытка привязать серверный сокет к порту " ~ _port.to!string );
+		while( isNotBinded ) //Заставляем ОСь дать нам порт
+		{
+			try {
 				listener.bind( new InternetAddress(_port) );
 				isNotBinded = false;
 				
 				//Ждём, чтобы излишне не загружать систему
 				Thread.sleep( dur!("msecs")( 500 ) ); 
-			} catch(std.socket.SocketOSException) {}
+			} catch( std.socket.SocketOSException ) {}
 		}
 		listener.listen(5);
-		writeln("Сайт стартовал!");
+		writeln("Сервер запущен!");
 		
 		while(true) //Цикл приёма соединений через серверный сокет
 		{	Socket currSock = listener.accept(); //Принимаем соединение
@@ -126,9 +131,16 @@ mixin template ProcessRequestImpl()
 {
 	private void _processRequest(Socket sock)
 	{
+		scope(exit)
+		{
+			sock.shutdown(SocketShutdown.BOTH);
+			Thread.sleep( dur!("msecs")( 30 ) );
+			sock.close();
+		}
+
 		try
 		{
-			auto receivedData = readHTTPDataFromSocket(sock);
+			auto receivedData = readHTTPMessageFromSocket(sock);
 			ServerRequest request = new ServerRequest( receivedData.headers, receivedData.messageBody, sock.remoteAddress, sock.localAddress );
 
 			if( request is null )
@@ -160,13 +172,6 @@ mixin template ProcessRequestImpl()
 
 			throw exc; // С Throwable не связываемся - и просто роняем Thread
 		}
-
-		scope(exit)
-		{
-			sock.shutdown(SocketShutdown.BOTH);
-			Thread.sleep( dur!("msecs")( 30 ) );
-			sock.close();
-		}
 	}
 }
 
@@ -193,22 +198,25 @@ public:
 
 	void _initServer()
 	{
+		import std.stdio: writeln;
+
 		_listener = new TcpSocket();
 		assert(_listener.isAlive);
 
 		bool isBinded = false;
-		writeln( "Пытаемся привязать серверный сокет к порту " ~ _port.to!string );
-		while( !isBinded )  //Заставляем ОСь дать нам порт
-		{	try {
+		writeln( "Попытка привязать серверный сокет к порту " ~ _port.to!string );
+		while( !isBinded ) //Заставляем ОСь дать нам порт
+		{
+			try {
 				_listener.bind( new InternetAddress(_port) );
 				isBinded = true;
 
 				//Ждём, чтобы излишне не загружать систему
 				Thread.sleep( dur!("msecs")( 500 ) );
-			} catch(std.socket.SocketOSException) {}
+			} catch( std.socket.SocketOSException ) {}
 		}
 		_listener.listen(1);
-		writeln("Сайт стартовал!");
+		writeln( "Сервер запущен!" );
 
 		_taskPool = new TaskPool(_threadCount);
 	}

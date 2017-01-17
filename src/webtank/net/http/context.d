@@ -1,19 +1,20 @@
 module webtank.net.http.context;
 
-import webtank.net.http.request, webtank.net.http.response, webtank.security.access_control, webtank.net.http.handler;
+import webtank.net.http.input, webtank.net.http.output, webtank.security.access_control, webtank.net.http.handler;
 
 class HTTPContext
 {	
-	this(ServerRequest rq, ServerResponse rp)
-	{	_request = rq;
-		_response = rp;
+	this(HTTPInput request, HTTPOutput response)
+	{	_request = request;
+		_response = response;
 	}
+
 	///Запрос к серверу по протоколу HTTP
-	ServerRequest request() @property
+	HTTPInput request() @property
 	{	return _request; }
 	
 	///Объект ответа сервера
-	ServerResponse response() @property
+	HTTPOutput response() @property
 	{	return _response; }
 	
 	///Удостоверение пользователя
@@ -53,8 +54,8 @@ class HTTPContext
 	}
 	
 protected:
-	ServerRequest _request;
-	ServerResponse _response;
+	HTTPInput _request;
+	HTTPOutput _response;
 	IUserIdentity _userIdentity;
 
 	IHTTPHandler[] _handlerList;
