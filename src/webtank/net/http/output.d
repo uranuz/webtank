@@ -4,13 +4,14 @@ import std.array;
 
 import webtank.net.http.cookie, webtank.net.uri, webtank.net.http.headers;
 
-///Класс для формирования ответа от HTTP-сервера, либо запроса от клиента
+///Класс для формирования ответа от HTTP-сервера, либо запроса от HTTP-клиента
 class HTTPOutput
 {
 protected:
 	HTTPHeaders _headers;
 	string _messageBody;
 	CookieCollection _cookies;
+	URI _requestURI;
 
 public:
 	this()
@@ -23,18 +24,48 @@ public:
 	HTTPHeaders headers() @property {
 		return _headers;
 	}
-	
-	///Добавляет строку str к ответу сервера
+
+	/// HTTP-метод: GET, POST и т.п. Свойство для чтения
+	string method() @property {
+		return _headers["method"];
+	}
+	/// HTTP-метод: GET, POST и т.п. Свойство для записи
+	void method(string value) @property {
+		_headers["method"] = value;
+	}
+
+	/// Свойство для чтения идентификатора ресурса в виде структуры URI
+	URI requestURI() @property {
+		return _requestURI;
+	}
+	/// Свойство для записи идентификатора ресурса в виде структуры URI
+	void requestURI(URI value) @property {
+		_requestURI = value;
+		_headers["request-uri"] = value.toRawString();
+	}
+
+	/// Свойство для чтения идентификатора ресурса в виде строки
+	string rawRequestURI() @property {
+		return _headers["request-uri"];
+	}
+	/// Свойство для записи идентификатора ресурса в виде строки
+	void rawRequestURI(string value) @property {
+		_requestURI = URI(value);
+		_headers["request-uri"] = value;
+	}
+
+	///Добавляет строку str к сообщению ответа сервера, либо запроса клиента
 	void write(string str) {
 		_messageBody ~= str;
 	}
 	
-	///Добавляет строку str к ответу сервера
+	///Добавляет строку str к сообщению ответа сервера, либо запроса клиента
 	void opOpAssign(string op: "~")(string str) {
 		_messageBody ~= str;
 	}
 	
-	///Устанавливает заголовки для перенаправления
+	/// Устанавливает заголовки для перенаправления запроса HTTP-клиента
+	/// на другой ресурс location
 	void redirect(string location)
 	{
 		_headers["status-code"] = "302";
@@ -42,8 +73,14 @@ public:
 		_headers["location"] = location;
 	}
 	
-	string getString() {
-		return _getHeaderStr() ~ _messageBody;
+	/// Возвращает полный ответ сервера на запрос клиента
+	string getResponseString() {
+		return _getResponseHeadersStr() ~ _messageBody;
+	}
+
+	/// Возвращает полный запрос, формируемый клиентом
+	string getRequestString() {
+		return _getRequestHeadersStr() ~ _messageBody;
 	}
 	
 	//Пытаемся очистить ответ, возвращает true, если получилось
@@ -67,15 +104,27 @@ public:
 	}
 
 protected:
-	string _getHeaderStr()
+	string _getResponseHeadersStr()
 	{
-		import std.conv, std.stdio;
+		import std.conv: to;
 		_headers["content-length"] = _messageBody.length.to!string;
 		_headers["content-type"] = "text/html; charset=\"utf-8\"";
 		
 		return 
 			_headers.getStatusLine()
 			~ ( _cookies.length > 0 ? _cookies.toResponseHeadersString() ~ "\r\n" : "" )
+			~ _headers.getString() ~ "\r\n" ;
+	}
+
+	string _getRequestHeadersStr()
+	{
+		import std.conv: to;
+		_headers["content-length"] = _messageBody.length.to!string;
+		_headers["content-type"] = "text/html; charset=\"utf-8\"";
+		
+		return 
+			_headers.getRequestLine()
+			~ ( _cookies.length > 0 ? _cookies.toRequestHeadersString() ~ "\r\n" : "" )
 			~ _headers.getString() ~ "\r\n" ;
 	}
 }

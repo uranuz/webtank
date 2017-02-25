@@ -404,6 +404,15 @@ public:
 		return result;
 	}
 
+	string toRequestHeadersString()
+	{
+		import std.range: empty;
+		string result;
+		foreach( ref cookie; _cookies )
+			result ~= ( result.empty ? "" : "\r\n" ) ~ "Cookie: " ~ cookie.toString();
+		return result;
+	}
+
 	size_t length() @property {
 		return _cookies.length;
 	}

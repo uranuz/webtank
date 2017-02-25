@@ -11,7 +11,7 @@ $(LOCALE_RU_RU
 	использоваться для диагностики и отладки системы.
 )
 +/
-module webtank.common.logger;
+module webtank.common.loger;
 
 /++
 $(LOCALE_EN_US
@@ -139,7 +139,7 @@ $(LOCALE_RU_RU
 	Базовый клас для различных типов журналирования
 )
 +/
-abstract class Logger
+abstract class Loger
 {	
 	
 	
@@ -148,7 +148,7 @@ public:
 	/++
 	$(LOCALE_EN_US
 		This is write log event function that must be reimplemented
-		in derived logger classes
+		in derived loger classes
 	)
 
 	$(LOCALE_RU_RU
@@ -265,14 +265,14 @@ protected:
 
 /++
 $(LOCALE_EN_US
-	Logger that outputs information into log file
+	Loger that outputs information into log file
 )
 
 $(LOCALE_RU_RU
 	Логгер для записи информации в файл журнала
 )
 +/
-class FileLogger: Logger
+class FileLoger: Loger
 {	
 	import std.stdio, std.concurrency, std.datetime, std.conv, std.path;
 protected:
@@ -291,7 +291,7 @@ public:
 	this( string fileName, LogLevel logLevel ) shared
 	{
 		synchronized {
-			(cast(FileLogger) this)._init( fileName, logLevel );
+			(cast(FileLoger) this)._init( fileName, logLevel );
 		}
 	}
 
@@ -351,22 +351,22 @@ $(LOCALE_RU_RU
 	Логер-обертка для работы журналирования в отдельном системном потоке
 )
 +/
-class ThreadedLogger: Logger
+class ThreadedLoger: Loger
 {	import std.concurrency;
 public:
 	
 
-	this(shared(Logger) baseLogger)
-	{	_loggerTid = spawn(&_run, thisTid, baseLogger);
+	this(shared(Loger) baseLoger)
+	{	_logerTid = spawn(&_run, thisTid, baseLoger);
 	}
 	
 	override void writeEvent(LogEvent event)
-	{	send(_loggerTid, event);
+	{	send(_logerTid, event);
 	}
 
 	/++
 	$(LOCALE_EN_US
-		Function stops logger and it's thread.
+		Function stops loger and it's thread.
 		Loger object turns into invalid state after it.
 	)
 
@@ -376,28 +376,28 @@ public:
 	)
 	+/
 	void stop()
-	{	send(_loggerTid, LogStopMsg());
+	{	send(_logerTid, LogStopMsg());
 	}
 
 protected:
-	Tid _loggerTid;
+	Tid _logerTid;
 	
 	struct LogStopMsg {}
 	
-	static void _run( Tid ownerTid, shared(Logger) baseLogger )
+	static void _run( Tid ownerTid, shared(Loger) baseLoger )
 	{	
 		bool cont = true;
-		auto logger = cast(Logger) baseLogger;
+		auto loger = cast(Loger) baseLoger;
 		while(cont)
 		{	receive(
 				(LogEvent ev) {
-					logger.writeEvent(ev);
+					loger.writeEvent(ev);
 				},
 				(LogStopMsg msg) {
 					cont = false;
 				},
 				(OwnerTerminated e) {
-					logger.write(LogEventType.fatal, "Нить, породившая процесс логера, завершилась!!!");
+					loger.write(LogEventType.fatal, "Нить, породившая процесс логера, завершилась!!!");
 					throw e;
 				}
 			);
@@ -406,7 +406,7 @@ protected:
 }
 
 //TODO: Реализовать продвинутую фильтрацию логов
-// class LogFilter: Logger
+// class LogFilter: Loger
 // {	
 // 	override void writeEvent(LogEvent event)
 // 	{	
@@ -417,10 +417,10 @@ protected:
 
 
 // private {
-// 	__gshared shared(Logger)[] _loggers;
+// 	__gshared shared(Loger)[] _logers;
 // }
 // 
-// __gshared Logger log;
+// __gshared Loger log;
 // 
 // import core.thread, std.datetime;
 // 
@@ -436,7 +436,7 @@ protected:
 // 
 // void main()
 // {
-// 	log = new ThreadedLogger( new FileLogger("test.log", LogLevel.warn) );
+// 	log = new ThreadedLoger( new FileLoger("test.log", LogLevel.warn) );
 // 	pragma(msg, typeof(log));
 // 
 // 	auto th = new Thread(&func);

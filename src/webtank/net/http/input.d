@@ -21,7 +21,7 @@ protected:
 	
 
 	// Производные поля
-	URI _uri;
+	URI _requestURI;
 	CookieCollection _cookies;
 	FormData _bodyForm;
 	FormData _queryForm;
@@ -42,10 +42,10 @@ public:
 		_remoteAddress = remoteAddress;
 		_localAddress = localAddress;
 
-		if( "cookie" in _headers )
+		if( auto cookiePtr = "cookie" in _headers )
 		{
 			// Если видим заголовок "cookie" - значит это запрос
-			_cookies = parseRequestCookies( _headers["cookie"] );
+			_cookies = parseRequestCookies( *cookiePtr );
 		}
 		else
 		{
@@ -53,11 +53,22 @@ public:
 			_cookies = new CookieCollection();
 		}
 
-		_uri = URI( _headers["request-uri"] );
-		if( "host" in _headers )
-			_uri.authority = _headers["host"];
+		// Для запроса к серверу разбираем идентификатор ресурса
+		if( auto uriPtr = "request-uri" in _headers )
+		{
+			_requestURI = URI( *uriPtr );
+			if( auto hostPtr = "host" in _headers )
+				_requestURI.authority = *hostPtr;
+			
+			_requestURI.scheme = "http";
+		}
+	}
 
-		_uri.scheme = "http";
+	// Возвращает true, если это экземпляр данных о запросе к HTTP-серверу
+	// и false - если это ответ, переданный HTTP-клиенту
+	bool isRequest() @property {
+		// Если в прочитанных заголовках есть строка запроса - значит это запрос
+		return !!("request-line" in _headers);
 	}
 
 	/// Словарь с HTTP-заголовками
@@ -66,9 +77,23 @@ public:
 	}
 
 	///"Сырое" (недекодированое) значение идентификатора запрашиваемого ресурса
-	string rawURI() @property {
+	string rawRequestURI() @property {
 		return headers["request-uri"];
 	}
+
+	alias rawURI = rawRequestURI; // Псевдоним для совместимости
+
+	///Структура с информацией об идентификаторе запрашиваемого ресурса
+	ref const(URI) requestURI() @property {
+		return _requestURI;
+	}
+
+	/// HTTP-метод: GET, POST и т.п.
+	string method() @property {
+		return _headers["method"];
+	}
+
+	alias uri = requestURI; // Псевдоним для совместимости
 
 	///"Тело сообщения" в том виде, каким оно пришло
 	string messageBody() @property {
@@ -83,11 +108,6 @@ public:
 	///Описание клиентской программы и среды
 	string userAgent() @property {
 		return headers["user-agent"];
-	}
-
-	///Структура с информацией об идентификаторе запрашиваемого ресурса
-	ref const(URI) uri() @property {
-		return _uri;
 	}
 	
 	///Данные HTTP формы переданные через адресную строку
@@ -150,8 +170,10 @@ immutable(size_t) messageBodyLimit = 4_194_304;
 
 //Функция принимает данные из сокета и возвращает экземпляр HTTPInput
 //или кидается исключениями при ошибках
-auto readHTTPMessageFromSocket(Socket sock)
+auto readHTTPDataFromSocket(Socket sock)
 {
+	assert( sock, "Socket is null" );
+
 // 	size_t bytesRead;
 	char[] startBuf;
 	startBuf.length = startBufLength;
@@ -198,6 +220,12 @@ auto readHTTPMessageFromSocket(Socket sock)
 	}
 
 	return tuple!("headers", "messageBody")(headers, messageBody);
+}
+
+HTTPInput readHTTPInputFromSocket(Socket sock)
+{
+	auto inputData = readHTTPDataFromSocket(sock);
+	return new HTTPInput(inputData.headers, inputData.messageBody, sock.remoteAddress, sock.localAddress);
 }
 
 // Всевдоним класса для совместимости со старым кодом

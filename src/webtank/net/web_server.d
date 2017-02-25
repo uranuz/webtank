@@ -10,13 +10,13 @@ class WebServer
 protected:
 	ushort _port = 8082;
 	IHTTPHandler _handler;
-	Logger _logger;
+	Loger _loger;
 	
 public:
-	this(ushort port, IHTTPHandler handler, Logger logger)
+	this(ushort port, IHTTPHandler handler, Loger loger)
 	{	_port = port;
 		_handler = handler;
-		_logger = logger;
+		_loger = loger;
 	}
 	
 	void start()
@@ -40,7 +40,7 @@ public:
 				isNotBinded = false;
 				
 				//Ждём, чтобы излишне не загружать систему
-				Thread.sleep( dur!("msecs")( 500 ) ); 
+				Thread.sleep( dur!("msecs")( 500 ) );
 			} catch( std.socket.SocketOSException ) {}
 		}
 		listener.listen(5);
@@ -48,7 +48,7 @@ public:
 		
 		while(true) //Цикл приёма соединений через серверный сокет
 		{	Socket currSock = listener.accept(); //Принимаем соединение
-			auto workingThread = new WorkingThread(currSock, _handler, _logger);
+			auto workingThread = new WorkingThread(currSock, _handler, _loger);
 			workingThread.start();
 		}
 		
@@ -65,13 +65,13 @@ class WorkingThread: Thread
 protected:
 	Socket _socket;
 	IHTTPHandler _handler;
-	Logger _logger;
+	Loger _loger;
 	
 public:
-	this(Socket sock, IHTTPHandler handler, Logger logger)
+	this(Socket sock, IHTTPHandler handler, Loger loger)
 	{	_socket = sock;
 		_handler = handler;
-		_logger = logger;
+		_loger = loger;
 		super(&_work);
 	}
 
@@ -140,42 +140,41 @@ mixin template ProcessRequestImpl()
 
 		try
 		{
-			auto receivedData = readHTTPMessageFromSocket(sock);
-			ServerRequest request = new ServerRequest( receivedData.headers, receivedData.messageBody, sock.remoteAddress, sock.localAddress );
+			HTTPInput request = readHTTPInputFromSocket(sock);
 
 			if( request is null )
 			{
-				this._logger.crit( `request is null` );
+				this._loger.crit( `request is null` );
 				return;
 			}
 
-			auto context = new HTTPContext( request, new ServerResponse() );
+			auto context = new HTTPContext( request, new HTTPOutput() );
 
 			//Запуск обработки HTTP-запроса
 			this._handler.processRequest( context );
 
 			//Наш сервер не поддерживает соединение
 			context.response.headers["connection"] = "close";
-			sock.send( context.response.getString() ); //Главное - отправка результата клиенту
+			sock.send( context.response.getResponseString() ); //Главное - отправка результата клиенту
 		}
 		catch( Exception exc )
 		{
-			this._logger.crit( makeErrorMsg(exc) ); //Хотим знать, что случилось
-			sock.send( makeErrorResponse(exc).getString() );
+			this._loger.crit( makeErrorMsg(exc) ); //Хотим знать, что случилось
+			sock.send( makeErrorResponse(exc).getResponseString() );
 
 			return; // На эксепшоне не падаем - а тихо-мирно завершаемся
 		}
 		catch( Throwable exc )
 		{
-			this._logger.fatal( makeErrorMsg(exc) ); //Хотим знать, что случилось
-			sock.send( makeErrorResponse(exc).getString() );
+			this._loger.fatal( makeErrorMsg(exc) ); //Хотим знать, что случилось
+			sock.send( makeErrorResponse(exc).getResponseString() );
 
 			throw exc; // С Throwable не связываемся - и просто роняем Thread
 		}
 	}
 }
 
-import webtank.common.logger: Logger;
+import webtank.common.loger: Loger;
 
 // Web-сервер, использующий стандартный пул задач Phobos
 class WebServer2
@@ -186,14 +185,14 @@ protected:
 	TaskPool _taskPool;
 	size_t _threadCount;
 	ushort _port = 8082;
-	Logger _logger;
+	Loger _loger;
 
 public:
-	this( ushort port, IHTTPHandler handler, Logger logger, size_t threadCount = 5 )
+	this( ushort port, IHTTPHandler handler, Loger loger, size_t threadCount = 5 )
 	{	_port = port;
 		_handler = handler;
 		_threadCount = threadCount;
-		_logger = logger;
+		_loger = loger;
 	}
 
 	void _initServer()
@@ -230,7 +229,7 @@ public:
 				Socket client = _listener.accept();
 				if( client is null )
 				{
-					this._logger.crit( `accepted socket is null` );
+					this._loger.crit( `accepted socket is null` );
 					continue;
 				}
 
@@ -239,7 +238,7 @@ public:
 			}
 			catch( Throwable exc )
 			{
-				this._logger.fatal( makeErrorMsg(exc) );
+				this._loger.fatal( makeErrorMsg(exc) );
 				throw exc;
 			}
 		}

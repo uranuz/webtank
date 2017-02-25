@@ -1,40 +1,47 @@
 module webtank.net.http.client;
 
-import webtank.net.http.headers;
+import webtank.net.http.input, webtank.net.http.output, webtank.net.uri;
 
-// Ответ HTTP сервера клиенту
-class ClientResponse
+/// Осуществляет блокирующий запрос к удалённому HTTP-серверу
+/// На вход нужно передать экземпляр HTTPOutput, где как минимум должны быть заполнены
+/// свойства requestURI (или rawRequestURI) и method. Возможно, ещё вы захотите передать 
+/// и какое-то сообщение (используя метод write), если, например, используется HTTP метод POST
+HTTPInput sendRequestAndWait(HTTPOutput request)
 {
-private:
-	HTTPHeaders _headers;
-	public immutable(string) messageBody;
+	assert( request, `Request is null!!!` );
+	
+	import std.socket;
+	URI requestURI = request.requestURI;
+	Socket sock = new TcpSocket( new InternetAddress(requestURI.host, requestURI.port) );
+	
+	sock.send(request.getRequestString());
 
-public:
-	this( HTTPHeaders headers, string messageBody )
-	{
-		_headers = headers;
-		this.messageBody = messageBody;
-	}
-
-	HTTPHeaders headers() @property
-	{
-		return _headers;
-	}
-
+	return readHTTPInputFromSocket(sock);
 }
 
-// Запрос HTTP клиента серверу
-class ClientRequest
+/// Более простая для понимания перегрузка метода sendRequestAndWait - "для тех, кто в танке" :)
+HTTPInput sendRequestAndWait( string requestURI, string method, string messageBody = null )
 {
-
+	HTTPOutput request = new HTTPOutput();
+	request.rawRequestURI = requestURI;
+	request.method = method;
+	request.write(messageBody);
+	
+	return sendRequestAndWait( request );
 }
 
-import webtank.net.http.reader;
-import std.socket: Socket;
+import std.json;
 
-ClientResponse receiveHTTPResponse(Socket sock)
+/// Вспомогательный метод для запросов по протоколу JSON-RPC
+/// Нужно задать адрес узла requestURI, название RPC-метода (не HTTP-метода)
+/// params - JSON-объект с параметрами, которые будут отправлены HTTP-методом "POST"
+/// Вызов блокирующий, т.е. ждёт возврата результата удалённым узлом
+HTTPInput sendJSON_RPCRequestAndWait( string requestURI, string rpcMethod, ref JSONValue params )
 {
-	auto receivedData = readHTTPDataFromSocket(sock);
+	JSONValue payload;
+	payload["jsonrpc"] = "2.0";
+	payload["method"] = rpcMethod;
+	payload["params"] = params;
 
-	return new ClientResponse( receivedData.headers, receivedData.messageBody );
+	return sendRequestAndWait( requestURI, "POST", payload.toJSON() );
 }

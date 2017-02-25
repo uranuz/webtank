@@ -5,14 +5,15 @@ import std.string, std.conv, std.traits, std.typecons, std.json, std.functional;
 import webtank.net.http.handler, webtank.common.serialization, webtank.net.http.context, webtank.net.uri_pattern;
 
 ///Класс исключения для удалённого вызова процедур
-class JSON_RPC_Exception : Exception {
+class JSON_RPC_Exception : Exception
+{
 	this(string msg, string file = __FILE__, size_t line = __LINE__) {
 		super(msg, file, line);
 	}
 }
 
 class JSON_RPC_Router: EventBasedHTTPHandler
-{	
+{
 	this( string URIPatternStr, string[string] regExprs, string[string] defaults )
 	{	_uriPattern = new URIPattern(URIPatternStr, regExprs, defaults);
 	}

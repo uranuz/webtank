@@ -205,6 +205,8 @@ protected:
 /// Класс, представляющий HTTP заголовки для запроса и ответа
 class HTTPHeaders
 {	
+	private static immutable _reservedHeaderNames = [ "http-version", "status-code", "reason-phrase", "status-line", "request-line", "method", "request-uri" ];
+	
 	///HTTP request headers constructor
 	///Конструктор для заголовков запроса
 	this(string[string] headers, bool isRequest = true)
@@ -234,6 +236,14 @@ class HTTPHeaders
 				~ _headers.get("reason-phrase", "") ~ "\r\n";
 	}
 
+	string getRequestLine()
+	{
+		return
+			_headers["method"] ~ " "
+			~ _headers["request-uri"] ~ " "
+			~ _headers["http-version"] ~ "\r\n";
+	}
+
 	size_t contentLength() @property
 	{
 		import std.conv: to, ConvException;
@@ -251,9 +261,13 @@ class HTTPHeaders
 	///Method for getting HTTP headers as string (separated by "\r\n")
 	///Метод для получения HTTP заголовков в виде строки (разделённых символами переноса "\r\n")
 	string getString()
-	{	string result;
+	{
+		import std.algorithm: canFind;
+
+		string result;
 		foreach( name, value; _headers )
-		{	if( name == "http-version" || name == "status-code" || name == "reason-phrase")
+		{
+			if( _reservedHeaderNames.canFind(name) )
 				continue;
 			result ~= name ~ ": " ~ value ~ "\r\n";
 		}
