@@ -25,6 +25,11 @@ interface IUserIdentity
 	
 	///Функция возвращает true, если пользователь выступает в роли roleName
 	bool isInRole(string roleName);
+
+	///Делает текущий экземпляр удостоверения пользователя недействительным
+	///После этого методы isAuthenticated, isInRole, isActionAllowed и т.п. должны
+	///возвращать, не позволяя выполнять какие-либо действия на уровне прав.
+	void invalidate();
 	
 	///Возвращает true, если разрешено выполнение действия action для ресурса resource. Иначе - false
 	bool isActionAllowed( string resource, string action /+, string attribute +/);
@@ -54,6 +59,8 @@ public:
 		
 		bool isInRole(string roleName)
 		{	return false; }
+
+		void invalidate() {}
 		
 		bool isActionAllowed( string resource, string action )
 		{	return false; }

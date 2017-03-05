@@ -44,7 +44,8 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 		
 		string jsonrpc;
 		if( "jsonrpc" in jMessageBody.object )
-		{	if( jMessageBody["jsonrpc"].type == JSON_TYPE.STRING )
+		{
+			if( jMessageBody["jsonrpc"].type == JSON_TYPE.STRING )
 				jsonrpc = jMessageBody["jsonrpc"].str;
 		}
 		
@@ -53,7 +54,8 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 			
 		string methodName;
 		if( "method" in jMessageBody.object )
-		{	if( jMessageBody["method"].type == JSON_TYPE.STRING )
+		{
+			if( jMessageBody["method"].type == JSON_TYPE.STRING )
 				methodName = jMessageBody["method"].str;
 		}
 		
@@ -68,8 +70,9 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 		//Запрос должен иметь элемент params, даже если параметров
 		//не передаётся. В последнем случае должно передаваться
 		//либо null в качестве параметра, либо пустой объект {}
-		if( "params" in jMessageBody.object )
-		{	auto paramsType = jMessageBody["params"].type;
+		if( "params" in jMessageBody )
+		{
+			auto paramsType = jMessageBody["params"].type;
 		
 			//В текущей реализации принимаем либо объект (список поименованных параметров)
 			//либо null, символизирующий их отсутствие
@@ -83,7 +86,6 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 		
 		//Вызов метода
 		jResponseArray["result"] = method( jMessageBody["params"], context );
-		
 		jResponseArray["jsonrpc"] = "2.0";
 		
 		if( "id" in jMessageBody )
@@ -98,11 +100,12 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 	
 	JSON_RPC_Router join(alias Method)(string methodName = null)
 		if( isSomeFunction!(Method) )
-	{	auto nameOfMethod = ( methodName.length == 0 ? fullyQualifiedName!(Method) : methodName );
-	
+	{
+		auto nameOfMethod = ( methodName.length == 0 ? fullyQualifiedName!(Method) : methodName );
+
 		if( nameOfMethod in _methods )
-			throw new JSON_RPC_Exception(`JSON-RPC method` ~ nameOfMethod ~ ` is already registered in system!!!`);
-		
+			throw new JSON_RPC_Exception(`JSON-RPC method` ~ nameOfMethod ~ ` is already registered in the system!!!`);
+
 		_methods[nameOfMethod] = toDelegate(  &callJSON_RPC_Method!(Method) );
 		return this;
 	}
@@ -121,83 +124,61 @@ template callJSON_RPC_Method(alias Method)
 	alias ReturnType!(Method) ResultType;
 	alias ParameterIdentifierTuple!(Method) ParamNames;
 	
-	JSONValue callJSON_RPC_Method(ref const(JSONValue) jValue, HTTPContext context)
-	{	JSONValue result = null; //По-умолчанию в качестве результата null
+	JSONValue callJSON_RPC_Method(ref const(JSONValue) jParams, HTTPContext context)
+	{
+		JSONValue result = null; // По-умолчанию в качестве результата null
+		size_t expectedParamsCount = 0; // Ожидаемое число параметров в jParams
 		
-		static if( ParamTypes.length == 0 )
-		{	
-			if( jValue.type == JSON_TYPE.NULL   )
-			{	//Don't remove!!!
+		//Считаем количество параметров, которые должны были быть переданы
+		foreach( type; ParamTypes )
+		{
+			static if( !is(type: HTTPContext) ) {
+				++expectedParamsCount;
 			}
-			else if( jValue.type == JSON_TYPE.OBJECT )
-			{	if( jValue.object.length != 0 )
-					throw new JSON_RPC_Exception(
-						"Calling method without params. But got JSON object with " 
-						~ jValue.object.length.to!string ~ " parameters "
-					);
-			}
-			else
-				throw new JSON_RPC_Exception( 
-					"Unsupported JSON value type!!!"
-				);
-			
-			static if( is( ResultType == void ) )
-				Method(); //Вызов метода без параметров и возвращаемого значения
-			else
-				result = getStdJSON( Method() ); //Вызов метода без параметров с возвращаемым значением
 		}
-		else
-		{	
-			if( jValue.type == JSON_TYPE.OBJECT )
-			{	size_t jParamsCount = 0;
-				
-				//Считаем количество параметров, которые должны были быть переданы
-				foreach( type; ParamTypes )
-				{	static if( !is( type: HTTPContext )  )
-						jParamsCount++;
+
+		if( expectedParamsCount > 0 && (jParams.type != JSON_TYPE.OBJECT || jParams.object.length != expectedParamsCount) ) {
+			throw new JSON_RPC_Exception(
+				`Expected JSON object with ` ~ expectedParamsCount.to!string	~ ` params in JSON-RPC call, but got: `
+				~ (jParams.type == JSON_TYPE.OBJECT ? jParams.object.length.to!string : jParams.type.to!string)
+			);
+		}
+
+		Tuple!(ParamTypes) argTuple;
+		foreach( i, type; ParamTypes )
+		{
+			static if( is(type : HTTPContext) )
+			{
+				auto typedContext = cast(type) context;
+				if( !typedContext ) {
+					throw new JSON_RPC_Exception( 
+						`Error in attempt to convert parameter "` ~ ParamNames[i] ~ `" to type "` ~ type.stringof ~ `". Context reference is null!`
+					);
 				}
-				
-				if( jParamsCount == jValue.object.length )
-				{	
-// 					pragma(msg, ParamTypes);
-					Tuple!(ParamTypes) argTuple;
-// 					pragma(msg, typeof(argTuple));
-					foreach( i, type; ParamTypes )
-					{	static if( is( type : HTTPContext )  )
-						{	argTuple[i] = cast(type) context; //Передаём контекст при необходимости
-							continue;
-						}
-						else 
-						{	if( ParamNames[i] in jValue.object )
-							{	
-								auto dValue = getDLangValue!(type)( jValue.object[ ParamNames[i] ] );
-								argTuple[i] = dValue;
-							}
-							else
-								throw new JSON_RPC_Exception( 
-									"Expected JSON-RPC parameter " ~ ParamNames[i]
-									~ " is not found in param object!!!"
-								);
-						}
-					}
-					
-					static if( is( ResultType == void ) )
-						Method(argTuple.expand);
-					else
-						result = getStdJSON( Method(argTuple.expand) );
+				argTuple[i] = typedContext; //Передаём контекст при необходимости
+				continue;
+			}
+			else
+			{
+				if( auto paramPtr = ParamNames[i] in jParams )
+				{
+					argTuple[i] = getDLangValue!(type)(*paramPtr);
 				}
 				else
+				{
 					throw new JSON_RPC_Exception( 
-						"Expected JSON-RPC params count is " ~ jParamsCount.to!string
-						~ " but got " ~ jValue.object.length.to!string
+						`Expected JSON-RPC parameter ` ~ ParamNames[i] ~ ` is not found in params object!!!`
 					);
+				}
 			}
-			else
-				throw new JSON_RPC_Exception( 
-					"Unsupported JSON value type!!!"
-				);
 		}
 		
+		static if( is( ResultType == void ) ) {
+			Method(argTuple.expand);
+		} else {
+			result = getStdJSON( Method(argTuple.expand) );
+		}
+
 		return result;
 	}
 }

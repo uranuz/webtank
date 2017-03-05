@@ -123,38 +123,49 @@ protected:
 		foreach( n, var; _dataLines )
 		{	import std.string;
 			if( n == 0 )
-			{	//Разбираем первую строку
+			{
+				//Разбираем первую строку
 				import std.array;
-				auto startLineAttr = split(_dataLines[0], " ");
-				if( startLineAttr.length == 3 )
-				{
-					import std.algorithm: startsWith;
-					if( startsWith( startLineAttr[0], "HTTP/" ) )
-					{
-						_headers["status-line"] = _dataLines[0];
-						_headers["http-version"] = startLineAttr[0];
-						_headers["status-code"] = startLineAttr[1];
-						_headers["reason-phrase"] = startLineAttr[2..$].join(" ");
-					}
-					else
-					{
-						string HTTPMethod = toLower( strip( startLineAttr[0] ) );
-						//TODO: Добавить проверку начальной строки
-						//Проверить методы по списку
-						//Проверить URI (не знаю как)
-						//Проверить версию HTTP. Поддерживаем 1.0, 1.1 (0.9 фтопку)
-						_headers["request-line"] = _dataLines[0];
-						_headers["method"] = startLineAttr[0];
-						_headers["request-uri"] = startLineAttr[1];
-						_headers["http-version"] = startLineAttr[2];
-					}
+				import std.algorithm: startsWith;
 
+				auto startLineAttr = split(_dataLines[0], " ");
+
+				if( startsWith( startLineAttr[0], "HTTP/" ) )
+				{
+					if( startLineAttr.length < 3 )
+					{
+						//Плохой запрос
+						throw new HTTPException(
+							"Status line of HTTP request must follow format: <http-version> <status-code> <reason-phrase>",
+							400 //400 Bad Request
+						);
+					}
+					
+					_headers["status-line"] = _dataLines[0];
+					_headers["http-version"] = startLineAttr[0];
+					_headers["status-code"] = startLineAttr[1];
+					_headers["reason-phrase"] = startLineAttr[2..$].join(" ");
 				}
-				else //Плохой запрос
-				{	throw new HTTPException(
-						"Starting line of HTTP request must consist of 3 sections separated by space symbols!!!",
-						400 //400 Bad Request
-					); 
+				else
+				{
+					if( startLineAttr.length != 3 )
+					{
+						//Плохой запрос
+						throw new HTTPException(
+							"Request line of HTTP request must consist of 3 sections: <method> <request-uri> <http-version>",
+							400 //400 Bad Request
+						);
+					}
+					
+					string HTTPMethod = toLower( strip( startLineAttr[0] ) );
+					//TODO: Добавить проверку начальной строки
+					//Проверить методы по списку
+					//Проверить URI (не знаю как)
+					//Проверить версию HTTP. Поддерживаем 1.0, 1.1 (0.9 фтопку)
+					_headers["request-line"] = _dataLines[0];
+					_headers["method"] = startLineAttr[0];
+					_headers["request-uri"] = startLineAttr[1];
+					_headers["http-version"] = startLineAttr[2];
 				}
 			}
 			else if( n > 0 )
@@ -210,8 +221,15 @@ class HTTPHeaders
 	///HTTP request headers constructor
 	///Конструктор для заголовков запроса
 	this(string[string] headers, bool isRequest = true)
-	{	_isRequest = isRequest;
-		_headers = headers.dup;
+	{
+		import std.string: strip;
+		import std.uni: toLower;
+		_isRequest = isRequest;
+		foreach( key, value; headers ) {
+			if( strip(key).length > 0 ) {
+				_headers[ toLower(key) ] = value;
+			}
+		}
 	}
 	
 	///HTTP response headers constructor
@@ -277,28 +295,40 @@ class HTTPHeaders
 	///Operator for writing value of header
 	///Опреатор записи значения заголовка
 	void opIndexAssign(string value, string name) 
-	{	import std.string;
-		if( strip( value ).length > 0 ) //Пустые значения не добавляем
-			_headers[ toLower( strip( name ) ) ] = value;
+	{
+		import std.string: strip;
+		import std.uni: toLower;
+		if( strip(value).length > 0 ) //Пустые значения не добавляем
+			_headers[ toLower(name) ] = value;
 	}
 	
 	///Operator for reading value of header
 	///Оператор чтения значения заголовка
 	string opIndex(string name)
-	{	import std.string;
-		return _headers.get( toLower( strip( name ) ), null );
+	{
+		import std.uni: toLower;
+		return _headers.get( toLower(name), null );
 	}
 	
 	///Method gets value of header with "name" or "defaultValue" if header is not exist
 	///Метод получает значение заголовка с именем name или defaultValue, если заголовок отсутствует
 	string get(string name, string defaultValue)
-	{	import std.string;
-		return _headers.get( toLower( strip( name ) ), defaultValue );
+	{
+		import std.uni: toLower;
+		return _headers.get( toLower(name), defaultValue );
 	}
 	
 	///Оператор in для класса
 	inout(string)* opBinaryRight(string op)(string name) inout if(op == "in")
-	{	return ( name in _headers );
+	{
+		import std.uni: toLower;
+		return ( toLower(name) in _headers );
+	}
+
+	/// Returns copy of headers as associative array
+	/// Возвращает копию заголовков в виде ассоциативного массива
+	string[string] toAA() {
+		return _headers.dup;
 	}
 	
 	///Response headers clear method

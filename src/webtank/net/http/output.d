@@ -41,7 +41,7 @@ public:
 	/// Свойство для записи идентификатора ресурса в виде структуры URI
 	void requestURI(URI value) @property {
 		_requestURI = value;
-		_headers["request-uri"] = value.toRawString();
+		_headers["request-uri"] = value.rawQuery;
 	}
 
 	/// Свойство для чтения идентификатора ресурса в виде строки

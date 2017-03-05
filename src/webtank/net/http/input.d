@@ -153,9 +153,11 @@ public:
 		{
 			try { //Пытаемся распарсить messageBody в JSON
 				_bodyJSON = parseJSON(messageBody);
-			} catch( JSONException e ) {
-				_bodyJSON = JSONValue.init;
-			} finally {
+			} 
+			//catch( JSONException e ) {
+				//_bodyJSON = JSONValue.init;
+			//} 
+			finally {
 				_isJSONParsed = true;
 			}
 		}
