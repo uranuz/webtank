@@ -51,7 +51,12 @@ class HTTPHeadersParser
 		import std.conv: to, ConvException;
 		if( _isEndReached )
 		{
-			return _data[ _headersLength.. (_headersLength + this.contentLength) ];
+			size_t bodyDataEndPos = _headersLength + this.contentLength;
+			if( bodyDataEndPos < _data.length ) {
+				return _data[_headersLength.. bodyDataEndPos];
+			} else {
+				return _data[_headersLength..$];
+			}
 		}
 		else
 			return null;
