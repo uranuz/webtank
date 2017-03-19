@@ -137,10 +137,9 @@ public:
 			jArray["n"] = _name; //Вывод имени поля
 			jArray["t"] = ValueType.stringof; //Вывод типа поля
 			
-			static if( isEnumFormat!(FormatType) )
-			{	//Сериализуем формат для перечислимого типа (выбираем все поля формата)
-				foreach( string key, val; _enumFormat.getStdJSON() )
-					jArray[key] = val;
+			static if( isEnumFormat!(FormatType) ) {
+				//Сериализуем формат для перечислимого типа (выбираем все поля формата)
+				jArray["enum"] = _enumFormat.getStdJSON();
 			}
 			
 			return JSONValue(jArray);

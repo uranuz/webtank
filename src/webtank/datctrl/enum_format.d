@@ -190,9 +190,8 @@ struct EnumFormat( T, bool withNames )
 	$(LOCALE_RU_RU Сериализует формат перечислимого типа в std.json)
 	+/
 	JSONValue getStdJSON() const
-	{	
-		JSONValue[string] jArray; //Массив полей для формата перечислимого типа
-		
+	{
+
 		//Массив элементов перечислимого типа
 		JSONValue[] jEnumItems;
 		
@@ -220,10 +219,8 @@ struct EnumFormat( T, bool withNames )
 				];
 			}
 		}
-		
-		jArray["enum"] = jEnumItems;
-		
-		return JSONValue(jArray);
+
+		return JSONValue(jEnumItems);
 	}
 }
 
