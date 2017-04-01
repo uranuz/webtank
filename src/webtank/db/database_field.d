@@ -128,15 +128,21 @@ public:
 				_queryResult.isNull( _fieldIndex, index ) 
 				: false );
 		}
-		
+
 		///Метод сериализации формата поля в std.json
 		JSONValue getStdJSONFormat()
-		{	
+		{
+			import std.traits: isIntegral;
 			JSONValue[string] jArray;
-			
-			jArray["n"] = _name; //Вывод имени поля
-			jArray["t"] = ValueType.stringof; //Вывод типа поля
-			
+
+			jArray["n"] = _name; // Вывод имени поля
+			jArray["t"] = _getTypeStr!(ValueType); // Вывод типа поля
+			jArray["dt"] = ValueType.stringof; // D-шный тип поля
+
+			static if( isIntegral!(ValueType) ) {
+				jArray["sz"] = ValueType.sizeof; // Размер чисел в байтах
+			}
+
 			static if( isEnumFormat!(FormatType) ) {
 				//Сериализуем формат для перечислимого типа (выбираем все поля формата)
 				jArray["enum"] = _enumFormat.getStdJSON();
@@ -212,6 +218,25 @@ public:
 		}
 	} //override
 
+	private string _getTypeStr(T)()
+	{
+		import std.traits;
 
+		static if( is(T: void) ) {
+			return "void";
+		} else static if( is(T: bool) ) {
+			return "bool";
+		} else static if( isIntegral!(T) ) {
+			return "int";
+		} else static if( isSomeString!(T) ) {
+			return "str";
+		} else static if( isArray!(T) ) {
+			return "array";
+		} else static if( isAssociativeArray!(T) ) {
+			return "assocArray";
+		} else {
+			return "<unknown>";
+		}
+	}
 }
 
