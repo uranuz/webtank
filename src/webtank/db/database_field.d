@@ -145,7 +145,7 @@ public:
 
 			static if( isEnumFormat!(FormatType) ) {
 				//Сериализуем формат для перечислимого типа (выбираем все поля формата)
-				jArray["enum"] = _enumFormat.getStdJSON();
+				jArray["enum"] = _enumFormat.toStdJSON();
 			}
 			
 			return JSONValue(jArray);

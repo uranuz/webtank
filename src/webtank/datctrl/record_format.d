@@ -6,7 +6,7 @@ static if( isDatCtrlEnabled ) {
 
 import std.typetuple, std.typecons, std.conv, std.json, std.traits;
 
-import webtank.common.optional, webtank.datctrl.data_field, webtank.datctrl.enum_format, webtank.common.serialization, webtank.common.utils;
+import webtank.common.optional, webtank.datctrl.data_field, webtank.datctrl.enum_format, webtank.common.std_json, webtank.common.utils;
 
 /++
 $(LOCALE_EN_US Struct representing format of record or record set)

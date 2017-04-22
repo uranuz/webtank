@@ -6,7 +6,7 @@ static if( isDatCtrlEnabled ) {
 
 import std.typetuple, std.typecons, std.conv, std.json;
 
-import webtank.datctrl.data_field, webtank.datctrl.record, webtank.datctrl.record_format, webtank.common.serialization;
+import webtank.datctrl.data_field, webtank.datctrl.record, webtank.datctrl.record_format, webtank.common.std_json;
 
 interface IBaseRecordSet
 {	
@@ -186,7 +186,7 @@ interface IWriteableRecordSet(alias RecordFormatT): IRecordSet!(RecordFormatT), 
 $(LOCALE_EN_US Class implements work with record set)
 $(LOCALE_RU_RU Класс реализует работу с набором записей)
 +/
-class RecordSet(alias RecordFormatT): IRecordSet!(RecordFormatT), IStdJSONSerializeable
+class RecordSet(alias RecordFormatT): IRecordSet!(RecordFormatT)
 {	
 	//Тип формата для набора записей
 	alias RecordFormatT FormatType; 
@@ -244,7 +244,7 @@ public:
 		{	if( this.isNull(name, index) )
 				recJSON[j] = null;
 			else
-				recJSON[j] = webtank.common.serialization.getStdJSON( this.get!(name)(index) );
+				recJSON[j] = webtank.common.std_json.toStdJSON( this.get!(name)(index) );
 		}
 		return JSONValue(recJSON);
 	}
@@ -279,7 +279,7 @@ public:
 	$(LOCALE_EN_US Serializes format and data of record set into std.json)
 	$(LOCALE_RU_RU Сериализует формат и данные набора данных в std.json)
 	+/
-	JSONValue getStdJSON()
+	JSONValue toStdJSON()
 	{	auto jValues = this.getStdJSONFormat();
 		
 		JSONValue[] jData;

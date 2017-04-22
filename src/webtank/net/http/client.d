@@ -59,7 +59,9 @@ HTTPInput sendJSON_RPCBlocking(Result)( string requestURI, string rpcMethod, ref
 	payload["method"] = rpcMethod;
 	payload["params"] = params;
 
-	return sendBlocking( requestURI, "POST", payload.toJSON() );
+	// Будем выводить NaN, -Infinity и Infinity в виде строк, чтобы не падать на стороне отправителя данных
+	// Если приёмная сторона "захочет", то может распарсить, либо "упасть"
+	return sendBlocking( requestURI, "POST", payload.toJSON(false, JSONOptions.specialFloatLiterals) );
 }
 
 /// Перегрузка метода с возможностью передать словарь с HTTP-заголовками
@@ -71,7 +73,7 @@ HTTPInput sendJSON_RPCBlocking(Result)( string requestURI, string rpcMethod, str
 	payload["method"] = rpcMethod;
 	payload["params"] = params;
 
-	return sendBlocking( requestURI, "POST", headers, payload.toJSON() );
+	return sendBlocking( requestURI, "POST", headers, payload.toJSON(false, JSONOptions.specialFloatLiterals) );
 }
 
 /// Проверяем, если произошла ошибка во время вызова и бросаем исключение, если так
@@ -106,7 +108,7 @@ JSONValue sendJSON_RPCBlocking( string requestURI, string rpcMethod, ref JSONVal
 {
 	auto response = sendJSON_RPCBlocking!(HTTPInput)(requestURI, rpcMethod, jsonParams);
 
-	JSONValue bodyJSON = response.bodyJSON;
+	JSONValue bodyJSON = response.messageBody.parseJSON();
 	assert( bodyJSON.type == JSON_TYPE.OBJECT, `Expected object as JSON-RPC result` );
 
 	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
@@ -120,7 +122,7 @@ JSONValue sendJSON_RPCBlocking( string requestURI, string rpcMethod, string[stri
 {
 	auto response = sendJSON_RPCBlocking!(HTTPInput)(requestURI, rpcMethod, headers, jsonParams);
 
-	JSONValue bodyJSON = response.bodyJSON;
+	JSONValue bodyJSON = response.messageBody.parseJSON();
 	assert( bodyJSON.type == JSON_TYPE.OBJECT, `Expected object as JSON-RPC result` );
 
 	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки

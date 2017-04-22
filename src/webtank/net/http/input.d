@@ -25,10 +25,7 @@ protected:
 	CookieCollection _cookies;
 	FormData _bodyForm;
 	FormData _queryForm;
-	
-	JSONValue _bodyJSON;
-	bool _isJSONParsed = false;
-	
+
 public:
 	this(
 		HTTPHeaders headers,
@@ -145,26 +142,6 @@ public:
 	Address localAddress() @property {
 		return _localAddress;
 	}
-
-	///Возвращает тело сообщения обработанное как объект JSON
-	JSONValue bodyJSON() @property
-	{
-		if( !_isJSONParsed)
-		{
-			try { //Пытаемся распарсить messageBody в JSON
-				_bodyJSON = parseJSON(messageBody);
-			} 
-			//catch( JSONException e ) {
-				//_bodyJSON = JSONValue.init;
-			//} 
-			finally {
-				_isJSONParsed = true;
-			}
-		}
-
-		return _bodyJSON;
-	}
-
 } 
 
 immutable(size_t) startBufLength = 10_240;

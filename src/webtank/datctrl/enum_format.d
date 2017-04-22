@@ -189,7 +189,7 @@ struct EnumFormat( T, bool withNames )
 	$(LOCALE_EN_US Serializes enumerated field format into std.json)
 	$(LOCALE_RU_RU Сериализует формат перечислимого типа в std.json)
 	+/
-	JSONValue getStdJSON() const
+	JSONValue toStdJSON() const
 	{
 
 		//Массив элементов перечислимого типа

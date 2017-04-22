@@ -2,7 +2,7 @@ module webtank.net.http.json_rpc_handler;
 
 import std.string, std.conv, std.traits, std.typecons, std.json, std.functional;
 
-import webtank.net.http.handler, webtank.common.serialization, webtank.net.http.context, webtank.net.uri_pattern;
+import webtank.net.http.handler, webtank.common.std_json, webtank.net.http.context, webtank.net.uri_pattern;
 
 ///Класс исключения для удалённого вызова процедур
 class JSON_RPC_Exception : Exception
@@ -37,7 +37,7 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 		if( !isRequestMatched )
 			return HTTPHandlingResult.mismatched;
 		
-		auto jMessageBody = context.request.bodyJSON;
+		auto jMessageBody = context.request.messageBody.parseJSON();
 		
 		if( jMessageBody.type != JSON_TYPE.OBJECT )
 			throw new JSON_RPC_Exception(`JSON-RPC message body must be of object type!!!`);
@@ -93,7 +93,7 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 		
 		JSONValue jResponse = jResponseArray;
 		
-		context.response ~= toJSON(jResponse);
+		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
 		
 		return HTTPHandlingResult.handled;
 	}
@@ -162,7 +162,7 @@ template callJSON_RPC_Method(alias Method)
 			{
 				if( auto paramPtr = ParamNames[i] in jParams )
 				{
-					argTuple[i] = getDLangValue!(type)(*paramPtr);
+					argTuple[i] = fromStdJSON!(type)(*paramPtr);
 				}
 				else
 				{
@@ -176,7 +176,7 @@ template callJSON_RPC_Method(alias Method)
 		static if( is( ResultType == void ) ) {
 			Method(argTuple.expand);
 		} else {
-			result = getStdJSON( Method(argTuple.expand) );
+			result = toStdJSON( Method(argTuple.expand) );
 		}
 
 		return result;

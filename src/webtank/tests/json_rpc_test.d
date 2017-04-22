@@ -35,7 +35,7 @@ void main()
 	string query = `select * from book`;
 	auto book_rs = dbase.query(query).getRecordSet(bookRecFormat);
 	auto rec1 = book_rs.front;
-	auto jBookRS = rec1.getStdJSON();
+	auto jBookRS = rec1.toStdJSON();
 	writeln( toJSON( &jBookRS ) );
 	
 	writeln("TestPoint 2");
