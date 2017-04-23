@@ -23,7 +23,6 @@ struct EnumFormat( T, bool withNames )
 		this( Tuple!(ValueType, string)[] pairs )
 		{
 			_pairs = pairs;
-		
 		}
 		
 		string getName(ValueType value) const
@@ -181,7 +180,7 @@ struct EnumFormat( T, bool withNames )
 	}
 	
 	///Оператор in для проверки наличия ключа в наборе значений перечислимого типа
-	bool opBinaryRight(string op)(ValueType value) inout 
+	bool opBinaryRight(string op)(ValueType value) inout
 		if( op == "in" )
 	{	return hasValue(value); }
 	
@@ -191,7 +190,8 @@ struct EnumFormat( T, bool withNames )
 	+/
 	JSONValue toStdJSON() const
 	{
-
+		import webtank.common.std_json;
+		
 		//Массив элементов перечислимого типа
 		JSONValue[] jEnumItems;
 		
@@ -202,9 +202,9 @@ struct EnumFormat( T, bool withNames )
 			
 			foreach( i, pair; _pairs )
 			{
-				jEnumItems[i] = [ 
-					"v": JSONValue( pair[0].conv!string ), 
-					"n": JSONValue( pair[1] ) 
+				jEnumItems[i] = [
+					"v": pair[0].toStdJSON(),
+					"n": JSONValue(pair[1])
 				];
 			}
 		}
@@ -214,8 +214,8 @@ struct EnumFormat( T, bool withNames )
 			
 			foreach( i, val; _values )
 			{
-				jEnumItems[i] = [ 
-					"v": JSONValue( val.conv!string ), 
+				jEnumItems[i] = [
+					"v": val.toStdJSON(),
 				];
 			}
 		}
