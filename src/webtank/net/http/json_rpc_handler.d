@@ -12,8 +12,10 @@ class JSON_RPC_Exception : Exception
 	}
 }
 
-class JSON_RPC_Router: EventBasedHTTPHandler
+class JSON_RPC_Router: IHTTPHandler
 {
+	mixin EventBasedHTTPHandlerImpl;
+	
 	this( string URIPatternStr, string[string] regExprs, string[string] defaults )
 	{	_uriPattern = new URIPattern(URIPatternStr, regExprs, defaults);
 	}
@@ -24,7 +26,7 @@ class JSON_RPC_Router: EventBasedHTTPHandler
 	
 	alias JSONValue delegate( ref const(JSONValue), HTTPContext ) JSON_RPC_WrapperMethod;
 	
-	override HTTPHandlingResult customProcessRequest(HTTPContext context)
+	HTTPHandlingResult customProcessRequest(HTTPContext context)
 	{	//-----Опрос обработчика запроса-----
 		auto uriData = _uriPattern.match(context.request.uri.path);
 		
