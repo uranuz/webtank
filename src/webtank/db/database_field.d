@@ -221,6 +221,7 @@ public:
 	private string _getTypeStr(T)()
 	{
 		import std.traits;
+		import std.datetime: SysTime, DateTime, Date;
 
 		static if( is(T: void) ) {
 			return "void";
@@ -234,6 +235,10 @@ public:
 			return "array";
 		} else static if( isAssociativeArray!(T) ) {
 			return "assocArray";
+		} else static if( is( T: SysTime ) || is( T: DateTime) ) {
+			return "dateTime";
+		} else static if( is( T: Date ) ) {
+			return "date";
 		} else {
 			return "<unknown>";
 		}
