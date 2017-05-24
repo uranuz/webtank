@@ -160,7 +160,7 @@ T fromStdJSON(T, uint recursionLevel = 1)(JSONValue jValue)
 					}
 				}
 			} else if( jValue.type != JSON_TYPE.NULL ) {
-				throw new SerializationException("Expected JSON object or null to deserialize into structure!!!");
+				throw new SerializationException("Expected JSON object or null to deserialize into structure of type: " ~ T.stringof);
 			}
 			return result;
 		}
