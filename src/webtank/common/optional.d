@@ -282,7 +282,7 @@ This function is also called for the implicit conversion to $(D T).
 			// because it should be practical in most cases.
 			// But for classes, pointers, function pointers or delegates it is not.
 			// So help to not shoot into someone's foot as early as possible
-			enum message = "Attemt to get value of " ~ typeof(this).stringof ~ " that is not initialized!!! ";
+			enum message = "Attempt to get value of " ~ typeof(this).stringof ~ " that is not initialized!!! ";
 			enforceEx!OptionalException(isSet, message);
 		}
 		return _value;
