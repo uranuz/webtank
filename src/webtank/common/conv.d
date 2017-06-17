@@ -2,25 +2,25 @@ module webtank.common.conv;
 
 import std.conv, std.traits, std.algorithm;
 
-import webtank.common.optional;
-
 T conv(T, V)(V value)
 {
+	import webtank.common.optional: Optional, isNullableType, isOptional;
+	import std.conv: to;
+	import std.algorithm: canFind;
 	static if( is( T == enum ) )
 	{
-		auto enumValues = [ EnumMembers!T ];
-		
 		static if( isSomeString!( OriginalType!(T) ) && isSomeString!(V) )
 		{
+			auto enumValues = [ EnumMembers!T ];
 			auto tmp = to!(OriginalType!(T))(value);
 			
-			if( !enumValues.canFind(tmp) )
-					throw new ConvException( `Value "` ~ value.to!string ~ `" is not enum value of type "` ~ ValueType.stringof ~ `"!!!` );
+			if( !enumValues.canFind(tmp) ) {
+				throw new ConvException( `Value "` ~ value.to!string ~ `" is not enum value of type "` ~ ValueType.stringof ~ `"!!!` );
+			}
 		
 			return cast(T) tmp;
 		}
-		else
-		{
+		else {
 			return value.to!(T);
 		}
 	}
@@ -36,7 +36,7 @@ T conv(T, V)(V value)
 			{	if( value.length > 0 )
 					result = conv!(OptionalValueType!T)(value);
 			}
-			else static if( isNullable!(V) )
+			else static if( isNullableType!(V) )
 			{	if( value !is null )
 					result = conv!(OptionalValueType!T)(value);
 			}
@@ -45,14 +45,13 @@ T conv(T, V)(V value)
 			}
 		}
 		catch( ConvException e )
-		{	result = null; }
+		{	result = T(); }
 		
 		return result;
 	}
-	else
-	{	return value.to!(T);
+	else {
+		return value.to!T;
 	}
-
 }
 
 /++
