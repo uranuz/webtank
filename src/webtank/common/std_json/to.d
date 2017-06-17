@@ -98,10 +98,10 @@ JSONValue toStdJSON(T)(T dValue)
 		else static if( isOptional!T )
 		{
 			alias OptionalValueType!T BaseT;
-			if( dValue.isNull ) {
-				jValue = null;
-			} else {
+			if( dValue.isSet ) {
 				jValue = toStdJSON(dValue.value);
+			} else {
+				jValue = null;
 			}
 		} else static if( is( T: std.datetime.Date ) ) {
 			jValue = dValue.toISOExtString();
