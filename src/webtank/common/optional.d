@@ -263,6 +263,10 @@ Assigns $(D value) to the internally-held state.
 		_assign(rhs);
 	}
 
+	// Postplit is added in order to get rid of error:
+	// .opAssign is not callable because it is annotated with @disable
+	this(this) inout pure @safe nothrow {}
+
 /**
 Gets the value. $(D this) must not be in the null state.
 This function is also called for the implicit conversion to $(D T).
