@@ -52,8 +52,9 @@ template OptionalValueType(O)
 }
 
 template OptionalIsUndefable(O) {
-	static if( is( O == Optional!(T, Flag, Rest), T, Flag, Rest... ) )
-		enum bool OptionalWithUndefState = Flag;
+	import std.traits: fullyQualifiedName, Unqual;
+	static if( is( Unqual!O == Optional!(T, Rest), T, Rest... ) )
+		enum bool OptionalIsUndefable = Rest[0];
 	else
 		static assert(false, `Type ` ~ fullyQualifiedName!(O) ~ ` is not an instance of Optional!!!` );
 }
@@ -84,6 +85,25 @@ unittest
 	assert( !isNullableType!(double) );
 	assert( !isNullableType!(int[8]) );
 	assert( !isNullableType!(double) );
+}
+
+unittest {
+	assert(!isOptional!int);
+	assert(!isOptional!string);
+	assert(isOptional!(Optional!int));
+	assert(isOptional!(Optional!(int*)));
+	assert(isOptional!(Optional!string));
+	assert(isOptional!(Optional!Exception));
+	
+	assert(isOptional!(Undefable!int));
+	assert(isOptional!(Undefable!(int*)));
+	assert(isOptional!(Undefable!string));
+	assert(isOptional!(Undefable!Exception));
+
+	assert(OptionalIsUndefable!(Undefable!int));
+	assert(OptionalIsUndefable!(Undefable!(int*)));
+	assert(OptionalIsUndefable!(Undefable!string));
+	assert(OptionalIsUndefable!(Undefable!Exception));
 }
 
 Optional!(T) optional(T)(auto ref inout(T) value) 
@@ -134,13 +154,10 @@ Constructor binding $(D this) with $(D value).
 		pure @safe nothrow
 		if( !isOptional!RHS && !is(RHS == typeof(null)) )
 	{
+		_value = rhs;
 		static if( isNullableType!RHS ) {
-			_value = rhs;
-			static if( OptionalIsUndefable!RHS ) {
-				_state = rhs is null? OptState.Null: OptState.Set;
-			}
+			_state = rhs is null? OptState.Null: OptState.Set;
 		} else {
-			_value = rhs;
 			_state = OptState.Set;
 		}
 	}
@@ -213,7 +230,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 
 			return isSet && rhs.isSet && _value == rhs._value;
 		} else static if( isNullableType!RHS ) {
-			return _value == rhs._value;
+			return _value == rhs;
 		} else {
 			return isSet && _value == rhs;
 		}
@@ -419,4 +436,23 @@ unittest
 	Test kokoko;
 	assertThrown!OptionalException(kokoko = ko);
 	assertThrown!OptionalException(kokoko = ko.value);
+}
+
+unittest
+{
+	Undefable!string ko1 = "aaa";
+	Undefable!string ko2;
+	ko2 = ko1;
+	assert(ko2 == "aaa");
+	assert(ko2 != null);
+	assert(!ko2.isUndef);
+	assert(!ko2.isNull);
+	assert(ko2.isSet);
+
+	Undefable!string ko3 = ko1;
+	assert(ko3 == "aaa");
+	assert(!ko3.isUndef);
+	assert(!ko3.isNull);
+	assert(ko3.isSet);
+	assert(ko2 == ko3);
 }
