@@ -128,7 +128,7 @@ struct Optional(T, bool isUndefable = false)
 /**
 Constructor binding $(D this) with $(D value).
  */
-	this(RHS)(auto ref const(RHS) rhs)
+	this(RHS)(auto ref RHS rhs)
 		pure @safe nothrow
 		if( !is( RHS == typeof(null) ) )
 	{
@@ -150,7 +150,7 @@ Constructor binding $(D this) with $(D value).
 		}
 	}
 
-	private void _assign(RHS)(auto ref const(RHS) rhs)
+	private void _assign(RHS)(auto ref RHS rhs)
 		pure @safe nothrow
 		if( !isOptional!RHS && !is(RHS == typeof(null)) )
 	{
@@ -162,7 +162,7 @@ Constructor binding $(D this) with $(D value).
 		}
 	}
 
-	private void _assign(RHS)(auto ref const(RHS) rhs)
+	private void _assign(RHS)(auto ref RHS rhs)
 		pure @safe nothrow
 		if( isOptional!RHS )
 	{
@@ -274,7 +274,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 /**
 Assigns $(D value) to the internally-held state.
  */
-	void opAssign(RHS)(auto ref const(RHS) rhs) 
+	void opAssign(RHS)(auto ref RHS rhs) 
 		pure @safe nothrow
 	{
 		_assign(rhs);
@@ -455,4 +455,16 @@ unittest
 	assert(!ko3.isNull);
 	assert(ko3.isSet);
 	assert(ko2 == ko3);
+
+	Undefable!(size_t[]) ko4 = cast(size_t[]) [5,4,3,2];
+	assert(!ko4.isUndef);
+	assert(!ko4.isNull);
+	assert(ko4.isSet);
+	
+	Undefable!(size_t[]) ko5;
+	ko5 = ko4;
+	assert(!ko5.isUndef);
+	assert(!ko5.isNull);
+	assert(ko5.isSet);
+	assert(ko5 == ko5);
 }
