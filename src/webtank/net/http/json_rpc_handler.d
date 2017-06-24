@@ -25,50 +25,80 @@ class JSON_RPC_Router: IHTTPHandler
 	}
 	
 	alias JSONValue delegate( ref const(JSONValue), HTTPContext ) JSON_RPC_WrapperMethod;
-	
+
 	HTTPHandlingResult customProcessRequest(HTTPContext context)
-	{	//-----Опрос обработчика запроса-----
-		auto uriData = _uriPattern.match(context.request.uri.path);
-		
-		bool isRequestMatched =
-			uriData.isMatched &&
-			toLower( context.request.headers.get("method", null) ) == "post";
-		
-		//-----Конец опроса обработчика события-----
-		onPostPoll.fire(context, isRequestMatched);
-		if( !isRequestMatched )
-			return HTTPHandlingResult.mismatched;
-		
+	{
+		JSONValue jResponse;
+		try {
+			//-----Опрос обработчика запроса-----
+			auto uriData = _uriPattern.match(context.request.uri.path);
+			
+			bool isRequestMatched =
+				uriData.isMatched &&
+				toLower(context.request.headers.get("method", null)) == "post";
+			
+			//-----Конец опроса обработчика события-----
+			onPostPoll.fire(context, isRequestMatched);
+			if( !isRequestMatched )
+				return HTTPHandlingResult.mismatched;
+
+			_processRequestInternal(context, jResponse);
+		} catch(Exception ex) {
+			jResponse["error"] = [
+				"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
+				"message": JSONValue(ex.msg),
+				"data": JSONValue([
+					"file": JSONValue(ex.file),
+					"line": JSONValue(ex.line)
+				])
+			];
+		}
+		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
+
+		return HTTPHandlingResult.handled;
+	}
+	
+	private void _processRequestInternal(HTTPContext context, ref JSONValue jResponse)
+	{
 		auto jMessageBody = context.request.messageBody.parseJSON();
 		
 		if( jMessageBody.type != JSON_TYPE.OBJECT )
 			throw new JSON_RPC_Exception(`JSON-RPC message body must be of object type!!!`);
-		
+
 		string jsonrpc;
-		if( "jsonrpc" in jMessageBody.object )
+		if( "jsonrpc" in jMessageBody )
 		{
 			if( jMessageBody["jsonrpc"].type == JSON_TYPE.STRING )
 				jsonrpc = jMessageBody["jsonrpc"].str;
 		}
-		
+
 		if( jsonrpc != "2.0" )
 			throw new JSON_RPC_Exception(`Only version 2.0 of JSON-RPC protocol is supported!!!`);
-			
+
+		// Версия должна быть по протоколу. Раз мы проверили, что версия 2.0 - уже можно записать её в результат
+		jResponse["jsonrpc"] = "2.0";
+
+		if( "id" in jMessageBody ) {
+			jResponse["id"] = jMessageBody["id"]; // По протоколу возвращаем обратно идентификатор сообщения
+		} else {
+			jResponse["id"] = null; // По протоколу должны вернуть null, если нету в запросе
+		}
+
 		string methodName;
-		if( "method" in jMessageBody.object )
+		if( "method" in jMessageBody )
 		{
 			if( jMessageBody["method"].type == JSON_TYPE.STRING )
 				methodName = jMessageBody["method"].str;
 		}
-		
+
 		if( methodName.length == 0 )
 			throw new JSON_RPC_Exception(`JSON-RPC method name must not be empty!!!`);
-			
+
 		auto method = _methods.get(methodName, null);
 		
 		if( method is null )
 			throw new JSON_RPC_Exception(`JSON-RPC method "` ~ methodName ~ `" is not found by server!!!`);
-		
+
 		//Запрос должен иметь элемент params, даже если параметров
 		//не передаётся. В последнем случае должно передаваться
 		//либо null в качестве параметра, либо пустой объект {}
@@ -83,23 +113,10 @@ class JSON_RPC_Router: IHTTPHandler
 		}
 		else
 			throw new JSON_RPC_Exception(`JSON-RPC "params" property should be in JSON request object!!!`);
-		
-		JSONValue[string] jResponseArray;
-		
-		//Вызов метода
-		jResponseArray["result"] = method( jMessageBody["params"], context );
-		jResponseArray["jsonrpc"] = "2.0";
-		
-		if( "id" in jMessageBody )
-			jResponseArray["id"] = jMessageBody["id"];
-		
-		JSONValue jResponse = jResponseArray;
-		
-		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
-		
-		return HTTPHandlingResult.handled;
+
+		jResponse["result"] = method(jMessageBody["params"], context); // Вызов метода
 	}
-	
+
 	JSON_RPC_Router join(alias Method)(string methodName = null)
 		if( isSomeFunction!(Method) )
 	{

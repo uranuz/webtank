@@ -77,30 +77,39 @@ HTTPInput sendJSON_RPCBlocking(Result)( string requestURI, string rpcMethod, str
 }
 
 /// Проверяем, если произошла ошибка во время вызова и бросаем исключение, если так
-private void _checkJSON_RPCErrors(JSONValue bodyJSON)
+private void _checkJSON_RPCErrors(ref JSONValue response)
 {
-	if( "error" in bodyJSON )
+	if( response.type != JSON_TYPE.OBJECT )
+		throw new Exception(`Expected assoc array as JSON-RPC response`);
+	
+	if( "error" in response )
 	{
-		string msg = "Unknown JSON-RPC error";
+		if( response["error"].type != JSON_TYPE.OBJECT ) {
+			throw new Exception(`"error" field in JSON-RPC response must be an object`);
+		}
+		string errorMsg;
+		if( "message" in response["error"] ) {
+			errorMsg = response["error"]["message"].type == JSON_TYPE.STRING? response["error"]["message"].str: null;
+		}
 
-		JSONValue errorObj = bodyJSON["error"];
-		if( errorObj.type == JSON_TYPE.OBJECT )
+		if( "data" in response["error"] )
 		{
-			msg = `JSON-RPC error. `;
-			if( "code" in errorObj && (errorObj["code"].type == JSON_TYPE.UINTEGER || errorObj["code"].type == JSON_TYPE.INTEGER) )
-			{
-				import std.conv: text;
-				msg ~= `Code: ` ~ ( errorObj["code"].type == JSON_TYPE.UINTEGER ? errorObj["code"].uinteger.text : errorObj["code"].integer.text ) ~ `.`;
-			}
-
-			if( "message" in errorObj && errorObj["message"].type == JSON_TYPE.STRING )
-			{
-				msg ~= ` Message: "` ~ errorObj["message"].str ~ `".`;
+			JSONValue errorData = response["error"]["data"];
+			if(
+				"file" in errorData &&
+				"line" in errorData &&
+				errorData["file"].type == JSON_TYPE.STRING &&
+				errorData["line"].type == JSON_TYPE.UINTEGER
+			) {
+				throw new Exception(errorMsg, errorData["file"].str, errorData["line"].uinteger);
 			}
 		}
 
-		throw new Exception(msg);
+		throw new Exception(errorMsg);
 	}
+
+	if( "result" !in response )
+		throw new Exception(`Expected "result" field in JSON-RPC response`);
 }
 
 /// Перегрузка метода, которая возвращает результат в формате std.json
@@ -109,10 +118,7 @@ JSONValue sendJSON_RPCBlocking( string requestURI, string rpcMethod, ref JSONVal
 	auto response = sendJSON_RPCBlocking!(HTTPInput)(requestURI, rpcMethod, jsonParams);
 
 	JSONValue bodyJSON = response.messageBody.parseJSON();
-	assert( bodyJSON.type == JSON_TYPE.OBJECT, `Expected object as JSON-RPC result` );
-
 	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
-	assert( "result" in bodyJSON, `Expected "result" field in JSON-RPC result` );
 
 	return bodyJSON["result"];
 }
@@ -123,10 +129,7 @@ JSONValue sendJSON_RPCBlocking( string requestURI, string rpcMethod, string[stri
 	auto response = sendJSON_RPCBlocking!(HTTPInput)(requestURI, rpcMethod, headers, jsonParams);
 
 	JSONValue bodyJSON = response.messageBody.parseJSON();
-	assert( bodyJSON.type == JSON_TYPE.OBJECT, `Expected object as JSON-RPC result` );
-
 	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
-	assert( "result" in bodyJSON, `Expected "result" field in JSON-RPC result` );
 
 	return bodyJSON["result"];
 }
