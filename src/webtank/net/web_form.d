@@ -110,7 +110,9 @@ public:
 string[][string] extractFormData(string queryStr)
 {	string[][string] result;
 	foreach( key, values; parseFormData(queryStr) )
-	{	string decodedKey = decodeURIFormQuery(key);
+	{
+		// TODO: Возможно, что данные сюда уже придут декодированными. Нужно обработать этот случай!
+		string decodedKey = decodeURIFormQuery(key);
 		foreach( val; values )
 			result[ decodedKey ] ~= decodeURIFormQuery(val);
 	}

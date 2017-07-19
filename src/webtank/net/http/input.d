@@ -110,8 +110,10 @@ public:
 	///Данные HTTP формы переданные через адресную строку
 	FormData queryForm() @property
 	{
-		if( _queryForm is null )
-			_queryForm = new FormData(uri.query);
+		if( _queryForm is null ) {
+			// Класс FormData ожидает строку запроса в сыром виде, потому что сам её декодирует
+			_queryForm = new FormData(uri.rawQuery);
+		}
 		return _queryForm;
 	}
 

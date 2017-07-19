@@ -343,7 +343,7 @@ public:
 
 	///Оператор получения доступа к Cookie по имени
 	///Бросает исключение RangeError, если Cookie не существует
-	inout(Cookie) opIndex(string name) inout
+	ref inout(Cookie) opIndex(string name) inout
 	{
 		auto cookie = name in this;
 		if( cookie is null )
