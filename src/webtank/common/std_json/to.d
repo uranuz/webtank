@@ -97,7 +97,7 @@ JSONValue toStdJSON(T)(T dValue)
 		}
 		else static if( isOptional!T )
 		{
-			alias OptionalValueType!T BaseT;
+			alias BaseT = OptionalValueType!T;
 			if( dValue.isSet ) {
 				jValue = toStdJSON(dValue.value);
 			} else {

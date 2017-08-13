@@ -129,7 +129,7 @@ T fromStdJSON(T, uint recursionLevel = 1)(JSONValue jValue)
 	}
 	else static if( isOptional!T )
 	{
-		alias OptionalValueType!T BaseT;
+		alias BaseT = OptionalValueType!T;
 		T result;
 		if( jValue.type == JSON_TYPE.NULL ) {
 			result = null; // We need to set null explicitly, because of Undefable

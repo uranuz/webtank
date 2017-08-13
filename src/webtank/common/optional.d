@@ -155,9 +155,9 @@ Constructor binding $(D this) with $(D value).
 		if( !isOptional!RHS && !is(RHS == typeof(null)) )
 	{
 		_value = rhs;
-		static if( isNullableType!RHS ) {
+		static if( isNullableType!RHS && isUndefable ) {
 			_state = rhs is null? OptState.Null: OptState.Set;
-		} else {
+		} else static if( !isNullableType!RHS ) {
 			_state = OptState.Set;
 		}
 	}
@@ -348,6 +348,10 @@ unittest
 	assert(!a.isSet);
 	assert(a is null); // It is safe for built-in arrays to work with null
 	assert(a.value is null);
+	a = "SuperTest";
+	assert(!a.isNull);
+	assert(a.isSet);
+	assert(a.value == "SuperTest");
 
 	// Working with other types such as classes, pointers and function pointers is not safe when they are null
 	class Test { int b; }
