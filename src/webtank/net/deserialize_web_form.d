@@ -75,15 +75,16 @@ void formDataToStruct(Struc, string subFieldDelim = "__", string arrayElemDelim 
 						else static if( isArray!FieldType )
 						{
 							alias Elem = ElementType!FieldType;
-							static assert(isPlainType!Elem, Elem.stringof ~ ` is not allowed array element type!!!`);
-							if( formData.array(fieldName).length == 1 ) {
-								Elem[] innerArray = __traits(getMember, result, structFieldName);
-								foreach( item; splitter(*formFieldPtr, arrayElemDelim) ) {
-									innerArray ~= convertPlainType!Elem(item);
+							static if( isPlainType!Elem ) {
+								if( formData.array(fieldName).length == 1 ) {
+									Elem[] innerArray = __traits(getMember, result, structFieldName);
+									foreach( item; splitter(*formFieldPtr, arrayElemDelim) ) {
+										innerArray ~= convertPlainType!Elem(item);
+									}
+									__traits(getMember, result, structFieldName) = innerArray;
+								} else {
+									__traits(getMember, result, structFieldName) = formData.array(fieldName).to!(Elem[]);
 								}
-								__traits(getMember, result, structFieldName) = innerArray;
-							} else {
-								__traits(getMember, result, structFieldName) = formData.array(fieldName).to!(Elem[]);
 							}
 						}
 					}
@@ -96,7 +97,7 @@ void formDataToStruct(Struc, string subFieldDelim = "__", string arrayElemDelim 
 				}
 			}
 			// Здесь нет else, чтобы можно было задать, например, дату как совокупность подполей так и целиком в виде строки формата ISO
-			static if( is( FieldType == struct ) )
+			static if( is( FieldType == struct ) && !isOptional!BaseFieldType )
 			{
 				// Здесь может быть функция-свойство, а не простое поле, поэтому читаем значение, затем меняем
 				// и снова записываем, чтобы изменить в структуре только те поля, которые надо

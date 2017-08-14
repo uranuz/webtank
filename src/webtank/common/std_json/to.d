@@ -65,7 +65,7 @@ JSONValue toStdJSON(T)(T dValue)
 		}
 		else static if( isAssociativeArray!T )
 		{
-			static if( isSomeString!(KeyType!(T)) )
+			static if( isSomeString!(KeyType!T) )
 			{
 				if( dValue is null ) {
 					jValue = null;
@@ -73,16 +73,23 @@ JSONValue toStdJSON(T)(T dValue)
 				else
 				{
 					JSONValue[string] jArray;
-
-					foreach( key, val; dValue ) {
-						jArray[key.to!string] = toStdJSON(val);
+					foreach( key, val; dValue )
+					{
+						// Не будем выводить свойства которые имеют тип Undefable с состоянием isUndef
+						static if( isOptional!(ValueType!T) && OptionalIsUndefable!(ValueType!T) )
+						{
+							if( !val.isUndef ) {
+								jArray[key.to!string] = toStdJSON(val);
+							}
+						} else {
+							jArray[key.to!string] = toStdJSON(val);
+						}
 					}
-
 					jValue = jArray;
 				}
-			}
-			else
+			} else {
 				static assert( 0, "Only string types are allowed for object keys!!!" );
+			}
 		}
 		else static if( isTuple!T )
 		{
@@ -114,7 +121,16 @@ JSONValue toStdJSON(T)(T dValue)
 				static if( __traits(compiles, {
 					auto test = __traits(getMember, dValue, name);
 				})) {
-					jArray[name] = toStdJSON( __traits(getMember, dValue, name) );
+					alias FieldType = typeof(__traits(getMember, dValue, name));
+					// Не будем выводить свойства которые имеют тип Undefable с состоянием isUndef
+					static if( isOptional!FieldType && OptionalIsUndefable!FieldType )
+					{
+						if( !__traits(getMember, dValue, name).isUndef ) {
+							jArray[name] = toStdJSON( __traits(getMember, dValue, name) );
+						}
+					} else {
+						jArray[name] = toStdJSON( __traits(getMember, dValue, name) );
+					}
 				}
 			}
 			jValue = jArray;
