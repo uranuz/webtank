@@ -2,7 +2,7 @@ module webtank.net.web_form;
 
 import std.range, std.ascii, std.conv;
 
-import webtank.net.uri;
+import webtank.net.uri: decodeURIFormQuery;
 
 // pop char from input range, or throw
 private dchar popChar(T)(ref T input)

@@ -868,9 +868,9 @@ unittest
 		auto uri = new URI(s);
 		assert(uri.scheme == "http");
 		assert(uri.userInfo == "machin");
-		assert(uri.hostName == "fr.wikipedia.org");
+		assert(uri.host == "fr.wikipedia.org");
 		assert(uri.port == 80);
-		assert(uri.authority == "machin@fr.wikipedia.org:80");
+		assert(uri.authority == "machin@fr.wikipedia.org");
 		assert(uri.path == "/wiki/Uniform_Resource_Locator");
 		assert(uri.query == "Query Part=4");
 		assert(uri.fragment == "fragment part");

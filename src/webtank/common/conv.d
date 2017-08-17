@@ -1,12 +1,11 @@
 module webtank.common.conv;
 
-import std.conv, std.traits, std.algorithm;
-
 T conv(T, V)(V value)
 {
-	import webtank.common.optional: Optional, isNullableType, isOptional;
-	import std.conv: to;
+	import std.conv: to, castFrom;
 	import std.algorithm: canFind;
+	import std.traits: isSomeString, OriginalType, isDynamicArray;
+	import webtank.common.optional: Optional, isNullableType, isOptional;
 	static if( is( T == enum ) )
 	{
 		static if( isSomeString!( OriginalType!(T) ) && isSomeString!(V) )
@@ -19,13 +18,11 @@ T conv(T, V)(V value)
 			}
 		
 			return cast(T) tmp;
-		}
-		else {
-			return value.to!(T);
+		} else {
+			return cast(T) value.to!( OriginalType!(T) );
 		}
 	}
-	else static if( is( V == enum ) && isSomeString!( OriginalType!(V) ) && isSomeString!(T) )
-	{
+	else static if( is( V == enum ) && isSomeString!( OriginalType!(V) ) && isSomeString!(T) ) {
 		return (cast(OriginalType!(V)) value).to!T;
 	}
 	else static if( isOptional!T )
@@ -48,8 +45,7 @@ T conv(T, V)(V value)
 		{	result = T(); }
 		
 		return result;
-	}
-	else {
+	} else {
 		return value.to!T;
 	}
 }
@@ -64,7 +60,8 @@ $(LOCALE_RU_RU
 )
 +/
 ubyte hexSymbolToByte(char symbol)
-{	if( symbol >= '0' && symbol <= '9' )
+{
+	if( symbol >= '0' && symbol <= '9' )
 		return cast(ubyte) ( symbol - '0' ) ;
 	else if( symbol >= 'a' && symbol <= 'f' )
 		return cast(ubyte) ( symbol - 'a' + 10 );
@@ -82,9 +79,8 @@ $(LOCALE_RU_RU
 	Функция определяет соответствует ли переданный символ цифре шестнадцатеричного числа
 )
 +/
-bool isHexSymbol(char symbol)
-{	return 
-		( symbol >= '0' && symbol <= '9' ) || ( symbol >= 'a' && symbol <= 'f' ) || ( symbol >= 'A' && symbol <= 'F' );
+bool isHexSymbol(char symbol) {
+	return (symbol >= '0' && symbol <= '9') || (symbol >= 'a' && symbol <= 'f') || (symbol >= 'A' && symbol <= 'F');
 }
 
 /++
@@ -101,13 +97,16 @@ ubyte[] hexStringToByteArray(string hexString)
 	size_t i = 0; //Индексация результирующего массива
 	bool low = false;
 	foreach( symbol; hexString )
-	{	if( isHexSymbol(symbol) )
-		{	if( low )
-			{	result[i] += cast(ubyte) hexSymbolToByte(symbol);
+	{
+		if( isHexSymbol(symbol) )
+		{
+			if( low )
+			{
+				result[i] += cast(ubyte) hexSymbolToByte(symbol);
 				i++; //После добавления младшего символа переходим к след. элементу
+			} else {
+				result[i] = cast(ubyte) ( hexSymbolToByte(symbol) * 16 );
 			}
-			else
-				 result[i] = cast(ubyte) ( hexSymbolToByte(symbol) * 16 );
 			low = !low; 
 		}
 	}
@@ -122,24 +121,30 @@ ubyte[] hexStringToByteArray(string hexString)
 	ditto
 +/
 ubyte[arrayLen] hexStringToStaticByteArray(size_t arrayLen)(string hexString)
-{	ubyte[arrayLen] result;
+{
+	ubyte[arrayLen] result;
 	size_t i = 0; //Индексация результирующего массива
 	bool low = false;
 	foreach( symbol; hexString )
-	{	if( isHexSymbol(symbol) )
-		{	if( i >= arrayLen )
-				new Exception( "Количество значащих символов слишком велико для соответствия размеру результата" );
-			if( low )
-			{	result[i] += cast(ubyte) hexSymbolToByte(symbol);
-				i++; //После добавления младшего символа переходим к след. элементу
+	{
+		if( isHexSymbol(symbol) )
+		{
+			if( i >= arrayLen ) {
+				new Exception("Количество значащих символов слишком велико для соответствия размеру результата");
 			}
-			else
-				 result[i] = cast(ubyte) ( hexSymbolToByte(symbol) * 16 );
+			if( low )
+			{
+				result[i] += cast(ubyte) hexSymbolToByte(symbol);
+				i++; //После добавления младшего символа переходим к след. элементу
+			} else {
+				result[i] = cast(ubyte) ( hexSymbolToByte(symbol) * 16 );
+			}
 			low = !low; 
 		}
 	}
-	if( low )
+	if( low ) {
 		throw new Exception("Количество значащих Hex-символов должно быть чётным");
+	}
 	return result;
 }
 
@@ -153,12 +158,14 @@ $(LOCALE_RU_RU
 )
 +/
 string toHexString(uint arrayLen)(ubyte[arrayLen] srcArray)
-{	import std.digest.digest;
+{
+	import std.digest.digest;
 	return std.digest.digest.toHexString(srcArray).idup;
 }
 
 unittest
-{	import std.digest.md;
+{
+	import std.digest.md;
 	import std.digest.digest;
 	ubyte[16] hash = md5Of("abc");
 	string hexStr = std.digest.digest.toHexString(hash);
@@ -193,7 +200,8 @@ $(LOCALE_RU_RU
 )
 +/
 bool toBool(string src)
-{	import std.string;
+{
+	import std.string;
 	foreach( logicStr; trueStrings )
 		if( toLower( strip(src) ) == logicStr )
 			return true;
@@ -215,20 +223,22 @@ $(LOCALE_RU_RU
 )
 +/
 DateTime DateTimeFromPGTimestamp( const(char)[] dateString )
-{	auto temp = dateString[0..10] ~ "T" ~ dateString[11..19];
+{
+	auto temp = dateString[0..10] ~ "T" ~ dateString[11..19];
 	return DateTime.fromISOExtString(temp);
 }
 
-// void main()
-// {	import std.stdio;
-// 	import std.digest.digest;
-// 	string hexStr2 = "b1e37dab-1c9a-faa5-6d03-9cb3e4399261";
-// 	ubyte[16] hash2 = hexStringToByteArray(hexStr2);
-// 	string restoredHexStr2 = toHexString(hash2);
-// 	ubyte[16] hash2_1 = hexStringToByteArray(restoredHexStr2);
-// 	writeln(hash2);
-// 	writeln(restoredHexStr2);
-// 	writeln( hash2_1 );
-// 	writeln( convDef!bool(" p ", true) );
-// 	
-// }
+//void main()
+//{
+//	import std.stdio;
+//	import std.digest.digest;
+//	string hexStr2 = "b1e37dab-1c9a-faa5-6d03-9cb3e4399261";
+//	ubyte[16] hash2 = hexStringToByteArray(hexStr2);
+//	string restoredHexStr2 = toHexString(hash2);
+//	ubyte[16] hash2_1 = hexStringToByteArray(restoredHexStr2);
+//	writeln(hash2);
+//	writeln(restoredHexStr2);
+//	writeln( hash2_1 );
+//	writeln( convDef!bool(" p ", true) );
+//	
+//}

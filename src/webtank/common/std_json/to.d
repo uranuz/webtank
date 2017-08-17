@@ -3,7 +3,6 @@ module webtank.common.std_json.to;
 import std.json, std.traits, std.conv, std.typecons;
 
 import webtank.common.optional;
-import std.datetime: Date;
 import webtank.common.std_json.exception;
 
 /++
@@ -17,6 +16,7 @@ $(LOCALE_RU_RU
 +/
 JSONValue toStdJSON(T)(T dValue)
 {
+	import std.datetime: Date, DateTime, TimeOfDay, SysTime;
 	static if( is( T == JSONValue ) ) {
 		return dValue;
 	}
@@ -33,7 +33,7 @@ JSONValue toStdJSON(T)(T dValue)
 			} else static if( isUnsigned!T ) {
 				jValue = dValue.to!ulong;
 			} else {
-				static assert( 0, "This should never happen!!!" ); //Это не должно произойти))
+				static assert(false, "This should never happen!!!"); //Это не должно произойти))
 			}
 		} else static if( isFloatingPoint!T ) {
 			jValue = dValue.to!real;
@@ -88,7 +88,7 @@ JSONValue toStdJSON(T)(T dValue)
 					jValue = jArray;
 				}
 			} else {
-				static assert( 0, "Only string types are allowed for object keys!!!" );
+				static assert(false, "Only string types are allowed for object keys!!!");
 			}
 		}
 		else static if( isTuple!T )
@@ -110,10 +110,11 @@ JSONValue toStdJSON(T)(T dValue)
 			} else {
 				jValue = null;
 			}
-		} else static if( is( T: std.datetime.Date ) ) {
+		} else static if( is( T == Date ) || is( T == DateTime ) || is( T == TimeOfDay ) || is( T == SysTime ) ) {
+			// Строковый формат для дат и времени более компактен и привычен, поэтому выводим в нём вместо объекта JSON
 			jValue = dValue.toISOExtString();
 		}
-		else static if ( is( T == struct ) )
+		else static if( is( T == struct ) )
 		{
 			JSONValue[string] jArray;
 			foreach( name; __traits(allMembers, T) )
@@ -143,9 +144,8 @@ JSONValue toStdJSON(T)(T dValue)
 			} else {
 				return dValue.toStdJSON();
 			}
-		}
-		else {
-			static assert( 0, "This value's type is not of one implemented JSON type!!!" );
+		} else {
+			static assert(false, "This value's type is not of one implemented JSON type!!!" );
 		}
 		return jValue;
 	}

@@ -1,10 +1,6 @@
 module webtank.common.std_json.from;
 
-import std.json, std.traits, std.conv, std.typecons;
-
-import webtank.common.optional;
-import std.datetime: Date;
-import webtank.common.std_json.exception;
+import std.json: JSONValue, JSON_TYPE;
 
 /++
 $(LOCALE_EN_US
@@ -17,6 +13,13 @@ $(LOCALE_RU_RU
 +/
 T fromStdJSON(T, uint recursionLevel = 1)(JSONValue jValue)
 {
+	import std.conv: text, to;
+	import std.traits;
+	import std.typecons: Tuple, isTuple;
+	import webtank.common.optional: Optional, isOptional, OptionalValueType;
+	import std.datetime: Date, DateTime, TimeOfDay, SysTime;
+	import webtank.common.std_json.exception;
+
 	static if( is( T == JSONValue ) ) {
 		return jValue; //Raw JSONValue given
 	}
@@ -161,8 +164,16 @@ T fromStdJSON(T, uint recursionLevel = 1)(JSONValue jValue)
 						}
 					}
 				}
+			} else if( jValue.type == JSON_TYPE.STRING ) {
+				static if( is( T == Date ) || is( T == DateTime ) || is( T == TimeOfDay ) || is( T == SysTime ) ) {
+					// Явно говорим, что из строки будем получать дату или время в формате ISO
+					result = T.fromISOExtString(jValue.str);
+				} else {
+					// Пока для других типом преобразование из строки не доступно. Может позже... Но это не точно...
+					throw new SerializationException("Deserialization from string to struct is only possible for date and time for now...");
+				}
 			} else if( jValue.type != JSON_TYPE.NULL ) {
-				throw new SerializationException("Expected JSON object or null to deserialize into structure of type: " ~ T.stringof);
+				throw new SerializationException("Expected JSON object or null to deserialize into structure of type: " ~ T.stringof ~ ", but got: " ~ jValue.type.text);
 			}
 			return result;
 		}
