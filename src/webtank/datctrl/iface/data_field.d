@@ -1,4 +1,4 @@
-module webtank.datctrl.data_field;
+module webtank.datctrl.iface.data_field;
 
 import webtank._version;
 
@@ -66,20 +66,15 @@ $(LOCALE_RU_RU
 +/
 template DataFieldValueType(FormatType) 
 {	
-	static if( isPrimaryKeyFormat!(FormatType) )
-	{
+	static if( isPrimaryKeyFormat!(FormatType) ) {
 		alias DataFieldValueType = DataFieldValueType!(FormatType.BaseDecl);
-	}
-	else static if( isEnumFormat!(FormatType) )
-	{
+	} else static if( isEnumFormat!(FormatType) ) {
 		alias DataFieldValueType = FormatType.ValueType;
-	}
-	else static if( is(FormatType) )
-	{
+	}	else static if( is(FormatType) ) {
 		alias DataFieldValueType = FormatType;
-	}
-	else
+	} else {
 		static assert( 0, FormatType.stringof ~ " is not valid D type!!!" );
+	}
 }
 
 
@@ -149,19 +144,16 @@ interface IBaseDataField
 	+/
 	string getStr(size_t index, string defaultValue);
 
-	
 	JSONValue getStdJSONFormat();
-	
-		//Методы записи
-// 	void setNull(size_t key); //Установить значение ячейки в null
-// 	void isNullable(bool nullable) @property; //Установка возможности быть пустым
+
+	JSONValue getStdJSONValue(size_t index);
 }
 
 
-interface IBaseWriteableDataField
+interface IBaseWriteableDataField: IBaseDataField
 {
 	void nullify(size_t index);
-	void setNullable(size_t index, bool value);
+	void isNullable(bool value) @property;
 }
 
 /++
@@ -173,9 +165,8 @@ $(LOCALE_RU_RU
 	Основной шаблонный интерфейс данных поля
 )
 +/
-interface IDataField(FormatT) : IBaseDataField
+interface IDataField(FormatType) : IBaseDataField
 {	
-	alias FormatType = FormatT;
 	alias ValueType = DataFieldValueType!(FormatType);
 	
 	/++
@@ -214,136 +205,10 @@ interface IDataField(FormatT) : IBaseDataField
 	}
 }
 
-interface IWriteableDataField(alias FormatT): IDataField!(FormatT), IBaseWriteableDataField
+interface IWriteableDataField(alias FormatType): IDataField!(FormatType), IBaseWriteableDataField
 {
-	void set(size_t index, ValueType value);
-
-}
-
-
-class WriteableField(alias FormatT): IWriteableDataField!(FormatT)
-{
-	alias FormatType = FormatT;
 	alias ValueType = DataFieldValueType!(FormatType);
-
-protected:
-	ValueType[] _values;
-	bool[] _nullFlags;
-	string _name;
-	bool _isNullable;
-	
-	static if( isEnumFormat!(FormatType) )
-	{
-		this( 
-			ValueType[] values,
-			bool[] nullFlags,
-			string fieldName, bool isNullable,
-			FormatType enumFormat
-		)
-		{	_values = values;
-			_nullFlags = nullFlags;
-			_name = fieldName;
-			_isNullable = isNullable;
-			_enumFormat = enumFormat;
-		}
-		
-		FormatType _enumFormat;
-	}
-	
-	this( 
-		ValueType[] values,
-		bool[] nullFlags,
-		string fieldName, bool isNullable
-	)
-	{	_values = values;
-		_nullFlags = nullFlags;
-		_name = fieldName;
-		_isNullable = isNullable;
-	}
-	
-	
-	override
-	{
-		size_t length() @property
-		{
-			return _values.length;
-		}
-	
-		string name() @property
-		{
-			return _name;
-		}
-		
-		bool isNullable() @property
-		{
-			return _isNullable;
-		}
-		
-		bool isWriteable() @property
-		{
-			return true;
-		}
-		
-		bool isNull(size_t index)
-		{
-			return isNullable ? ( _nullFlags[index] ) : false;
-		}
-	
-		string getStr(size_t index)
-		{
-			return isNull ? null : _values[index].to!string;
-		}
-		
-		string getStr(size_t index, string defaultValue)
-		{
-			return isNull ? defaultValue : _values[index].to!string;
-		}
-		
-		JSONValue getStdJSONFormat()
-		{
-		
-		}
-		
-		ValueType get(size_t index)
-		{
-			return _values[index];
-		}
-		
-		ValueType get(size_t index, ValueType defaultValue)
-		{
-			return isNull ? defaultValue : _values[index];
-		}
-
-		static if( isEnumFormat!(FormatType) )
-		{
-			FormatType enumFormat()
-			{
-				return _enumFormat;
-			}
-		}
-		
-		void set(size_t index, ValueType value)
-		{
-			_nullFlags[index] = false;
-			_values[index] = value;
-		}
-		
-		void nullify(size_t index)
-		{
-			_nullFlags[index] = true;
-			_values[index] = ValueType.init;
-		}
-		
-		void setNullable(bool value) @property
-		{
-			_isNullable = value;
-		}
-
-	
-	} //override
-
+	void set(ValueType value, size_t index);
 }
-
-
 
 } //static if( isDatCtrlEnabled )
