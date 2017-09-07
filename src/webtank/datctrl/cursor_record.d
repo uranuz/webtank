@@ -26,7 +26,9 @@ public:
 			return _recordSet.getIndexByStringKey(_recordKey);
 		}
 
-		IBaseDataField getField(string fieldName);
+		IBaseDataField getField(string fieldName) {
+			return _recordSet.getField(fieldName);
+		}
 
 		string getStr(string fieldName) {
 			return _recordSet.getStr(fieldName, recordIndex);

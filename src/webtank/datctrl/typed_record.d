@@ -96,5 +96,20 @@ struct TypedRecord(alias RecordFormatT, RecordType)
 		}
 	}
 
-	alias this _record;
+	alias _record this;
+}
+
+unittest {
+	import webtank.datctrl.iface.data_field;
+	import webtank.datctrl.iface.record;
+	import webtank.datctrl.record_format;
+	import webtank.datctrl.detatched_record;
+	
+	auto recFormat = RecordFormat!(
+		PrimaryKey!(size_t), "num",
+		string, "name"
+	)();
+	IBaseWriteableDataField[] dataFields;
+	auto baseRec = new DetatchedRecord(dataFields);
+	auto rec = TypedRecord!(typeof(recFormat), IBaseWriteableRecord)(baseRec);
 }

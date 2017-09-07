@@ -151,6 +151,8 @@ interface IBaseWriteableRecordSet: IBaseRecordSet
 {
 	void nullify(string fieldName, size_t recordIndex);
 	void setNullable(string fieldName, bool value);
+	void addItems(size_t count, size_t index = size_t.max);
+	void addItems(IBaseWriteableRecord[] records, size_t index = size_t.max);
 
 	override {
 		// Ковариантные переопределения методов для записываемых типов

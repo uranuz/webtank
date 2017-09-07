@@ -7,26 +7,28 @@ class DetatchedRecord: IBaseWriteableRecord
 {
 protected:
 	IBaseWriteableDataField[] _dataFields;
+	size_t _keyFieldIndex;
 	size_t[string] _fieldIndexes;
 
 public:
-	this(IBaseWriteableDataField dataFields) {
+	this(IBaseWriteableDataField[] dataFields) {
 		_dataFields = dataFields;
 		_reindex();
 	}
 
 	private void _reindex()
 	{
-		_dataFields = null;
+		_fieldIndexes.clear();
 		foreach( i, dataField; _dataFields ) {
-			_dataFields[dataField.name] = i;
+			_fieldIndexes[dataField.name] = i;
 		}
 	}
 
 	override {
-		IBaseWriteableDataField getField(string fieldName) {
+		IBaseWriteableDataField getField(string fieldName)
+		{
 			assert(fieldName in _fieldIndexes);
-			return _dataCells[ _fieldIndexes[fieldName] ];
+			return _dataFields[ _fieldIndexes[fieldName] ];
 		}
 
 		size_t recordIndex() @property {
@@ -34,15 +36,15 @@ public:
 		}
 
 		string getStr(string fieldName) {
-			return getField(fieldName).getStr();
+			return getField(fieldName).getStr(recordIndex);
 		}
 
 		string getStr(string fieldName, string defaultValue) {
-			return getField(fieldName).getStr(defaultValue);
+			return getField(fieldName).getStr(recordIndex, defaultValue);
 		}
 
 		bool isNull(string fieldName) {
-			return getField(fieldName).isNull;
+			return getField(fieldName).isNull(recordIndex);
 		}
 
 		bool isNullable(string fieldName) {
@@ -58,11 +60,22 @@ public:
 		}
 
 		void nullify(string fieldName) {
-			getField(fieldName).nullify();
+			getField(fieldName).nullify(recordIndex);
 		}
 
 		void setNullable(string fieldName, bool value) {
 			getField(fieldName).isNullable = value;
+		}
+
+		import std.json: JSONValue;
+
+		JSONValue toStdJSON()
+		{
+			assert(false, `Not implemented yet!`);
+		}
+
+		size_t keyFieldIndex() @property {
+			return _keyFieldIndex;
 		}
 	} // override
 }

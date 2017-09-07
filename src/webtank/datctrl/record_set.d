@@ -53,12 +53,14 @@ public:
 		return _dataFields[ _fieldIndexes[fieldName] ];
 	}
 
-	RecordType opIndex(size_t recordIndex) {
+	IBaseRecord opIndex(size_t recordIndex) {
 		return getRecord(recordIndex);
 	}
 
-	RecordType getRecord(size_t recordIndex) {
-		return new CursorRecord(this, recordIndex);
+	IBaseRecord getRecord(size_t recordIndex)
+	{
+		import std.conv: to;
+		return new CursorRecord(this, recordIndex.to!string);
 	}
 
 	string getStr(string fieldName, size_t recordIndex) {
@@ -90,7 +92,7 @@ public:
 	}
 
 	size_t fieldCount() @property {
-		return dataFields.length;
+		return _dataFields.length;
 	}
 
 	JSONValue getStdJSONData(size_t index)
@@ -141,8 +143,10 @@ public:
 		return new Range(this);
 	}
 
-	size_t getIndexByStringKey(string recordKey) {
-		return _dataFields[recordKey];
+	size_t getIndexByStringKey(string recordKey)
+	{
+		assert(recordKey in _recordIndexes, `Cannot find record with specified key!`);
+		return _recordIndexes[recordKey];
 	}
 
 	static class Range: InputRange!IBaseRecord
@@ -159,12 +163,26 @@ public:
 				return _index < _rs.length;
 			}
 
-			RecordType front() @property {
+			IBaseRecord front() @property {
 				return _rs.getRecord(_index);
+			}
+
+			IBaseRecord moveFront() {
+				assert(false, `Not implemented yet!`);
 			}
 
 			void popFront() {
 				_index++;
+			}
+
+			int opApply(scope int delegate(IBaseRecord))
+			{
+				assert(false, `Not implemented yet!`);
+			}
+
+			int opApply(scope int delegate(ulong, IBaseRecord))
+			{
+				assert(false, `Not implemented yet!`);
 			}
 		}
 	}
