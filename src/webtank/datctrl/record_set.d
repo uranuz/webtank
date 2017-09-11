@@ -11,9 +11,59 @@ $(LOCALE_RU_RU Класс реализует работу с набором за
 +/
 class RecordSet: IBaseRecordSet
 {
-	import webtank.datctrl.cursor_record: CursorRecord;
+	mixin RecordSetImpl!false;
+}
+
+class WriteableRecordSet: IBaseWriteableRecordSet
+{
+	mixin RecordSetImpl!true;
+
+public:
+	override {
+		void nullify(string fieldName, size_t recordIndex) {
+			getField(fieldName).nullify(recordIndex);
+		}
+
+		void setNullable(string fieldName, bool value) {
+			getField(fieldName).isNullable = value;
+		}
+
+		void addItems(size_t count, size_t index = size_t.max)
+		{
+			foreach( dataField; _dataFields ) {
+				dataField.addItems(count, index);
+			}
+		}
+
+		void addItems(IBaseWriteableRecord[] records, size_t index = size_t.max) {
+			assert(false);
+		}
+	}
+}
+
+mixin template RecordSetImpl(bool isWriteableFlag)
+{
 protected:
-	IBaseDataField[] _dataFields;
+	static if( isWriteableFlag )
+	{
+		import webtank.datctrl.cursor_record: WriteableCursorRecord;
+		alias RecordSetIface = IBaseWriteableRecordSet;
+		alias DataFieldIface = IBaseWriteableDataField;
+		alias RangeIface = IWriteableRecordSetRange;
+		alias RecordIface = IBaseWriteableRecord;
+		alias RecordType = WriteableCursorRecord;
+	}
+	else
+	{
+		import webtank.datctrl.cursor_record: CursorRecord;
+		alias RecordSetIface = IBaseRecordSet;
+		alias DataFieldIface = IBaseDataField;
+		alias RangeIface = InputRange!IBaseRecord;
+		alias RecordIface = IBaseRecord;
+		alias RecordType = CursorRecord;
+	}
+
+	DataFieldIface[] _dataFields;
 	size_t _keyFieldIndex;
 	size_t[string] _recordIndexes;
 	size_t[string] _fieldIndexes;
@@ -30,7 +80,7 @@ protected:
 
 	void _reindexRecords()
 	{
-		IBaseDataField keyField = _dataFields[_keyFieldIndex];
+		DataFieldIface keyField = _dataFields[_keyFieldIndex];
 		_recordIndexes.clear();
 		foreach( i; 0 .. keyField.length )
 		{
@@ -41,26 +91,28 @@ protected:
 	}
 
 public:
-	this(IBaseDataField[] dataFields, size_t keyFieldIndex)
+	this(DataFieldIface[] dataFields, size_t keyFieldIndex = 0)
 	{
 		_dataFields = dataFields;
+		_keyFieldIndex = keyFieldIndex;
 		_reindexFields();
 		_reindexRecords();
 	}
 	
-	IBaseDataField getField(string fieldName) {
+	DataFieldIface getField(string fieldName)
+	{
 		assert(fieldName in _fieldIndexes, `Field doesn't exist in recordset!`);
 		return _dataFields[ _fieldIndexes[fieldName] ];
 	}
 
-	IBaseRecord opIndex(size_t recordIndex) {
+	RecordIface opIndex(size_t recordIndex) {
 		return getRecord(recordIndex);
 	}
 
-	IBaseRecord getRecord(size_t recordIndex)
+	RecordIface getRecord(size_t recordIndex)
 	{
 		import std.conv: to;
-		return new CursorRecord(this, recordIndex.to!string);
+		return new RecordType(this, recordIndex.to!string);
 	}
 
 	string getStr(string fieldName, size_t recordIndex) {
@@ -95,6 +147,7 @@ public:
 		return _dataFields.length;
 	}
 
+	import std.json: JSONValue;
 	JSONValue getStdJSONData(size_t index)
 	{
 		JSONValue[] recJSON;
@@ -139,7 +192,7 @@ public:
 		return jValues;
 	}
 
-	IRecordSetRange opSlice() {
+	RangeIface opSlice() {
 		return new Range(this);
 	}
 
@@ -149,12 +202,12 @@ public:
 		return _recordIndexes[recordKey];
 	}
 
-	static class Range: InputRange!IBaseRecord
+	static class Range: RangeIface
 	{
-		private IBaseRecordSet _rs;
+		private RecordSetIface _rs;
 		private size_t _index = 0;
 
-		this(IBaseRecordSet rs) {
+		this(RecordSetIface rs) {
 			_rs = rs;
 		}
 
@@ -163,11 +216,11 @@ public:
 				return _index < _rs.length;
 			}
 
-			IBaseRecord front() @property {
+			RecordIface front() @property {
 				return _rs.getRecord(_index);
 			}
 
-			IBaseRecord moveFront() {
+			RecordIface moveFront() {
 				assert(false, `Not implemented yet!`);
 			}
 
@@ -175,16 +228,28 @@ public:
 				_index++;
 			}
 
-			int opApply(scope int delegate(IBaseRecord))
+			static if( isWriteableFlag )
+			{
+				int opApply(scope int delegate(IBaseRecord))
+				{
+					assert(false, `Not implemented yet!`);
+				}
+
+				int opApply(scope int delegate(ulong, IBaseRecord))
+				{
+					assert(false, `Not implemented yet!`);
+				}
+			}
+
+			int opApply(scope int delegate(RecordIface))
 			{
 				assert(false, `Not implemented yet!`);
 			}
 
-			int opApply(scope int delegate(ulong, IBaseRecord))
+			int opApply(scope int delegate(ulong, RecordIface))
 			{
 				assert(false, `Not implemented yet!`);
 			}
 		}
 	}
-
 }

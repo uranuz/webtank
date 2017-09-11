@@ -1,8 +1,8 @@
 module webtank.datctrl.cursor_record;
 
-import webtank.datctrl.iface.data_field: IBaseDataField;
-import webtank.datctrl.iface.record: IBaseRecord;
-import webtank.datctrl.iface.record_set: IBaseRecordSet;
+import webtank.datctrl.iface.data_field: IBaseDataField, IBaseWriteableDataField;
+import webtank.datctrl.iface.record: IBaseRecord, IBaseWriteableRecord;
+import webtank.datctrl.iface.record_set: IBaseRecordSet, IBaseWriteableRecordSet;
 
 /++
 $(LOCALE_EN_US Class implements working with record)
@@ -10,12 +10,41 @@ $(LOCALE_RU_RU Класс реализует работу с записью)
 +/
 class CursorRecord: IBaseRecord
 {
+	mixin CursorRecordImpl!false;
+}
+
+class WriteableCursorRecord: IBaseWriteableRecord
+{
+	mixin CursorRecordImpl!true;
+public:
+	override {
+		void nullify(string fieldName) {
+			_recordSet.nullify(fieldName, recordIndex);
+		}
+		void setNullable(string fieldName, bool value) {
+			_recordSet.setNullable(fieldName, value);
+		}
+	}
+}
+
+mixin template CursorRecordImpl(bool isWriteableFlag)
+{
+	static if( isWriteableFlag )
+	{
+		alias RecordSetIface = IBaseWriteableRecordSet;
+		alias DataFieldIface = IBaseWriteableDataField;
+	}
+	else
+	{
+		alias RecordSetIface = IBaseRecordSet;
+		alias DataFieldIface = IBaseDataField;
+	}
 protected:
-	IBaseRecordSet _recordSet;
+	RecordSetIface _recordSet;
 	string _recordKey;
 
 public:
-	this(IBaseRecordSet recordSet, string recordKey)
+	this(RecordSetIface recordSet, string recordKey)
 	{
 		_recordSet = recordSet;
 		_recordKey = recordKey;
@@ -26,7 +55,7 @@ public:
 			return _recordSet.getIndexByStringKey(_recordKey);
 		}
 
-		IBaseDataField getField(string fieldName) {
+		DataFieldIface getField(string fieldName) {
 			return _recordSet.getField(fieldName);
 		}
 

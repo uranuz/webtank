@@ -3,10 +3,11 @@ module webtank.datctrl.typed_record_set;
 import webtank.datctrl.iface.record_set;
 import webtank.datctrl.typed_record;
 
-struct TypedRecordSet(alias RecordFormatT, RecordSetType)
+struct TypedRecordSet(RecordFormatT, RecordSetType)
 {
 	enum bool hasKeyField = RecordFormatT.hasKeyField;
-	alias RecordType = TypedRecord!(RecordFormatT);
+	alias RecordIface = typeof(_recordSet[].front());
+	alias RecordType = TypedRecord!(RecordFormatT, RecordIface);
 
 	private RecordSetType _recordSet;
 
@@ -33,6 +34,8 @@ struct TypedRecordSet(alias RecordFormatT, RecordSetType)
 
 	static if( hasKeyField )
 	{
+		alias PKValueType = RecordFormatT.getKeyFieldSpec!().ValueType;
+		
 		/++
 		$(LOCALE_EN_US Returns record by it's primary $(D_PARAM recordKey))
 		$(LOCALE_RU_RU Возвращает запись по первичному ключу $(D_PARAM recordKey))
@@ -40,7 +43,7 @@ struct TypedRecordSet(alias RecordFormatT, RecordSetType)
 		RecordType getRecordByKey(PKValueType recordKey)
 		{
 			import std.conv: to;
-			return RecordType(this, recordKey.to!string);
+			return RecordType( _recordSet.getRecord( getRecordIndex(recordKey) ) );
 		}
 		
 		template getByKey(string fieldName)
@@ -205,13 +208,10 @@ struct TypedRecordSet(alias RecordFormatT, RecordSetType)
 	}
 	
 	RecordType front() @property;
-	void popFront();
 	bool empty() @property;
 
 	static if( hasKeyField )
 	{
-		alias PKValueType = RecordFormatT.getKeyFieldSpec!().ValueType;
-		
 		void nullify(string fieldName, PKValueType recordKey);
 		void setNullable(string fieldName, PKValueType recordKey, bool value);
 
@@ -233,4 +233,21 @@ struct TypedRecordSet(alias RecordFormatT, RecordSetType)
 			_getTypedField!(fieldName, true).set(value, recordIndex);
 		}
 	}
+}
+
+unittest
+{
+	import webtank.datctrl.iface.data_field;
+	import webtank.datctrl.record_format;
+	import webtank.datctrl.memory_data_field;
+	import webtank.datctrl.record_set;
+
+	auto recFormat = RecordFormat!(
+		PrimaryKey!(size_t), "num",
+		string, "name"
+	)();
+	IBaseWriteableDataField[] dataFields = makeMemoryDataFields(recFormat);
+	auto baseRS = new WriteableRecordSet(dataFields);
+	auto rs = TypedRecordSet!(typeof(recFormat), IBaseWriteableRecordSet)(baseRS);
+
 }

@@ -1,7 +1,7 @@
 module webtank.datctrl.typed_record;
 
 // Обёртка над классом записи для обеспечения интерфейса доступа к данным со статической проверкой типа
-struct TypedRecord(alias RecordFormatT, RecordType)
+struct TypedRecord(RecordFormatT, RecordType)
 {
 	// Тип формата для записи
 	alias FormatType = RecordFormatT;
@@ -13,6 +13,7 @@ struct TypedRecord(alias RecordFormatT, RecordType)
 
 	template _getTypedField(string fieldName, bool isWriteable = false)
 	{
+		import webtank.datctrl.iface.data_field;
 		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
 		static if( isWriteable ) {
 			alias DataFieldType = IWriteableDataField!FieldFormatType;
@@ -104,12 +105,17 @@ unittest {
 	import webtank.datctrl.iface.record;
 	import webtank.datctrl.record_format;
 	import webtank.datctrl.detatched_record;
-	
+	import webtank.datctrl.memory_data_field;
+
 	auto recFormat = RecordFormat!(
 		PrimaryKey!(size_t), "num",
 		string, "name"
 	)();
-	IBaseWriteableDataField[] dataFields;
+	IBaseWriteableDataField[] dataFields = makeMemoryDataFields(recFormat);
 	auto baseRec = new DetatchedRecord(dataFields);
 	auto rec = TypedRecord!(typeof(recFormat), IBaseWriteableRecord)(baseRec);
+	assert(rec.isNull("name"));
+	rec.set!"name"("test");
+	assert(rec.get!"name"() == "test");
+	assert(!rec.isNull("name"));
 }

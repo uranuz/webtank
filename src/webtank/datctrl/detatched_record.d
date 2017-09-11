@@ -11,8 +11,16 @@ protected:
 	size_t[string] _fieldIndexes;
 
 public:
-	this(IBaseWriteableDataField[] dataFields) {
+	this(IBaseWriteableDataField[] dataFields, size_t keyFieldIndex = 0) {
 		_dataFields = dataFields;
+		_keyFieldIndex = keyFieldIndex;
+		foreach( dataField; _dataFields )
+		{
+			// Требуется наличие хотя бы одного элемента в каждом из полей данных
+			if ( dataField.length == 0) {
+				dataField.addItems(1);
+			}
+		}
 		_reindex();
 	}
 

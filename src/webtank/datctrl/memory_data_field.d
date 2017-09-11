@@ -4,7 +4,7 @@ import webtank.datctrl.iface.data_field;
 import webtank.datctrl.record_format;
 import webtank.datctrl.enum_format;
 
-class MemoryDataField(alias FormatType): IWriteableDataField!(FormatType)
+class MemoryDataField(FormatType): IWriteableDataField!(FormatType)
 {
 	alias ValueType = DataFieldValueType!(FormatType);
 
@@ -64,15 +64,19 @@ protected:
 		}
 		
 		bool isNull(size_t index) {
-			return isNullable ? ( _nullFlags[index] ) : false;
+			return isNullable? _nullFlags[index]: false;
 		}
 	
-		string getStr(size_t index) {
-			return isNull? null : _values[index].to!string;
+		string getStr(size_t index)
+		{
+			import std.conv: to;
+			return isNull(index)? null: _values[index].to!string;
 		}
 		
-		string getStr(size_t index, string defaultValue) {
-			return isNull ? defaultValue : _values[index].to!string;
+		string getStr(size_t index, string defaultValue)
+		{
+			import std.conv: to;
+			return isNull(index)? defaultValue: _values[index].to!string;
 		}
 
 		import std.json: JSONValue;
@@ -81,12 +85,17 @@ protected:
 			assert(false, "Not implemented yet!");
 		}
 		
+		JSONValue getStdJSONValue(size_t index)
+		{
+			assert(false, "Not implemented yet!");
+		}
+
 		ValueType get(size_t index) {
 			return _values[index];
 		}
 		
 		ValueType get(size_t index, ValueType defaultValue) {
-			return isNull ? defaultValue : _values[index];
+			return isNull(index)? defaultValue: _values[index];
 		}
 
 		static if( isEnumFormat!(FormatType) )
@@ -116,13 +125,22 @@ protected:
 		{
 			import std.array: insertInPlace;
 			import std.range: repeat;
+			if( index == size_t.max ) {
+				index = _values.length? _values.length - 1: 0;
+			}
 			_values.insertInPlace(index, ValueType.init.repeat(count));
+			_nullFlags.insertInPlace(index, true.repeat(count));
 		}
 
 		void addItems(ValueType[] values, size_t index = size_t.max)
 		{
 			import std.array: insertInPlace;
+			import std.range: repeat;
+			if( index == size_t.max ) {
+				index = _values.length? _values.length - 1: 0;
+			}
 			_values.insertInPlace(index, values);
+			_nullFlags.insertInPlace(index, false.repeat(values.length));
 		}
 	} //override
 
@@ -134,7 +152,7 @@ IBaseWriteableDataField[] makeMemoryDataFields(RecordFormatT)(RecordFormatT form
 	foreach( fieldName; RecordFormatT.tupleOfNames!() )
 	{
 		alias FieldFormatDecl = RecordFormatT.getFieldFormatDecl!(fieldName);
-		alias DataFieldType = MemoryDataField!(FieldFormatDecl);
+		alias DataFieldType = MemoryDataField!FieldFormatDecl;
 		alias fieldIndex = RecordFormatT.getFieldIndex!(fieldName);
 
 		bool isNullable = format.nullableFlags.get(fieldName, true);
@@ -159,4 +177,10 @@ unittest
 		string, "name"
 	)();
 	IBaseWriteableDataField[] dataFields = makeMemoryDataFields(recFormat);
+	assert(dataFields.length == 2);
+
+	foreach( dataField; dataFields ) {
+		dataField.addItems(1);
+		assert(dataField.length == 1);
+	}
 }

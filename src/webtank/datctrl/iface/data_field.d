@@ -205,7 +205,7 @@ interface IDataField(FormatType) : IBaseDataField
 	}
 }
 
-interface IWriteableDataField(alias FormatType): IDataField!(FormatType), IBaseWriteableDataField
+interface IWriteableDataField(FormatType): IDataField!(FormatType), IBaseWriteableDataField
 {
 	alias ValueType = DataFieldValueType!(FormatType);
 	void set(ValueType value, size_t index);
