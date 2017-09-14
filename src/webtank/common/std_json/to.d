@@ -114,6 +114,11 @@ JSONValue toStdJSON(T)(T dValue)
 			// Строковый формат для дат и времени более компактен и привычен, поэтому выводим в нём вместо объекта JSON
 			jValue = dValue.toISOExtString();
 		}
+		else static if( is( T == struct ) && __traits(compiles, {
+			auto result = dValue.toStdJSON();
+		}) ) {
+			return dValue.toStdJSON();
+		}
 		else static if( is( T == struct ) )
 		{
 			JSONValue[string] jArray;
@@ -136,7 +141,7 @@ JSONValue toStdJSON(T)(T dValue)
 			}
 			jValue = jArray;
 		}
-		else static if ( is( T == class ) && __traits(compiles, {
+		else static if( is( T == class ) && __traits(compiles, {
 			auto result = dValue.toStdJSON();
 		}) ) {
 			if( dValue is null ) {

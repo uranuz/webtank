@@ -63,27 +63,57 @@ extern (C)
 	int PQstatus(const PGconn *conn);
 }
 
-enum string dbQueryLogFile = `/home/test_serv/sites/test/logs/db_query.log`;
+enum DBLogInfoType
+{
+	info,
+	warn,
+	error
+};
+
+struct DBLogInfo
+{
+	string msg;
+	DBLogInfoType type;
+}
+
+alias DBLogerMethod = void delegate(DBLogInfo logInfo);
 
 ///Класс работы с СУБД PostgreSQL
 class DBPostgreSQL : IDatabase
 {
 protected:
 	PGconn* _conn;
-	string _queryLogFileName;
-	string _errorLogFileName;
+	DBLogerMethod _logerMethod;
+
+	void _logMsg(string msg)
+	{
+		if( _logerMethod ) {
+			_logerMethod(DBLogInfo(msg, DBLogInfoType.info));
+		}
+	}
+
+	void _warningMsg(string msg)
+	{
+		if( _logerMethod ) {
+			_logerMethod(DBLogInfo(msg, DBLogInfoType.warn));
+		}
+	}
+
+	void _errorMsg(string msg)
+	{
+		if( _logerMethod ) {
+			_logerMethod(DBLogInfo(msg, DBLogInfoType.error));
+		}
+	}
 	
 public:
 	//Конструктор объекта, принимает строку подключения как параметр
-	this( string connStr, 
-		string errorLogFileName = dbQueryLogFile, 
-		string queryLogFileName =  dbQueryLogFile 
-	) //Конструктор объекта, принимает строку подключения
-	{	_errorLogFileName = errorLogFileName;
-		_queryLogFileName = queryLogFileName;
+	this(string connStr, DBLogerMethod logerMethod = null) //Конструктор объекта, принимает строку подключения
+	{
+		_logerMethod = logerMethod;
 		connect(connStr);
 	}
-	
+
 	override {
 		//Ф-ция подключения к БД
 		bool connect(string connStr)

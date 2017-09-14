@@ -112,7 +112,7 @@ public:
 	RecordIface getRecord(size_t recordIndex)
 	{
 		import std.conv: to;
-		return new RecordType(this, recordIndex.to!string);
+		return new RecordType(this, _dataFields[_keyFieldIndex].getStr(recordIndex));
 	}
 
 	string getStr(string fieldName, size_t recordIndex) {
@@ -140,7 +140,7 @@ public:
 	}
 
 	size_t length() @property {
-		return ( _dataFields.length > 0 ) ? _dataFields[0].length : 0;
+		return ( _dataFields.length > 0 )? _dataFields[0].length : 0;
 	}
 
 	size_t fieldCount() @property {
@@ -153,7 +153,7 @@ public:
 		JSONValue[] recJSON;
 		recJSON.length = _dataFields.length;
 		foreach( i, dataField; _dataFields ) {
-			recJSON[i] = dataField.getStdJSONValue(i);
+			recJSON[i] = dataField.getStdJSONValue(index);
 		}
 		return JSONValue(recJSON);
 	}
@@ -182,7 +182,7 @@ public:
 
 		JSONValue[] jData;
 		jData.length = this.length;
-		
+
 		foreach( i; 0..this.length ) {
 			jData[i] = this.getStdJSONData(i);
 		}

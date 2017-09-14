@@ -1,5 +1,9 @@
 module webtank.datctrl.typed_record;
 
+import webtank.datctrl.iface.data_field;
+import webtank.datctrl.iface.record;
+import webtank.datctrl.record_format;
+
 // Обёртка над классом записи для обеспечения интерфейса доступа к данным со статической проверкой типа
 struct TypedRecord(RecordFormatT, RecordType)
 {
@@ -97,16 +101,17 @@ struct TypedRecord(RecordFormatT, RecordType)
 		}
 	}
 
-	alias _record this;
+	public auto record() @property {
+		return _record;
+	}
+
+	alias record this;
 }
 
-unittest {
-	import webtank.datctrl.iface.data_field;
-	import webtank.datctrl.iface.record;
-	import webtank.datctrl.record_format;
-	import webtank.datctrl.detatched_record;
-	import webtank.datctrl.memory_data_field;
+import webtank.datctrl.detatched_record;
+import webtank.datctrl.memory_data_field;
 
+unittest {
 	auto recFormat = RecordFormat!(
 		PrimaryKey!(size_t), "num",
 		string, "name"

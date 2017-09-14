@@ -1,13 +1,16 @@
 module webtank.datctrl.typed_record_set;
 
+import webtank.datctrl.iface.data_field;
+import webtank.datctrl.record_format;
 import webtank.datctrl.iface.record_set;
 import webtank.datctrl.typed_record;
 
-struct TypedRecordSet(RecordFormatT, RecordSetType)
+struct TypedRecordSet(FormatType, RecordSetType)
 {
-	enum bool hasKeyField = RecordFormatT.hasKeyField;
+	enum bool hasKeyField = FormatType.hasKeyField;
+	alias ThisRecordSet = TypedRecordSet!(FormatType, RecordSetType);
 	alias RecordIface = typeof(_recordSet[].front());
-	alias RecordType = TypedRecord!(RecordFormatT, RecordIface);
+	alias RecordType = TypedRecord!(FormatType, RecordIface);
 
 	private RecordSetType _recordSet;
 
@@ -32,9 +35,25 @@ struct TypedRecordSet(RecordFormatT, RecordSetType)
 		}
 	}
 
+	/++
+	$(LOCALE_EN_US Index operator for getting record by $(D_PARAM recordIndex))
+	$(LOCALE_RU_RU Оператор индексирования для получения записи по номеру $(D_PARAM recordIndex))
+	+/
+	RecordType opIndex(size_t recordIndex) {
+		return RecordType(_recordSet[recordIndex]);
+	}
+
+	/++
+	$(LOCALE_EN_US Returns record by $(D_PARAM recordIndex))
+	$(LOCALE_RU_RU Возвращает запись на позиции $(D_PARAM recordIndex))
+	+/
+	RecordType getRecord(size_t recordIndex) {
+		return RecordType(_recordSet.getRecord(recordIndex));
+	}
+
 	static if( hasKeyField )
 	{
-		alias PKValueType = RecordFormatT.getKeyFieldSpec!().ValueType;
+		alias PKValueType = FormatType.getKeyFieldSpec!().ValueType;
 		
 		/++
 		$(LOCALE_EN_US Returns record by it's primary $(D_PARAM recordKey))
@@ -207,13 +226,21 @@ struct TypedRecordSet(RecordFormatT, RecordSetType)
 		}
 	}
 	
-	RecordType front() @property;
-	bool empty() @property;
+	RecordType front() @property {
+		return getRecord(0);
+	}
+
+	bool empty() @property {
+		return !_recordSet || _recordSet.length == 0;
+	}
 
 	static if( hasKeyField )
 	{
-		void nullify(string fieldName, PKValueType recordKey);
-		void setNullable(string fieldName, PKValueType recordKey, bool value);
+		static if( is( RecordSetType : IBaseWriteableRecordSet ) ) {
+			void nullifyByKey(string fieldName, PKValueType recordKey) {
+				_recordSet.nullify(fieldName, getRecordIndex(recordKey));
+			}
+		}
 
 		template setByKey(string fieldName)
 		{
@@ -233,12 +260,44 @@ struct TypedRecordSet(RecordFormatT, RecordSetType)
 			_getTypedField!(fieldName, true).set(value, recordIndex);
 		}
 	}
+
+	static struct Range
+	{
+		private ThisRecordSet _rs;
+		private size_t _index = 0;
+
+		this(ThisRecordSet rs) {
+			_rs = rs;
+		}
+
+		bool empty() @property {
+			return _index >= _rs.length;
+		}
+	
+		RecordType front() @property
+		{
+			assert(_index < _rs.length);
+			return _rs.getRecord(_index);
+		}
+
+		void popFront() {
+			++_index;
+		}
+	}
+
+	Range opSlice() {
+		return Range(this);
+	}
+
+	public auto recordSet() @property {
+		return _recordSet;
+	}
+
+	alias recordSet this;
 }
 
 unittest
 {
-	import webtank.datctrl.iface.data_field;
-	import webtank.datctrl.record_format;
 	import webtank.datctrl.memory_data_field;
 	import webtank.datctrl.record_set;
 
@@ -249,5 +308,7 @@ unittest
 	IBaseWriteableDataField[] dataFields = makeMemoryDataFields(recFormat);
 	auto baseRS = new WriteableRecordSet(dataFields);
 	auto rs = TypedRecordSet!(typeof(recFormat), IBaseWriteableRecordSet)(baseRS);
-
+	rs.addItems(1);
+	rs.set!"name"("testValue", 0);
+	assert(rs.get!"name"(0) == "testValue");
 }
