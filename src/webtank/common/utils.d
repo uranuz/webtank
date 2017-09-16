@@ -179,14 +179,10 @@ unittest
 		string[int] _names;	
 	}
 	
-	immutable(EnumFormat) categories;
-	immutable(EnumFormat) magicCreatures;
-	immutable(EnumFormat) daysOfWeek;
-	
-	categories = immutable(EnumFormat)([ 1: "first", 2: "second", 3: "third", 6: "highest"  ]);
-	magicCreatures = immutable(EnumFormat)([ 2: "ork", 3: "goblin", 4: "elf", 7: "dwarf", 10: "dragon" ]);
-	daysOfWeek = immutable(EnumFormat)([ 0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday" ]);
-	
+	immutable(EnumFormat) categories = immutable(EnumFormat)([ 1: "first", 2: "second", 3: "third", 6: "highest"  ]);
+	immutable(EnumFormat) magicCreatures = immutable(EnumFormat)([ 2: "ork", 3: "goblin", 4: "elf", 7: "dwarf", 10: "dragon" ]);
+	immutable(EnumFormat) daysOfWeek = immutable(EnumFormat)([ 0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday" ]);
+
 	immutable(int)[string] a1;
  	immutable(int[string]) a2;
  	int[immutable(double)] a3;
@@ -195,7 +191,7 @@ unittest
  	immutable(EnumFormat)[string] a6;
  	immutable(EnumFormat[string]) a7;
  	immutable(EnumFormat[immutable(double)]) a8;
- 	immutable(int)[char[]] a1;
+ 	immutable(int)[char[]] a9;
  	
  	//static assert( is( typeof(a1) == int[string] ) );
 	//static assert( is( typeof(a2) == int[string] ) );
