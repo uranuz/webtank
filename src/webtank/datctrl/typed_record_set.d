@@ -54,7 +54,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 	static if( hasKeyField )
 	{
 		alias PKValueType = FormatType.getKeyFieldSpec!().ValueType;
-		
+
 		/++
 		$(LOCALE_EN_US Returns record by it's primary $(D_PARAM recordKey))
 		$(LOCALE_RU_RU Возвращает запись по первичному ключу $(D_PARAM recordKey))
@@ -64,7 +64,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 			import std.conv: to;
 			return RecordType( _recordSet.getRecord( getRecordIndex(recordKey) ) );
 		}
-		
+
 		template getByKey(string fieldName)
 		{
 			alias ValueType = FormatType.getValueType!(fieldName) ;
@@ -100,11 +100,11 @@ struct TypedRecordSet(FormatType, RecordSetType)
 				return _getTypedField!fieldName.get(getRecordIndex(recordKey), defaultValue);
 			}
 		}
-	
+
 		string getStrByKey(string fieldName, PKValueType recordKey) {
 			return _recordSet.getStr(fieldName, getRecordIndex(recordKey));
 		}
-		
+
 		/++
 		$(LOCALE_EN_US
 			Returns string representation of cell with field name $(D_PARAM fieldName)
@@ -137,7 +137,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		bool isNullByKey(string fieldName, PKValueType recordKey) {
 			return _recordSet.isNull(fieldName, getRecordIndex(recordKey));
 		}
-	
+
 		/++
 		$(LOCALE_EN_US Returns record index by it's primary $(D_PARAM key))
 		$(LOCALE_RU_RU Возвращает порядковый номер записи по первичному ключу $(D_PARAM key))
@@ -157,7 +157,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 			return _primaryKeys[index];
 		}
 		+/
-	
+
 	} //static if( hasKeyField )
 	else
 	{
@@ -167,12 +167,12 @@ struct TypedRecordSet(FormatType, RecordSetType)
 	}
 
 	template get(string fieldName)
-	{	
+	{
 		alias ValueType = FormatType.getValueType!(fieldName);
 
 		/++
 		$(LOCALE_EN_US
-			Meturns value of cell with field name $(D_PARAM fieldName) and $(D_PARAM recordIndex).
+			Returns value of cell with field name $(D_PARAM fieldName) and $(D_PARAM recordIndex).
 			Parameter $(D_PARAM defaultValue) determines return value when cell in null
 		)
 		$(LOCALE_RU_RU
@@ -225,7 +225,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 			static assert(0, "Getting enum data is only available for enum field types!!!");
 		}
 	}
-	
+
 	RecordType front() @property {
 		return getRecord(0);
 	}
@@ -273,7 +273,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		bool empty() @property {
 			return _index >= _rs.length;
 		}
-	
+
 		RecordType front() @property
 		{
 			assert(_index < _rs.length);
