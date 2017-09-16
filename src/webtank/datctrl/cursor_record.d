@@ -84,13 +84,12 @@ public:
 		}
 
 		import std.json: JSONValue;
-
 		JSONValue toStdJSON()
 		{
-			JSONValue jValue = _recordSet.getStdJSONFormat();
-			jValue["d"] = _recordSet.getStdJSONData(recordIndex);
-			jValue["t"] = "record";
-			return jValue;
+			JSONValue jValues = _recordSet.getStdJSONFormat();
+			jValues["d"] = _recordSet.getStdJSONData(recordIndex);
+			jValues["t"] = "record";
+			return jValues;
 		}
 
 		size_t keyFieldIndex() @property {

@@ -98,109 +98,88 @@ public:
 		_reindexFields();
 		_reindexRecords();
 	}
-	
-	DataFieldIface getField(string fieldName)
-	{
-		assert(fieldName in _fieldIndexes, `Field doesn't exist in recordset!`);
-		return _dataFields[ _fieldIndexes[fieldName] ];
-	}
 
-	RecordIface opIndex(size_t recordIndex) {
-		return getRecord(recordIndex);
-	}
-
-	RecordIface getRecord(size_t recordIndex)
-	{
-		import std.conv: to;
-		return new RecordType(this, _dataFields[_keyFieldIndex].getStr(recordIndex));
-	}
-
-	string getStr(string fieldName, size_t recordIndex) {
-		return getField(fieldName).getStr(recordIndex);
-	}
-
-	string getStr(string fieldName, size_t recordIndex, string defaultValue) {
-		return getField(fieldName).getStr(recordIndex, defaultValue);
-	}
-
-	size_t keyFieldIndex() @property {
-		return _keyFieldIndex;
-	}
-
-	bool isNull(string fieldName, size_t recordIndex) {
-		return getField(fieldName).isNull(recordIndex);
-	}
-
-	bool isNullable(string fieldName) {
-		return getField(fieldName).isNullable;
-	}
-	
-	bool isWriteable(string fieldName) {
-		return getField(fieldName).isWriteable;
-	}
-
-	size_t length() @property {
-		return ( _dataFields.length > 0 )? _dataFields[0].length : 0;
-	}
-
-	size_t fieldCount() @property {
-		return _dataFields.length;
-	}
-
-	import std.json: JSONValue;
-	JSONValue getStdJSONData(size_t index)
-	{
-		JSONValue[] recJSON;
-		recJSON.length = _dataFields.length;
-		foreach( i, dataField; _dataFields ) {
-			recJSON[i] = dataField.getStdJSONValue(index);
-		}
-		return JSONValue(recJSON);
-	}
-
-	JSONValue getStdJSONFormat()
-	{
-		JSONValue jValues;
-		jValues["kfi"] = _keyFieldIndex; // Номер ключевого поля
-		jValues["t"] = "recordset"; // Тип данных - набор записей
-
-		//Образуем JSON-массив форматов полей
-		JSONValue[] jFieldFormats;
-		jFieldFormats.length = _dataFields.length;
-
-		foreach( i, field; _dataFields ) {
-			jFieldFormats[i] = field.getStdJSONFormat();
-		}
-		jValues["f"] = jFieldFormats;
-
-		return jValues;
-	}
-
-	JSONValue toStdJSON()
-	{
-		auto jValues = this.getStdJSONFormat();
-
-		JSONValue[] jData;
-		jData.length = this.length;
-
-		foreach( i; 0..this.length ) {
-			jData[i] = this.getStdJSONData(i);
+	override {
+		DataFieldIface getField(string fieldName)
+		{
+			assert(fieldName in _fieldIndexes, `Field doesn't exist in recordset!`);
+			return _dataFields[ _fieldIndexes[fieldName] ];
 		}
 
-		jValues["d"] = jData;
+		RecordIface opIndex(size_t recordIndex) {
+			return getRecord(recordIndex);
+		}
 
-		return jValues;
-	}
+		RecordIface getRecord(size_t recordIndex)
+		{
+			import std.conv: to;
+			return new RecordType(this, _dataFields[_keyFieldIndex].getStr(recordIndex));
+		}
 
-	RangeIface opSlice() {
-		return new Range(this);
-	}
+		string getStr(string fieldName, size_t recordIndex) {
+			return getField(fieldName).getStr(recordIndex);
+		}
 
-	size_t getIndexByStringKey(string recordKey)
-	{
-		assert(recordKey in _recordIndexes, `Cannot find record with specified key!`);
-		return _recordIndexes[recordKey];
-	}
+		string getStr(string fieldName, size_t recordIndex, string defaultValue) {
+			return getField(fieldName).getStr(recordIndex, defaultValue);
+		}
+
+		size_t keyFieldIndex() @property {
+			return _keyFieldIndex;
+		}
+
+		bool isNull(string fieldName, size_t recordIndex) {
+			return getField(fieldName).isNull(recordIndex);
+		}
+
+		bool isNullable(string fieldName) {
+			return getField(fieldName).isNullable;
+		}
+
+		bool isWriteable(string fieldName) {
+			return getField(fieldName).isWriteable;
+		}
+
+		size_t length() @property {
+			return ( _dataFields.length > 0 )? _dataFields[0].length : 0;
+		}
+
+		size_t fieldCount() @property {
+			return _dataFields.length;
+		}
+
+		import webtank.datctrl.common;
+		mixin GetStdJSONFormatImpl;
+		mixin GetStdJSONDataImpl;
+
+		import std.json: JSONValue;
+		JSONValue toStdJSON()
+		{
+			auto jValues = this.getStdJSONFormat();
+
+			JSONValue[] jData;
+			jData.length = this.length;
+
+			foreach( i; 0..this.length ) {
+				jData[i] = this.getStdJSONData(i);
+			}
+
+			jValues["d"] = jData;
+			jValues["t"] = "recordset";
+
+			return jValues;
+		}
+
+		RangeIface opSlice() {
+			return new Range(this);
+		}
+
+		size_t getIndexByStringKey(string recordKey)
+		{
+			assert(recordKey in _recordIndexes, `Cannot find record with specified key!`);
+			return _recordIndexes[recordKey];
+		}
+	} // override
 
 	static class Range: RangeIface
 	{
@@ -209,6 +188,31 @@ public:
 
 		this(RecordSetIface rs) {
 			_rs = rs;
+		}
+
+		template _opApplyImpl(Rec, bool withIndex)
+		{
+			static if( withIndex ) {
+				alias DelegateType = scope int delegate(size_t, Rec);
+			} else {
+				alias DelegateType = scope int delegate(Rec);
+			}
+
+			int _opApplyImpl(DelegateType dg)
+			{
+				int result = 0;
+				foreach( i; 0.._rs.length )
+				{
+					static if( withIndex ) {
+						result = dg(i, _rs.getRecord(i));
+					} else {
+						result = dg(_rs.getRecord(i));
+					}
+					if (result)
+						break;
+				}
+				return result;
+			}
 		}
 
 		public override {
@@ -230,26 +234,34 @@ public:
 
 			static if( isWriteableFlag )
 			{
-				int opApply(scope int delegate(IBaseRecord))
-				{
-					assert(false, `Not implemented yet!`);
+				int opApply(scope int delegate(IBaseRecord) dg) {
+					return _opApplyImpl!(IBaseRecord, false)(dg);
 				}
 
-				int opApply(scope int delegate(ulong, IBaseRecord))
-				{
-					assert(false, `Not implemented yet!`);
+				int opApply(scope int delegate(size_t, IBaseRecord) dg) {
+					return _opApplyImpl!(IBaseRecord, true)(dg);
 				}
 			}
 
-			int opApply(scope int delegate(RecordIface))
-			{
-				assert(false, `Not implemented yet!`);
+			int opApply(scope int delegate(RecordIface) dg) {
+				return _opApplyImpl!(RecordIface, false)(dg);
 			}
 
-			int opApply(scope int delegate(ulong, RecordIface))
-			{
-				assert(false, `Not implemented yet!`);
+			int opApply(scope int delegate(size_t, RecordIface) dg) {
+				return _opApplyImpl!(RecordIface, true)(dg);
 			}
 		}
 	}
+}
+
+IBaseWriteableRecordSet makeMemoryRecordSet(RecordFormatT)(RecordFormatT format)
+{
+	import webtank.datctrl.memory_data_field;
+	import webtank.datctrl.typed_record_set;
+	return TypedRecordSet!(RecordFormatT, WriteableRecordSet)(
+		new WriteableRecordSet(
+			makeMemoryDataFields(format),
+			RecordFormatT.getKeyFieldIndex!()
+		)
+	);
 }

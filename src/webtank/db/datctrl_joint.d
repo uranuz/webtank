@@ -14,6 +14,9 @@ import webtank.db.database_field;
 auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT format)
 {
 	return TypedRecordSet!(RecordFormatT, RecordSet)(
-		new RecordSet(makePostgreSQLDataFields(queryResult, format))
+		new RecordSet(
+			makePostgreSQLDataFields(queryResult, format),
+			RecordFormatT.getKeyFieldIndex!()
+		)
 	);
 }

@@ -13,7 +13,7 @@ protected:
 	ValueType[] _values;
 	bool[] _nullFlags;
 	bool _isNullable;
-	
+
 	static if( isEnumFormat!(FormatType) )
 	{
 		this(
@@ -31,70 +31,68 @@ protected:
 		}
 
 		protected FormatType _enumFormat;
-	}
-	
-	this(
-		string fieldName,
-		ValueType[] values = null,
-		bool isNullable = true,
-		bool[] nullFlags = null
-	) {
-		_values = values;
-		_nullFlags = nullFlags;
-		_name = fieldName;
-		_isNullable = isNullable;
+	} else {
+		this(
+			string fieldName,
+			ValueType[] values = null,
+			bool isNullable = true,
+			bool[] nullFlags = null
+		) {
+			_values = values;
+			_nullFlags = nullFlags;
+			_name = fieldName;
+			_isNullable = isNullable;
+		}
 	}
 
-	override
-	{
+	override {
 		size_t length() @property {
 			return _values.length;
 		}
-	
+
 		string name() @property {
 			return _name;
 		}
-		
+
 		bool isNullable() @property {
 			return _isNullable;
 		}
-		
+
 		bool isWriteable() @property {
 			return true;
 		}
-		
-		bool isNull(size_t index) {
+
+		bool isNull(size_t index)
+		{
+			assert(index < _nullFlags.length);
 			return isNullable? _nullFlags[index]: false;
 		}
-	
+
 		string getStr(size_t index)
 		{
 			import std.conv: to;
+			assert(index < _values.length);
 			return isNull(index)? null: _values[index].to!string;
 		}
-		
+
 		string getStr(size_t index, string defaultValue)
 		{
 			import std.conv: to;
+			assert(index < _values.length);
 			return isNull(index)? defaultValue: _values[index].to!string;
 		}
 
-		import std.json: JSONValue;
-		JSONValue getStdJSONFormat()
-		{
-			assert(false, "Not implemented yet!");
-		}
-		
-		JSONValue getStdJSONValue(size_t index)
-		{
-			assert(false, "Not implemented yet!");
-		}
+		import webtank.datctrl.common;
+		mixin GetStdJSONFieldFormatImpl;
+		mixin GetStdJSONFieldValueImpl;
 
 		ValueType get(size_t index) {
 			return _values[index];
 		}
-		
-		ValueType get(size_t index, ValueType defaultValue) {
+
+		ValueType get(size_t index, ValueType defaultValue)
+		{
+			assert(index < _values.length);
 			return isNull(index)? defaultValue: _values[index];
 		}
 
@@ -104,19 +102,23 @@ protected:
 				return _enumFormat;
 			}
 		}
-		
+
 		void set(ValueType value, size_t index)
 		{
+			assert(index < _nullFlags.length);
+			assert(index < _values.length);
 			_nullFlags[index] = false;
 			_values[index] = value;
 		}
-		
+
 		void nullify(size_t index)
 		{
+			assert(index < _nullFlags.length);
+			assert(index < _values.length);
 			_nullFlags[index] = true;
 			_values[index] = ValueType.init;
 		}
-		
+
 		void isNullable(bool value) @property {
 			_isNullable = value;
 		}
@@ -143,7 +145,6 @@ protected:
 			_nullFlags.insertInPlace(index, false.repeat(values.length));
 		}
 	} //override
-
 }
 
 IBaseWriteableDataField[] makeMemoryDataFields(RecordFormatT)(RecordFormatT format)

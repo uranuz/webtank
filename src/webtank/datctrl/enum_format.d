@@ -24,7 +24,7 @@ struct EnumFormat( T, bool withNames )
 		{
 			_pairs = pairs;
 		}
-		
+
 		string getName(ValueType value) const
 		{
 			foreach( ref pair; _pairs )
@@ -34,7 +34,7 @@ struct EnumFormat( T, bool withNames )
 			}
 			assert( 0, "Attempt to get name for value *" ~ value.conv!string ~ "* that doesn't exist in EnumFormat object!!" ~ _pairs.conv!string );
 		}
-		
+
 		ValueType getValue(string name) const
 		{
 			foreach( ref pair; _pairs )
@@ -44,41 +44,41 @@ struct EnumFormat( T, bool withNames )
 			}
 			assert( 0, "Attempt to get value for name that doesn't exist in EnumFormat object!!" );
 		}
-		
+
 		bool hasName(string name) const
 		{
 			return _pairs.canFind!"a[1] == b"(name);
 		}
-		
+
 		bool hasValue(ValueType value) const
 		{
 			return _pairs.canFind!"a[0] == b"(value);
 		}
-		
+
 		///Возвращает набор имен для перечислимого типа
 		string[] names() @property const
-		{	
+		{
 			string[] result;
 			result.length = _pairs.length;
-			
+
 			foreach( i, ref pair; _pairs )
 				result[i] = pair[1];
-			
+
 			return result;
 		}
-		
+
 		///Возвращает набор значений перечислимого типа
 		ValueType[] values() @property const
-		{	
+		{
 			ValueType[] result;
 			result.length = _pairs.length;
-			
+
 			foreach( i, ref pair; _pairs )
 				result[i] = pair[0];
-			
+
 			return result;
 		}
-		
+
 		///Оператор для обхода значений перечислимого типа через foreach
 		///Первый параметр - имя (строка), второй - значение
 		int opApply(int delegate(string name, ValueType value) dg) const
@@ -89,7 +89,7 @@ struct EnumFormat( T, bool withNames )
 			}
 			return 0;
 		}
-	
+
 		///Оператор для обхода значений перечислимого типа через foreach
 		///в случае одного параметра (значения)
 		int opApply(int delegate(ValueType value) dg)
@@ -105,25 +105,25 @@ struct EnumFormat( T, bool withNames )
 	{
 		//Массив значений перечислимого типа
 		private ValueType[] _values;
-		
+
 		this( ValueType[] values )
 		{
 			_values = values;
 		}
-		
+
 		bool hasValue(ValueType value) const
 		{
 			import std.algorithm: canFind;
-			
+
 			return _pairs.canFind(name);
 		}
-		
+
 		///Возвращает набор значений перечислимого типа
 		ValueType[] values() @property const
-		{	
+		{
 			return _values.dup;
 		}
-		
+
 		///Оператор для обхода значений перечислимого типа через foreach
 		///в случае одного параметра (значения)
 		int opApply(int delegate(ValueType value) dg)
@@ -135,7 +135,7 @@ struct EnumFormat( T, bool withNames )
 			return 0;
 		}
 	}
-	
+
 	string getStr(ValueType value) const
 	{
 		static if( hasNames )
@@ -173,17 +173,17 @@ struct EnumFormat( T, bool withNames )
 			}
 		}
 	}
-	
+
 	string opIndex(ValueType value) const
 	{
 		return getStr(value);
 	}
-	
+
 	///Оператор in для проверки наличия ключа в наборе значений перечислимого типа
 	bool opBinaryRight(string op)(ValueType value) inout
 		if( op == "in" )
 	{	return hasValue(value); }
-	
+
 	/++
 	$(LOCALE_EN_US Serializes enumerated field format into std.json)
 	$(LOCALE_RU_RU Сериализует формат перечислимого типа в std.json)
@@ -191,15 +191,15 @@ struct EnumFormat( T, bool withNames )
 	JSONValue toStdJSON() const
 	{
 		import webtank.common.std_json;
-		
+
 		//Массив элементов перечислимого типа
 		JSONValue[] jEnumItems;
-		
+
 		static if( hasNames )
 		{
 			jEnumItems.length = _pairs.length;
 			JSONValue[string] jEnumItem;
-			
+
 			foreach( i, pair; _pairs )
 			{
 				jEnumItems[i] = [
@@ -211,7 +211,7 @@ struct EnumFormat( T, bool withNames )
 		else
 		{
 			jEnumItems.length = _values.length;
-			
+
 			foreach( i, val; _values )
 			{
 				jEnumItems[i] = [
@@ -238,7 +238,6 @@ auto enumFormat(Pair)(Pair[] pairs)
 auto enumFormat(T)(T[] values)
 	if( !isTuple!(T) )
 {
-	return EnumFormat!( T, false )(values);
-
+	return EnumFormat!(T, false)(values);
 }
 

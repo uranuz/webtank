@@ -141,7 +141,7 @@ JSONValue toStdJSON(T)(T dValue)
 			}
 			jValue = jArray;
 		}
-		else static if( is( T == class ) && __traits(compiles, {
+		else static if( (is( T == class ) || is( T == interface )) && __traits(compiles, {
 			auto result = dValue.toStdJSON();
 		}) ) {
 			if( dValue is null ) {
