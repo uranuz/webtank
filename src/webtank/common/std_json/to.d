@@ -17,7 +17,7 @@ $(LOCALE_RU_RU
 JSONValue toStdJSON(T)(T dValue)
 {
 	import std.datetime: Date, DateTime, TimeOfDay, SysTime;
-	static if( is( T == JSONValue ) ) {
+	static if( is(T == JSONValue) ) {
 		return dValue;
 	}
 	else
@@ -110,16 +110,17 @@ JSONValue toStdJSON(T)(T dValue)
 			} else {
 				jValue = null;
 			}
-		} else static if( is( T == Date ) || is( T == DateTime ) || is( T == TimeOfDay ) || is( T == SysTime ) ) {
+		} else static if( is(T == Date) || is(T == DateTime) || is(T == TimeOfDay) || is(T == SysTime) ) {
 			// Строковый формат для дат и времени более компактен и привычен, поэтому выводим в нём вместо объекта JSON
 			jValue = dValue.toISOExtString();
-		}
-		else static if( is( T == struct ) && __traits(compiles, {
-			auto result = dValue.toStdJSON();
-		}) ) {
+		} else static if(
+			is(T == struct)
+			&& __traits(hasMember, T, "toStdJSON") // Проверка, что это собственный метод структуры
+			&& __traits(compiles, { auto test = dValue.toStdJSON(); })
+		) {
 			return dValue.toStdJSON();
 		}
-		else static if( is( T == struct ) )
+		else static if( is(T == struct) )
 		{
 			JSONValue[string] jArray;
 			foreach( name; __traits(allMembers, T) )
@@ -141,9 +142,11 @@ JSONValue toStdJSON(T)(T dValue)
 			}
 			jValue = jArray;
 		}
-		else static if( (is( T == class ) || is( T == interface )) && __traits(compiles, {
-			auto result = dValue.toStdJSON();
-		}) ) {
+		else static if(
+			(is(T == class) || is(T == interface))
+			&& __traits(hasMember, T, "toStdJSON") // Проверка, что это собственный метод класса
+			&& __traits(compiles, { auto test = dValue.toStdJSON(); })
+		) {
 			if( dValue is null ) {
 				return JSONValue();
 			} else {

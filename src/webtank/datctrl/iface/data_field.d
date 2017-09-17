@@ -11,7 +11,7 @@ import webtank.datctrl.enum_format;
 
 ///В шаблоне хранится соответсвие между именем и типом поля
 template FieldSpec( T, string s = null )
-{	
+{
 	alias FormatDecl = T;
 	alias ValueType = DataFieldValueType!(T);
 	alias name = s;
@@ -63,8 +63,8 @@ $(LOCALE_RU_RU
 	значению семантического типа поля $(D_PARAM FieldT)
 )
 +/
-template DataFieldValueType(FormatType) 
-{	
+template DataFieldValueType(FormatType)
+{
 	static if( isPrimaryKeyFormat!(FormatType) ) {
 		alias DataFieldValueType = DataFieldValueType!(FormatType.BaseDecl);
 	} else static if( isEnumFormat!(FormatType) ) {
@@ -112,9 +112,9 @@ interface IBaseDataField
 	$(LOCALE_RU_RU Возвращает true, если значение поля с номером $(D_PARAM index) пустое (null) )
 	+/
 	bool isNull(size_t index);
-	
+
 	string getStr(size_t index);
-	
+
 	/++
 	$(LOCALE_EN_US
 		Returns string representation of field value at $(D_PARAM index).
@@ -168,9 +168,9 @@ $(LOCALE_EN_US Common template interface for data field)
 $(LOCALE_RU_RU Основной шаблонный интерфейс данных поля)
 +/
 interface IDataField(FormatType) : IBaseDataField
-{	
+{
 	alias ValueType = DataFieldValueType!(FormatType);
-	
+
 	/++
 	$(LOCALE_EN_US
 		Function returns typed value of field by $(D_PARAM index).
@@ -208,7 +208,16 @@ interface IDataField(FormatType) : IBaseDataField
 interface IWriteableDataField(FormatType): IDataField!(FormatType), IBaseWriteableDataField
 {
 	alias ValueType = DataFieldValueType!(FormatType);
+	/++
+		$(LOCALE_EN_US Set value of cell at $(D_PARAM index) with $(D_PARAM value))
+		$(LOCALE_RU_RU Устанавливает значение ячейки $(D_PARAM value) с порядковым номером $(D_PARAM index))
+	+/
 	void set(ValueType value, size_t index);
+
+	/++
+		$(LOCALE_EN_US Add $(D_PARAM values) at $(D_PARAM index))
+		$(LOCALE_RU_RU Добавляет значения $(D_PARAM values) в позицию $(D_PARAM index))
+	+/
 	void addItems(ValueType[] values, size_t index = size_t.max);
 }
 

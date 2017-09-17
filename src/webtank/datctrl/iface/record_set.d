@@ -52,7 +52,7 @@ interface IBaseRecordSet
 	)
 	+/
 	string getStr(string fieldName, size_t recordIndex, string defaultValue);
-	
+
 	/++
 		$(LOCALE_EN_US Returns index of field considered as primary key field)
 		$(LOCALE_RU_RU Возвращает номер поля рассматриваемого как первичный ключ)

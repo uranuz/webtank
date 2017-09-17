@@ -3,12 +3,11 @@ module webtank.datctrl.common;
 mixin template GetStdJSONFormatImpl()
 {
 	import std.json: JSONValue;
-	import webtank.datctrl.iface.record: IBaseRecord;
 	JSONValue getStdJSONFormat()
 	{
 		JSONValue jValues;
 		jValues["kfi"] = _keyFieldIndex; // Номер ключевого поля
-		jValues["t"] = is( this: IBaseRecord* )? "record": "recordset"; // Тип сериализованных данных
+		jValues["t"] = "recordset"; // Тип данных - набор записей
 
 		//Образуем JSON-массив форматов полей
 		JSONValue[] jFieldFormats;
