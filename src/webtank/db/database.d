@@ -12,6 +12,21 @@ $(LOCALE_RU_RU Перечислимый тип, представляющий т�
 +/
 enum DBMSType {PostgreSQL, MySQL, Firebird}; //Вроде как на будущее
 
+enum DBLogInfoType
+{
+	info,
+	warn,
+	error
+};
+
+struct DBLogInfo
+{
+	string msg;
+	DBLogInfoType type;
+}
+
+alias DBLogerMethod = void delegate(DBLogInfo logInfo);
+
 /++
 $(LOCALE_EN_US Base interface for database)
 $(LOCALE_RU_RU Базовый интерфейс для базы данных)
@@ -191,7 +206,7 @@ IDBQueryResult execQueryTuple(TL...)( IDatabase database, string expression, TL 
 	{	auto dbase = cast(DBPostgreSQL) database;
 		if( dbase is null )
 			throw new DBException("Database connection object is null!!!");
-			
+
 		return execQueryTupleImpl( dbase, expression, params );
 	}
 	else
@@ -211,12 +226,12 @@ struct DBQuery
 		else
 			_notImplementedError();
 	}
-	
+
 	this(TL...)( IDatabase database, string expression, TL params )
 	{	this( database, expression );
 		setParamTuple(params);
 	}
-	
+
 	///Метод устанавливает параметры запросов по кортежу значений
 	///Существующие параметры полностью перезаписываются
 	ref DBQuery setParamTuple(TL...)(TL params)
@@ -227,7 +242,7 @@ struct DBQuery
 			_notImplementedError();
 		return this;
 	}
-	
+
 	///Устанавливает param в качестве значения параметра с номером index
 	ref DBQuery setParam(T)( uint index, T param )
 	{	if( _dbType == DBMSType.PostgreSQL )
@@ -236,7 +251,7 @@ struct DBQuery
 			_notImplementedError();
 		return this;
 	}
-	
+
 	///Выполняет сформированный запрос
 	IDBQueryResult exec()
 	{	if( _dbType == DBMSType.PostgreSQL )
@@ -245,7 +260,7 @@ struct DBQuery
 			_notImplementedError();
 		assert(0);
 	}
-	
+
 	///Функция задаёт выражение запроса (с местозаполнителями для параметров)
 	ref DBQuery setExpr( string expression )
 	{	if( _dbType == DBMSType.PostgreSQL )
@@ -254,7 +269,7 @@ struct DBQuery
 			_notImplementedError();
 		return this;
 	}
-	
+
 	///Стирает внутренний набор параметров
 	ref DBQuery clearParams()
 	{	if( _dbType == DBMSType.PostgreSQL )
@@ -263,11 +278,11 @@ struct DBQuery
 			_notImplementedError();
 		return this;
 	}
-	
+
 	private void _notImplementedError(string file = __FILE__, size_t line = __LINE__)
 	{	throw new DBException("DBQuery for database driver " ~ _dbType.to!string ~ " is not implemented!!!", file, line);
 	}
-	
+
 protected:
 	union {
 		PostgreSQLQuery _pgQuery;
