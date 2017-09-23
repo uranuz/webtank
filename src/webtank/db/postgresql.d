@@ -222,9 +222,7 @@ public:
 		//Количество записей
 		size_t recordCount()
 		{
-			debug import std.stdio;
 			if( _queryResult ) {
-				debug writeln(`PQntuples: `, PQntuples(_queryResult));
 				return ( PQntuples(_queryResult) ).to!size_t;
 			}
 			return 0;
@@ -233,9 +231,7 @@ public:
 		//Количество полей данных (столбцов)
 		size_t fieldCount()
 		{
-			debug import std.stdio;
 			if( _queryResult ) {
-				debug writeln(`PQnfields: `, PQnfields(_queryResult));
 				return ( PQnfields(_queryResult) ).to!size_t;
 			}
 			return 0;
