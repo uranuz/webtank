@@ -45,14 +45,12 @@ struct EnumFormat( T, bool withNames )
 			assert( 0, "Attempt to get value for name that doesn't exist in EnumFormat object!!" );
 		}
 
-		bool hasName(string name) const
-		{
-			return _pairs.canFind!"a[1] == b"(name);
+		bool hasName(string name) const {
+			return _pairs.canFind!( (a, b) => a[1] == b )(name);
 		}
 
-		bool hasValue(ValueType value) const
-		{
-			return _pairs.canFind!"a[0] == b"(value);
+		bool hasValue(ValueType value) const {
+			return _pairs.canFind!( (a, b) => a[0] == b )(value);
 		}
 
 		///Возвращает набор имен для перечислимого типа
