@@ -3,6 +3,7 @@ module webtank.common.std_json.to;
 import std.json, std.traits, std.conv, std.typecons;
 
 import webtank.common.optional;
+import webtank.common.optional_date;
 import webtank.common.std_json.exception;
 
 /++
@@ -101,16 +102,16 @@ JSONValue toStdJSON(T)(T dValue)
 			}
 
 			jValue = jArray;
+		} else static if( isOptional!T ) {
+			jValue = dValue.isSet? toStdJSON(dValue.value): JSONValue(null);
+		} else static if( is( T == OptionalDate ) ) {
+			jValue = JSONValue([
+				"day": toStdJSON(dValue.day),
+				"month": toStdJSON(dValue.month),
+				"year": toStdJSON(dValue.year)
+			]);
 		}
-		else static if( isOptional!T )
-		{
-			alias BaseT = OptionalValueType!T;
-			if( dValue.isSet ) {
-				jValue = toStdJSON(dValue.value);
-			} else {
-				jValue = null;
-			}
-		} else static if( is(T == Date) || is(T == DateTime) || is(T == TimeOfDay) || is(T == SysTime) ) {
+		else static if( is(T == Date) || is(T == DateTime) || is(T == TimeOfDay) || is(T == SysTime) ) {
 			// Строковый формат для дат и времени более компактен и привычен, поэтому выводим в нём вместо объекта JSON
 			jValue = dValue.toISOExtString();
 		} else static if(

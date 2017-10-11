@@ -217,7 +217,7 @@ public:
 
 		public override {
 			bool empty() @property {
-				return _index < _rs.length;
+				return _index >= _rs.length;
 			}
 
 			RecordIface front() @property {

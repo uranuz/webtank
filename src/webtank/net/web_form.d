@@ -37,38 +37,41 @@ private:
 	string[][string] _data;
 
 public:
-	this( ref string[][string] data )
-	{	_data = data;
+	this( ref string[][string] data ) {
+		_data = data;
 	}
 
-	this( string formDataStr )
-	{	_data = extractFormData( formDataStr );
+	this( string formDataStr ) {
+		_data = extractFormData( formDataStr );
 	}
 
-	string opIndex(string name) const
-	{	return _data[name][0];
+	string opIndex(string name) const {
+		return _data[name][0];
 	}
 
 	string[] keys() @property const
-	{	string[] result;
-		foreach( ref array; _data )
-			result ~= array[0];
-		return result;
-	}
-
-	string[] values() @property const
-	{	string[] result;
+	{
+		string[] result;
 		foreach( name, ref array; _data )
 			result ~= name;
 		return result;
 	}
 
-	string[] array(string name) @property const
-	{	return _data.get(name, null).dup;
+	string[] values() @property const
+	{
+		string[] result;
+		foreach( ref array; _data )
+			result ~= array[0];
+		return result;
+	}
+
+	string[] array(string name) @property const {
+		return _data.get(name, null).dup;
 	}
 
 	string get(string name, string defValue) const
-	{	if( name in _data )
+	{
+		if( name in _data )
 			return _data[name][0];
 		else
 			return defValue;
@@ -76,23 +79,26 @@ public:
 
 	int opApply(int delegate(ref string value) del) //const
 	{
-		foreach( ref array; _data )
+		foreach( ref array; _data ) {
 			if( auto ret = del( array[0] ) )
 				return ret;
+		}
 		return 0;
 	}
 
 	int opApply(int delegate(ref string name, ref string value) del) //const
 	{
-		foreach( name, ref array; _data )
+		foreach( name, ref array; _data ) {
 			if( auto ret = del( name, array[0] ) )
 				return ret;
+		}
 		return 0;
 	}
 
 	auto opBinaryRight(string op)(string name) const
 		if( op == "in" )
-	{	auto array = name in _data;
+	{
+		auto array = name in _data;
 		if( array )
 			return &(*array)[0];
 		else
@@ -100,15 +106,17 @@ public:
 	}
 
 	override string toString()
-	{	import std.conv;
+	{
+		import std.conv;
 		return _data.to!string;
 	}
-	
+
 }
 
 ///Функция выполняет разбор и декодирование данных HTML формы
 string[][string] extractFormData(string queryStr)
-{	string[][string] result;
+{
+	string[][string] result;
 	foreach( key, values; parseFormData(queryStr) )
 	{
 		// TODO: Возможно, что данные сюда уже придут декодированными. Нужно обработать этот случай!
