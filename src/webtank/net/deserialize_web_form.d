@@ -10,6 +10,7 @@ import std.array: array;
 
 import webtank.common.conv: conv;
 import webtank.common.optional;
+import webtank.common.optional_date;
 import webtank.common.std_json.exception;
 import webtank.net.web_form: FormData;
 
@@ -23,7 +24,8 @@ template isPlainType(T)
 		|| is( T == Date )
 		|| is( T == DateTime )
 		|| is( T == SysTime )
-		|| is( T == TimeOfDay );
+		|| is( T == TimeOfDay )
+		|| is( T == OptionalDate );
 }
 
 template isPrimaryType(T) {
@@ -38,7 +40,7 @@ auto convertPlainType(T)(string value)
 	}
 	else static if( isIntegral!T || isFloatingPoint!T || isSomeString!T ) {
 		return value.conv!T;
-	} else static if( is( T == Date ) || is( T == DateTime ) || is( T == SysTime ) || is( T == TimeOfDay ) ) {
+	} else static if( is( T == Date ) || is( T == DateTime ) || is( T == SysTime ) || is( T == TimeOfDay ) || is( T == OptionalDate ) ) {
 		return T.fromISOExtString(value);
 	} else {
 		static assert(false, T.stringof ~ ` is not plain type!!!`);
@@ -172,6 +174,7 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 unittest
 {
 	import std.algorithm: equal;
+	import webtank.common.optional_date;
 	string[][string] rawData1 = [
 		`boolParam`: [`true`],
 		`intParam`: [`10`],
@@ -192,7 +195,13 @@ unittest
 		`datesAAParam__begin`: [`2019-10-23`],
 		`datesAAParam__end`: [`2019-11-25`],
 		`intArrayParam1`: [`5,4,3,2`],
-		`intArrayParam2`: [`3`,`4`,`5`]
+		`intArrayParam2`: [`3`,`4`,`5`],
+		`optDateParam1`: [`2019-10-23`],
+		`optDateParam2__day`: [`23`],
+		`optDateParam2__month`: [`10`],
+		`optDateParam2__year`: [`2019`],
+		`optDateParam3`: [`null-10-null`],
+		`optDateParam4`: [`null`]
 	];
 	FormData formData1 = new FormData(rawData1);
 	static struct InternalStruct1
@@ -226,6 +235,10 @@ unittest
 		Optional!Date partDateParam;
 		Optional!Date wholeDateParam;
 		Optional!InternalStruct1 structParam;
+		OptionalDate optDateParam1;
+		OptionalDate optDateParam2;
+		OptionalDate optDateParam3;
+		OptionalDate optDateParam4;
 	}
 
 	StructData1 strucData1;
@@ -256,4 +269,10 @@ unittest
 	assert(structData2.structParam.intSub == -30);
 	assert(structData2.structParam.floatSub == -30.3);
 	assert(structData2.structParam.stringSub == `trololo`);
+	assert(structData2.optDateParam1.toString() == `2019-10-23`);
+	assert(structData2.optDateParam2.toString() == `2019-10-23`);
+	assert(structData2.optDateParam3.year.isNull);
+	assert(structData2.optDateParam3.month == 10);
+	assert(structData2.optDateParam3.day.isNull);
+	assert(structData2.optDateParam4.isNull);
 }
