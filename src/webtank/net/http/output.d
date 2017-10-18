@@ -9,7 +9,7 @@ class HTTPOutput
 {
 protected:
 	HTTPHeaders _headers;
-	string _messageBody;
+	Appender!string _messageBody;
 	CookieCollection _cookies;
 	URI _requestURI;
 
@@ -58,12 +58,12 @@ public:
 	void write(string str) {
 		_messageBody ~= str;
 	}
-	
+
 	///Добавляет строку str к сообщению ответа сервера, либо запроса клиента
 	void opOpAssign(string op: "~")(string str) {
 		_messageBody ~= str;
 	}
-	
+
 	/// Устанавливает заголовки для перенаправления запроса HTTP-клиента
 	/// на другой ресурс location
 	void redirect(string location)
@@ -72,32 +72,32 @@ public:
 		_headers["reason-phrase"] = "Found";
 		_headers["location"] = location;
 	}
-	
+
 	/// Возвращает полный ответ сервера на запрос клиента
 	string getResponseString() {
-		return _getResponseHeadersStr() ~ _messageBody;
+		return _getResponseHeadersStr() ~ _messageBody.data;
 	}
 
 	/// Возвращает полный запрос, формируемый клиентом
 	string getRequestString() {
-		return _getRequestHeadersStr() ~ _messageBody;
+		return _getRequestHeadersStr() ~ _messageBody.data;
 	}
-	
+
 	//Пытаемся очистить ответ, возвращает true, если получилось
 	bool tryClear()
 	{
-		_messageBody = null;
+		_messageBody = appender!string();
 		headers.clear();
 		_cookies.clear();
 		return true;
 	}
-	
+
 	bool tryClearBody()
 	{
-		_messageBody = null;
+		_messageBody = appender!string();
 		return true;
 	}
-	
+
 	///Куки
 	CookieCollection cookies() @property {
 		return _cookies;
@@ -107,10 +107,10 @@ protected:
 	string _getResponseHeadersStr()
 	{
 		import std.conv: to;
-		_headers["content-length"] = _messageBody.length.to!string;
+		_headers["content-length"] = _messageBody.data.length.to!string;
 		_headers["content-type"] = "text/html; charset=\"utf-8\"";
-		
-		return 
+
+		return
 			_headers.getStatusLine()
 			~ ( _cookies.length > 0 ? _cookies.toResponseHeadersString() ~ "\r\n" : "" )
 			~ _headers.getString() ~ "\r\n" ;
@@ -119,10 +119,10 @@ protected:
 	string _getRequestHeadersStr()
 	{
 		import std.conv: to;
-		_headers["content-length"] = _messageBody.length.to!string;
+		_headers["content-length"] = _messageBody.data.length.to!string;
 		_headers["content-type"] = "text/html; charset=\"utf-8\"";
-		
-		return 
+
+		return
 			_headers.getRequestLine()
 			~ ( _cookies.length > 0 ? _cookies.toRequestHeadersString() ~ "\r\n" : "" )
 			~ _headers.getString() ~ "\r\n" ;
