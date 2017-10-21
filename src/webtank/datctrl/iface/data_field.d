@@ -17,8 +17,7 @@ template FieldSpec( T, string s = null )
 	alias name = s;
 }
 
-struct PrimaryKey(T)
-{
+struct PrimaryKey(T) {
 	alias BaseDecl = T;
 }
 
@@ -31,27 +30,7 @@ $(LOCALE_RU_RU
 	Возвращает true если $(D_PARAM FieldT) является типом ключевого поля или false в противном случае
 )
 +/
-
 alias isPrimaryKeyFormat(T...) =  isInstanceOf!(PrimaryKey, T[0]);
-
-/++
-$(LOCALE_EN_US
-	String values representing values that treated as boolean true value
-)
-
-$(LOCALE_RU_RU
-	Строковые значения, которые трактуются как true при преобразовании типов
-)
-+/
-
-immutable(string[]) _logicTrueValues = [
-	`true`, `t`, `yes`, `y`, `on`, `истина`, `и`, `да`, `д`
-];
-
-immutable(string[]) _logicFalseValues = [
-	`false`, `f`, `no`, `n`, `off`, `ложь`, `л`, `нет`, `н`
-];
-
 
 /++
 $(LOCALE_EN_US

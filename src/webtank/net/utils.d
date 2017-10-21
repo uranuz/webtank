@@ -1,5 +1,5 @@
  module webtank.net.utils;
- 
+
  import std.utf, std.conv;
 
 //Функция возвращает переданную строку с заменой экранированными кавычками для БД postgresql
@@ -10,7 +10,7 @@ string PGEscapeStr(string srcStr, string quoteSubst = "''" )
 	size_t i = 0;
 	size_t lastQuotePos = size_t.max;
 	for( ; i < str.length; i++ )
-	{	if( str[i] == '\'' ) 
+	{	if( str[i] == '\'' )
 		{	result ~= str[ (lastQuotePos + 1) .. i ] ~ dQuoteSubst ;
 			lastQuotePos = i;
 		}
@@ -39,9 +39,9 @@ string HTMLEscapeText(string srcStr)
 string printHTMLAttr(V)(string attr, V value)
 {	//TODO: Сделать защиту от HTML-инъекций для имени аттрибута
 	string strValue = value.to!string;
-	return ( 
-		( attr.length > 0 && strValue.length > 0 ) 
-		? ( ` ` ~ attr ~ `="` ~ HTMLEscapeValue( strValue )  ~ `"` ) 
+	return (
+		( attr.length > 0 && strValue.length > 0 )
+		? ( ` ` ~ attr ~ `="` ~ HTMLEscapeValue( strValue )  ~ `"` )
 		: ``
 	);
 }
@@ -50,7 +50,8 @@ string printHTMLAttr(V)(string attr, V value)
 //srcStr - исходная строка. Mapping - карта, по которой происходит замена
 //Синтаксис mapping = [ "что1": "чем1", "что2": "чем2", "что3": "чем3" ]
 dstring replace(dstring src, in dstring[dstring] mapping)
-{	dstring result;
+{
+	dstring result;
 	import std.algorithm;
 	auto whats = sort!("a.length > b.length")(mapping.keys.dup);
 	size_t i = 0;

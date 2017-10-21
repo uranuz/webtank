@@ -6,21 +6,25 @@ import webtank.net.uri: decodeURIFormQuery;
 
 // pop char from input range, or throw
 private dchar popChar(T)(ref T input)
-{	dchar result = input.front;
+{
+	dchar result = input.front;
 	input.popFront();
 	return result;
 }
 
 ///Функция выполняет разбор данных HTML формы
 T[][T] parseFormData(T)(T input)
-{	T[][T] result;
+{
+	T[][T] result;
 	T[] params = split(input, "&");
 
 	foreach( param; params )
-	{	size_t count = 0;
+	{
+		size_t count = 0;
 		auto temp = param.save();
 		for( ; !temp.empty; count++ )
-		{	if( popChar(temp) == '=' )
+		{
+			if( popChar(temp) == '=' )
 				break;
 		}
 		auto name = param.take(count).to!T;
@@ -80,7 +84,7 @@ public:
 	int opApply(int delegate(ref string value) del) //const
 	{
 		foreach( ref array; _data ) {
-			if( auto ret = del( array[0] ) )
+			if( auto ret = del(array[0]) )
 				return ret;
 		}
 		return 0;
@@ -89,7 +93,7 @@ public:
 	int opApply(int delegate(ref string name, ref string value) del) //const
 	{
 		foreach( name, ref array; _data ) {
-			if( auto ret = del( name, array[0] ) )
+			if( auto ret = del(name, array[0]) )
 				return ret;
 		}
 		return 0;
@@ -122,7 +126,7 @@ string[][string] extractFormData(string queryStr)
 		// TODO: Возможно, что данные сюда уже придут декодированными. Нужно обработать этот случай!
 		string decodedKey = decodeURIFormQuery(key);
 		foreach( val; values )
-			result[ decodedKey ] ~= decodeURIFormQuery(val);
+			result[decodedKey] ~= decodeURIFormQuery(val);
 	}
 	return result;
 }

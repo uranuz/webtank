@@ -3,37 +3,43 @@ module webtank.net.http.context;
 import webtank.net.http.input, webtank.net.http.output, webtank.security.access_control, webtank.net.http.handler;
 
 class HTTPContext
-{	
+{
 	this(HTTPInput request, HTTPOutput response)
-	{	_request = request;
+	{
+		_request = request;
 		_response = response;
 	}
 
 	///Запрос к серверу по протоколу HTTP
-	HTTPInput request() @property
-	{	return _request; }
-	
+	HTTPInput request() @property {
+		return _request;
+	}
+
 	///Объект ответа сервера
-	HTTPOutput response() @property
-	{	return _response; }
-	
+	HTTPOutput response() @property {
+		return _response;
+	}
+
 	///Удостоверение пользователя
-	IUserIdentity user() @property
-	{	return _userIdentity; }
-	
-	void _setuser(IUserIdentity newIdentity) 
-	{	if( _userIdentity is null )
+	IUserIdentity user() @property {
+		return _userIdentity;
+	}
+
+	void _setuser(IUserIdentity newIdentity)
+	{
+		if( _userIdentity is null )
 			_userIdentity = newIdentity;
 		else
 			throw new Exception("Access ticket for connection is already set!!!");
 	}
 
-	void _setCurrentHandler(IHTTPHandler handler)
-	{	_handlerList ~= handler;
+	void _setCurrentHandler(IHTTPHandler handler) {
+		_handlerList ~= handler;
 	}
 
 	void _unsetCurrentHandler(IHTTPHandler handler)
-	{	if( _handlerList.length > 0 )
+	{
+		if( _handlerList.length > 0 )
 		{	if( handler is _handlerList[$-1] )
 				_handlerList.length--;
 			else
@@ -44,15 +50,15 @@ class HTTPContext
 	}
 
 	///Текущий выполняемый обработчик для HTTP-запроса
-	IHTTPHandler currentHandler() @property
-	{	return _handlerList.length > 0 ? _handlerList[$-1] : null;
+	IHTTPHandler currentHandler() @property {
+		return _handlerList.length > 0? _handlerList[$-1]: null;
 	}
 
 	///Предыдущий обработчик HTTP-запроса
-	IHTTPHandler previousHandler() @property
-	{	return _handlerList.length > 1 ? _handlerList[$-2] : null;
+	IHTTPHandler previousHandler() @property {
+		return _handlerList.length > 1? _handlerList[$-2]: null;
 	}
-	
+
 protected:
 	HTTPInput _request;
 	HTTPOutput _response;

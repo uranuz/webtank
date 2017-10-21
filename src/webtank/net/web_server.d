@@ -6,19 +6,19 @@ import webtank.net.http.handler, webtank.net.http.context, webtank.net.http.http
 
 // Web-сервер порождающий поток на каждое входящее соединение
 class WebServer
-{	
+{
 protected:
 	ushort _port = 8082;
 	IHTTPHandler _handler;
 	Loger _loger;
-	
+
 public:
 	this(ushort port, IHTTPHandler handler, Loger loger)
 	{	_port = port;
 		_handler = handler;
 		_loger = loger;
 	}
-	
+
 	void start()
 	{
 		import std.stdio: writeln;
@@ -30,7 +30,7 @@ public:
 			listener.close();
 		}
 		assert(listener.isAlive);
-		
+
 		bool isNotBinded = true;
 		writeln( "Попытка привязать серверный сокет к порту " ~ _port.to!string );
 		while( isNotBinded ) //Заставляем ОСь дать нам порт
@@ -38,20 +38,20 @@ public:
 			try {
 				listener.bind( new InternetAddress(_port) );
 				isNotBinded = false;
-				
+
 				//Ждём, чтобы излишне не загружать систему
 				Thread.sleep( dur!("msecs")( 500 ) );
 			} catch( std.socket.SocketOSException ) {}
 		}
 		listener.listen(5);
 		writeln("Сервер запущен!");
-		
+
 		while(true) //Цикл приёма соединений через серверный сокет
 		{	Socket currSock = listener.accept(); //Принимаем соединение
 			auto workingThread = new WorkingThread(currSock, _handler, _loger);
 			workingThread.start();
 		}
-		
+
 	}
 }
 
@@ -61,25 +61,25 @@ import webtank.net.http.request, webtank.net.http.response, webtank.net.http.hea
 
 //Рабочий процесс веб-сервера
 class WorkingThread: Thread
-{	
+{
 protected:
 	Socket _socket;
 	IHTTPHandler _handler;
 	Loger _loger;
-	
+
 public:
 	this(Socket sock, IHTTPHandler handler, Loger loger)
-	{	_socket = sock;
+	{
+		_socket = sock;
 		_handler = handler;
 		_loger = loger;
 		super(&_work);
 	}
 
-	private void _work()
-	{
+	private void _work() {
 		_processRequest( _socket );
 	}
-	
+
 	mixin ProcessRequestImpl;
 }
 

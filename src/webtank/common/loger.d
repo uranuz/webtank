@@ -29,7 +29,7 @@ enum LogEventType
 	$(LOCALE_RU_RU Фатальная ошибка. Дальнейшая работа или восстановление после неё невозможно)
 	+/
 	fatal,
-	
+
 	/++
 	$(LOCALE_EN_US This is critical error event. There serious problems in system. Recovery is hardly possible
 		and sometimes can lead to undefined consequences.
@@ -94,7 +94,7 @@ $(LOCALE_RU_RU
 	"Уровень логирования" (общая степень детализации журнала)
 )
 +/
-enum LogLevel 
+enum LogLevel
 {	none,
 	fatal,
 	crit,
@@ -116,7 +116,7 @@ $(LOCALE_RU_RU
 	которую необходимо "зажурналировать"
 )
 +/
-struct LogEvent 
+struct LogEvent
 {	import std.datetime: SysTime;
 	LogEventType type;   ///Тип записи в журнал
 	string mod;       ///Имя модуля
@@ -140,9 +140,9 @@ $(LOCALE_RU_RU
 )
 +/
 abstract class Loger
-{	
-	
-	
+{
+
+
 public:
 
 	/++
@@ -169,10 +169,10 @@ public:
 	)
 	+/
 	void write(	LogEventType eventType, string text, string title = null,
-		string file = __FILE__, int line = __LINE__, 
+		string file = __FILE__, int line = __LINE__,
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__)
-	{	
+	{
 		import std.datetime;
 		LogEvent event;
 		event.type = eventType;
@@ -200,7 +200,7 @@ public:
 	)
 	+/
 	void fatal( string text, string title = null,
-		string file = __FILE__, int line = __LINE__, 
+		string file = __FILE__, int line = __LINE__,
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__ )
 	{	write( LogEventType.fatal, text, title, file, line, funcName, prettyFuncName, mod ); }
@@ -209,7 +209,7 @@ public:
 		ditto
 	+/
 	void crit( string text, string title = null,
-		string file = __FILE__, int line = __LINE__, 
+		string file = __FILE__, int line = __LINE__,
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__ )
 	{	write( LogEventType.crit, text, title, file, line, funcName, prettyFuncName, mod ); }
@@ -218,7 +218,7 @@ public:
 		ditto
 	+/
 	void error( string text, string title = null,
-		string file = __FILE__, int line = __LINE__, 
+		string file = __FILE__, int line = __LINE__,
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__ )
 	{	write( LogEventType.error, text, title, file, line, funcName, prettyFuncName, mod ); }
@@ -227,7 +227,7 @@ public:
 		ditto
 	+/
 	void warn( string text, string title = null,
-		string file = __FILE__, int line = __LINE__, 
+		string file = __FILE__, int line = __LINE__,
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__ )
 	{	write( LogEventType.warn, text, title, file, line, funcName, prettyFuncName, mod ); }
@@ -236,7 +236,7 @@ public:
 		ditto
 	+/
 	void info( string text, string title = null,
-		string file = __FILE__, int line = __LINE__, 
+		string file = __FILE__, int line = __LINE__,
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__ )
 	{	write( LogEventType.info, text, title, file, line, funcName, prettyFuncName, mod ); }
@@ -245,7 +245,7 @@ public:
 		ditto
 	+/
 	void dbg( string text, string title = null,
-		string file = __FILE__, int line = __LINE__, 
+		string file = __FILE__, int line = __LINE__,
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__ )
 	{	write( LogEventType.dbg, text, title, file, line, funcName, prettyFuncName, mod ); }
@@ -254,13 +254,13 @@ public:
 		ditto
 	+/
 	void trace( string text, string title = null,
-		string file = __FILE__, int line = __LINE__, 
+		string file = __FILE__, int line = __LINE__,
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__ )
 	{	write( LogEventType.trace, text, title, file, line, funcName, prettyFuncName, mod ); }
 
 protected:
-	
+
 }
 
 /++
@@ -273,7 +273,7 @@ $(LOCALE_RU_RU
 )
 +/
 class FileLoger: Loger
-{	
+{
 	import std.stdio, std.concurrency, std.datetime, std.conv, std.path;
 protected:
 	LogLevel _logLevel;
@@ -282,9 +282,8 @@ protected:
 	File _file;
 
 public:
-	
-	this( string fileName, LogLevel logLevel )
-	{
+
+	this( string fileName, LogLevel logLevel ) {
 		_init( fileName, logLevel );
 	}
 
@@ -316,16 +315,16 @@ public:
 		assert( _file.isOpen(), "Error while writing to log file!!!" );
 		return _file;
 	}
-	
+
 	///Добавление записи в лог
 	override void writeEvent(LogEvent event)
 	{
 		if( ( cast(int) event.type ) < ( cast(int) _logLevel ) )
 		{
-			string message = 
+			string message =
 				"//---------------------------------------\r\n"
-				~ event.timestamp.toISOExtString() 
-				~ " [" ~ std.conv.to!string( event.type ) ~ "] " ~ event.file ~ "(" 
+				~ event.timestamp.toISOExtString()
+				~ " [" ~ std.conv.to!string( event.type ) ~ "] " ~ event.file ~ "("
 				~ std.conv.to!string( event.line ) ~ ") " ~ event.prettyFuncName ~ ": " ~ event.title ~ "\r\n"
 				~ event.text ~ "\r\n";
 			auto logFile = _getLogFile();
@@ -334,7 +333,8 @@ public:
 		}
 	}
 
-	~this() {
+	~this()
+	{
 		_getLogFile().flush();
 		_getLogFile().close();
 	}
@@ -354,12 +354,12 @@ $(LOCALE_RU_RU
 class ThreadedLoger: Loger
 {	import std.concurrency;
 public:
-	
+
 
 	this(shared(Loger) baseLoger)
 	{	_logerTid = spawn(&_run, thisTid, baseLoger);
 	}
-	
+
 	override void writeEvent(LogEvent event)
 	{	send(_logerTid, event);
 	}
@@ -381,11 +381,11 @@ public:
 
 protected:
 	Tid _logerTid;
-	
+
 	struct LogStopMsg {}
-	
+
 	static void _run( Tid ownerTid, shared(Loger) baseLoger )
-	{	
+	{
 		bool cont = true;
 		auto loger = cast(Loger) baseLoger;
 		while(cont)
@@ -407,41 +407,41 @@ protected:
 
 //TODO: Реализовать продвинутую фильтрацию логов
 // class LogFilter: Loger
-// {	
+// {
 // 	override void writeEvent(LogEvent event)
-// 	{	
-// 		
+// 	{
+//
 // 	}
-// 	
+//
 // }
 
 
 // private {
 // 	__gshared shared(Loger)[] _logers;
 // }
-// 
+//
 // __gshared Loger log;
-// 
+//
 // import core.thread, std.datetime;
-// 
+//
 // void func()
 // {	for(size_t i = 0; i < 10; i++)
 // 	{	Thread.sleep( dur!("seconds")( 1 ) );
 // 		log.write( LogEventType.warn, "Сообщение" );
 // 	}
-// 
+//
 // }
-// 
-// 
-// 
+//
+//
+//
 // void main()
 // {
 // 	log = new ThreadedLoger( new FileLoger("test.log", LogLevel.warn) );
 // 	pragma(msg, typeof(log));
-// 
+//
 // 	auto th = new Thread(&func);
 // 	th.start();
-// 
+//
 // 	log.crit( "Произошла страшно непонятная ошибка!!!", "Абсолютно неизвестная ошибка" );
-// 
+//
 // }

@@ -14,23 +14,22 @@ import
 	webtank.common.optional,
 	webtank.datctrl.iface.data_field,
 	webtank.datctrl.enum_format,
-	webtank.common.std_json,
-	webtank.common.utils;
+	webtank.common.std_json;
 
 /++
 $(LOCALE_EN_US Struct representing format of record or record set)
 $(LOCALE_RU_RU Структура представляющая формат записи или набора записей)
 +/
 struct RecordFormat(Args...)
-{	
+{
 	alias EnumFormatDecls = filterFieldFormatDecls!( EnumFormat );
 	alias EnumFieldSpecs = _filterFieldSpecs!(_fieldSpecs).ByTypes!(EnumFormat);
 
 	bool[string] nullableFlags; ///Флаги "обнулябельности"
 	Tuple!(EnumFormatDecls) enumFormats;
-	
+
 	enum bool hasKeyField = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs).length > 0;
-	
+
 	template getEnumFormat(string fieldName)
 	{
 		alias enumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
@@ -64,7 +63,7 @@ struct RecordFormat(Args...)
 		return result;
 	}
 	+/
-	
+
 	private static immutable(string[]) _names = ((){
 		string[] result;
 		foreach( spec; _fieldSpecs )
@@ -99,7 +98,7 @@ struct RecordFormat(Args...)
 	//Внутреннее "хранилище" разобранной информации о полях записи
 	//Не использовать извне!!!
 	alias _fieldSpecs = _parseRecordFormatArgs!Args;
-	
+
 	//АХТУНГ!!! ДАЛЕЕ ИДУТ СТРАШНЫЕ ШАБЛОННЫЕ ЗАКЛИНАНИЯ!!!
 
 
@@ -120,7 +119,7 @@ struct RecordFormat(Args...)
 	template filterNamesByTypes(FilterDecls...) {
 		alias filterNamesByTypes = _getFieldNameTuple!( _filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterDecls) );
 	}
-	
+
 	template filterFieldFormatDecls(FilterDecls...) {
 		alias filterFieldFormatDecls = _getFieldFormatDeclTuple!( _filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterDecls) );
 	}
@@ -193,7 +192,7 @@ struct RecordFormat(Args...)
 		alias PKFieldSpecs = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs);
 		static assert( PKFieldSpecs.length > 0, "Primary key is not set for record format!!!" );
 		static assert( PKFieldSpecs.length < 2, "Only one primary key allowed for record format!!!" );
-		
+
 		alias getKeyFieldIndex = _getFieldIndex!(PKFieldSpecs[0].name, 0, _fieldSpecs);
 	}
 
@@ -202,7 +201,7 @@ struct RecordFormat(Args...)
 		alias PKFieldSpecs = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs);
 		static assert( PKFieldSpecs.length > 0, "Primary key is not set for record format!!!" );
 		static assert( PKFieldSpecs.length < 2, "Only one primary key allowed for record format!!!" );
-		
+
 		alias getKeyFieldSpec = PKFieldSpecs[0];
 	}
 
@@ -210,7 +209,7 @@ struct RecordFormat(Args...)
 	{
 		alias getEnumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
 	}
-	
+
 	template hasField(string fieldName)
 	{
 		enum bool hasField = _getHasField!(fieldName, _fieldSpecs);
@@ -280,10 +279,10 @@ template _parseRecordFormatArgs(Args...)
 		alias _parseRecordFormatArgs = AliasSeq!() ;
 	}
 	else static if( is(Args[0]) || is( Args[0] == PrimaryKey!(T), T...) )
-	{	
+	{
 		static if( is( typeof( Args[1] ) : string ) )
 			alias _parseRecordFormatArgs = AliasSeq!(FieldSpec!(Args[0 .. 2]), _parseRecordFormatArgs!(Args[2 .. $]));
-		else 
+		else
 			alias _parseRecordFormatArgs = AliasSeq!(FieldSpec!(Args[0]), _parseRecordFormatArgs!(Args[1 .. $]));
 	} else {
 		static assert(0, "Attempted to instantiate Tuple with an invalid argument: " ~ Args[0].stringof);
@@ -342,9 +341,9 @@ template _getFieldIndex(string fieldName, size_t index, FieldSpecs...)
 		static assert(0, "Field with name \"" ~ fieldName ~ "\" is not found in container!!!");
 	else static if( FieldSpecs[0].name == fieldName )
 		alias _getFieldIndex = index;
-	else 
+	else
 		alias _getFieldIndex = _getFieldIndex!(fieldName, index + 1 , FieldSpecs[1 .. $]);
-	
+
 }
 
 //Шаблон фильтрации кортежа элементов FieldSpec
@@ -361,7 +360,7 @@ template _filterFieldSpecs(FieldSpecs...)
 			alias ByTypes = AliasSeq!(
 				//Вызов фильтации для первого FieldSpec по набору FilterFieldTypes (типов полей)
 				_filterFieldSpec!(FieldSpecs[0], FilterFieldTypes),
-				
+
 				//Вызов для остальных FieldSpecs
 				_filterFieldSpecs!(FieldSpecs[1..$]).ByTypes!(FilterFieldTypes)
 			);
@@ -377,7 +376,7 @@ template _filterFieldSpec(alias FieldSpec, FilterFieldTypes...)
 	}
 	else
 	{
-		static if( __traits(isSame, FilterFieldTypes[0], EnumFormat) && 
+		static if( __traits(isSame, FilterFieldTypes[0], EnumFormat) &&
 			isInstanceOf!(EnumFormat, FieldSpec.FormatDecl) )
 		{
 			alias _filterFieldSpec = FieldSpec;

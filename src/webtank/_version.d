@@ -9,9 +9,6 @@ else enum bool isDatCtrlEnabled = true;
 version(no_webtank_db) enum bool isDataBaseEnabled = false;
 else enum bool isDataBaseEnabled = true;
 
-version(no_webtank_templating) enum bool isTemplatingEnabled = false;
-else enum bool isTemplatingEnabled = true;
-
 version(no_webtank_net) enum bool isNetEnabled = false;
 else enum bool isNetEnabled = true;
 

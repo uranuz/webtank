@@ -15,15 +15,15 @@ class JSON_RPC_Exception : Exception
 class JSON_RPC_Router: IHTTPHandler
 {
 	mixin EventBasedHTTPHandlerImpl;
-	
+
 	this( string URIPatternStr, string[string] regExprs, string[string] defaults )
 	{	_uriPattern = new URIPattern(URIPatternStr, regExprs, defaults);
 	}
-	
+
 	this( string URIPatternStr, string[string] defaults = null )
 	{	this(URIPatternStr, null, defaults);
 	}
-	
+
 	alias JSONValue delegate( ref const(JSONValue), HTTPContext ) JSON_RPC_WrapperMethod;
 
 	HTTPHandlingResult customProcessRequest(HTTPContext context)
@@ -32,11 +32,11 @@ class JSON_RPC_Router: IHTTPHandler
 		try {
 			//-----Опрос обработчика запроса-----
 			auto uriData = _uriPattern.match(context.request.uri.path);
-			
+
 			bool isRequestMatched =
 				uriData.isMatched &&
 				toLower(context.request.headers.get("method", null)) == "post";
-			
+
 			//-----Конец опроса обработчика события-----
 			onPostPoll.fire(context, isRequestMatched);
 			if( !isRequestMatched )
@@ -52,16 +52,22 @@ class JSON_RPC_Router: IHTTPHandler
 					"line": JSONValue(ex.line)
 				])
 			];
+			debug {
+				import std.array: appender;
+				auto backTrace = appender!(string[])();
+				foreach( inf; ex.info ) backTrace ~= inf.idup;
+				jResponse["error"]["data"]["backtrace"] = JSONValue(backTrace.data);
+			}
 		}
 		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
 
 		return HTTPHandlingResult.handled;
 	}
-	
+
 	private void _processRequestInternal(HTTPContext context, ref JSONValue jResponse)
 	{
 		auto jMessageBody = context.request.messageBody.parseJSON();
-		
+
 		if( jMessageBody.type != JSON_TYPE.OBJECT )
 			throw new JSON_RPC_Exception(`JSON-RPC message body must be of object type!!!`);
 
@@ -95,7 +101,7 @@ class JSON_RPC_Router: IHTTPHandler
 			throw new JSON_RPC_Exception(`JSON-RPC method name must not be empty!!!`);
 
 		auto method = _methods.get(methodName, null);
-		
+
 		if( method is null )
 			throw new JSON_RPC_Exception(`JSON-RPC method "` ~ methodName ~ `" is not found by server!!!`);
 
@@ -105,7 +111,7 @@ class JSON_RPC_Router: IHTTPHandler
 		if( "params" in jMessageBody )
 		{
 			auto paramsType = jMessageBody["params"].type;
-		
+
 			//В текущей реализации принимаем либо объект (список поименованных параметров)
 			//либо null, символизирующий их отсутствие
 			if( paramsType != JSON_TYPE.OBJECT && paramsType != JSON_TYPE.NULL )
@@ -128,26 +134,26 @@ class JSON_RPC_Router: IHTTPHandler
 		_methods[nameOfMethod] = toDelegate(  &callJSON_RPC_Method!(Method) );
 		return this;
 	}
-	
+
 protected:
-	
+
 	JSON_RPC_WrapperMethod[string] _methods;
-	
+
 	URIPattern _uriPattern;
 }
 
 template callJSON_RPC_Method(alias Method)
-{	
+{
 	import std.traits, std.json, std.conv, std.typecons;
 	alias ParameterTypeTuple!(Method) ParamTypes;
 	alias ReturnType!(Method) ResultType;
 	alias ParameterIdentifierTuple!(Method) ParamNames;
-	
+
 	JSONValue callJSON_RPC_Method(ref const(JSONValue) jParams, HTTPContext context)
 	{
 		JSONValue result = null; // По-умолчанию в качестве результата null
 		size_t expectedParamsCount = 0; // Ожидаемое число параметров в jParams
-		
+
 		//Считаем количество параметров, которые должны были быть переданы
 		foreach( type; ParamTypes )
 		{
@@ -170,7 +176,7 @@ template callJSON_RPC_Method(alias Method)
 			{
 				auto typedContext = cast(type) context;
 				if( !typedContext ) {
-					throw new JSON_RPC_Exception( 
+					throw new JSON_RPC_Exception(
 						`Error in attempt to convert parameter "` ~ ParamNames[i] ~ `" to type "` ~ type.stringof ~ `". Context reference is null!`
 					);
 				}
@@ -185,13 +191,13 @@ template callJSON_RPC_Method(alias Method)
 				}
 				else
 				{
-					throw new JSON_RPC_Exception( 
+					throw new JSON_RPC_Exception(
 						`Expected JSON-RPC parameter ` ~ ParamNames[i] ~ ` is not found in params object!!!`
 					);
 				}
 			}
 		}
-		
+
 		static if( is( ResultType == void ) ) {
 			Method(argTuple.expand);
 		} else {

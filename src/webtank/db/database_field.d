@@ -9,45 +9,6 @@ import webtank.datctrl.enum_format;
 
 import webtank.common.conv;
 
-/++
-$(LOCALE_EN_US
-	Function converts values from different real D types to another
-	real D types but coresponding to semantical field types set
-	by template argument $(D_PARAM FieldT)
-)
-
-$(LOCALE_RU_RU
-	Преобразование из различных настоящих типов в другой реальный
-	тип, который соотвествует семантическому типу поля,
-	указанному в параметре шаблона FieldT
-)
-+/
-auto fldConv(ValueType)( string value )
-{
-	static if( is(ValueType == enum) ) {
-		return value.conv!(ValueType);
-	}
-	else static if( is( ValueType == bool ) )
-	{
-		import std.string;
-		foreach(logVal; _logicTrueValues)
-			if( logVal == toLower(strip(value)) )
-				return true;
-
-		foreach(logVal; _logicFalseValues)
-			if( logVal == toLower(strip(value)) )
-				return false;
-
-		//TODO: Посмотреть, что делать с типами исключений в этом модуле
-		throw new Exception( `Value "` ~ value.to!string ~ `" cannot be interpreted as boolean!!!` );
-	}
-	else static if( is( ValueType == std.datetime.Date ) ) {
-		return std.datetime.Date.fromISOExtString(value);
-	} else {
-		return conv!(ValueType)( value );
-	}
-}
-
 ///Класс ключевого поля
 class DatabaseField(FormatT) : IDataField!( FormatT )
 {
@@ -142,7 +103,7 @@ public:
 		{
 			assert( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			return fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) );
+			return _queryResult.get(_fieldIndex, index).conv!ValueType;
 		}
 
 		///Получение данных из поля по порядковому номеру index
@@ -151,7 +112,7 @@ public:
 		{
 			assert( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			return ( isNull(index) ? defaultValue : fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) ) );
+			return ( isNull(index) ? defaultValue: _queryResult.get(_fieldIndex, index).conv!ValueType );
 		}
 
 		///Получает строковое представление данных
@@ -165,7 +126,7 @@ public:
 				if( isNull(index) ) {
 					return null;
 				} else {
-					return _enumFormat.getStr( fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) ) );
+					return _enumFormat.getStr( _queryResult.get(_fieldIndex, index).conv!ValueType );
 				}
 			}
 			else
@@ -187,7 +148,7 @@ public:
 			else
 			{
 				static if( isEnumFormat!(FormatType) ) {
-					return _enumFormat.getStr( fldConv!( ValueType )( _queryResult.get(_fieldIndex, index) ) );
+					return _enumFormat.getStr( _queryResult.get(_fieldIndex, index).conv!ValueType );
 				} else {
 					//TODO: добавить проверку на соответствие значения базовому типу поля
 					return _queryResult.get(_fieldIndex, index).to!string;

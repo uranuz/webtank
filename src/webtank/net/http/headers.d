@@ -6,13 +6,13 @@ import webtank.net.http.http;
 ///HTTP headers parser
 ///Парсер HTTP заголовков
 class HTTPHeadersParser
-{	
+{
 	this(string data)
 	{	feed(data);
 	}
-	
+
 	this() {}
-	
+
 	///Append new data to interal buffer and parse them
  	///Добавление данных к внутреннему буферу и запуск их разбора
 	void feed(string data)
@@ -28,15 +28,15 @@ class HTTPHeadersParser
 		_splitLines();
 		_parseLines();
 	}
-	
+
 	///Returns true if HTTP starting line (with HTTP method, URI and version) was read or false otherwise
 	///Возвращает true, если прочитана начальная строка (с HTTP-методом, URI и версией ). Иначе false
 	bool isStartLineAccepted() @property
 	{	return _dataLines.length >= 1;
 	}
-	
+
 	///Returns HTTPHeaders instance if headers were parsed correctly or null otherwise
-	///Возвращает экземпляр HTTPHeaders если заголовки прочитаны верно или иначе null 
+	///Возвращает экземпляр HTTPHeaders если заголовки прочитаны верно или иначе null
 	HTTPHeaders getHeaders()
 	{	if( _isEndReached )
 			return new HTTPHeaders(_headers);
@@ -79,7 +79,7 @@ class HTTPHeadersParser
 
 		return 0;
 	}
-	
+
 	///Returns interal buffer data related to HTTP headers
 	///Возвращает данные буфера, относящиеся к заголовкам HTTP-запроса
 	string headerData() @property
@@ -88,21 +88,21 @@ class HTTPHeadersParser
 		else
 			return null;
 	}
-	
+
 	///Return true if end of headers reached or false otherwise
 	///Возвращает true, если достигнут конец заголовков
 	bool isEndReached() @property
 	{	return _isEndReached;
 	}
-	
+
 	void clear()
 	{	_data = null;
 		_partialClear();
 	}
-	
+
 protected:
 	void _splitLines()
-	{	if(_isEndReached) 
+	{	if(_isEndReached)
 			return; //Если заголовки уже закончились, то ничего не делаем
 
 		for( ; _pos < _data.length; _pos++ )
@@ -122,7 +122,7 @@ protected:
 			}
 		}
 	}
-	
+
 	void _parseLines()
 	{	//Разбор заголовков
 		foreach( n, var; _dataLines )
@@ -145,7 +145,7 @@ protected:
 							400 //400 Bad Request
 						);
 					}
-					
+
 					_headers["status-line"] = _dataLines[0];
 					_headers["http-version"] = startLineAttr[0];
 					_headers["status-code"] = startLineAttr[1];
@@ -161,7 +161,7 @@ protected:
 							400 //400 Bad Request
 						);
 					}
-					
+
 					string HTTPMethod = toLower( strip( startLineAttr[0] ) );
 					//TODO: Добавить проверку начальной строки
 					//Проверить методы по списку
@@ -195,7 +195,7 @@ protected:
 		}
 		_parsedLinesCount = _dataLines.length;
 	}
-	
+
 	void _partialClear()
 	{	_dataLines = null;
 		_pos = 0;
@@ -220,9 +220,9 @@ protected:
 /// Class is representing HTTP headers for request and response
 /// Класс, представляющий HTTP заголовки для запроса и ответа
 class HTTPHeaders
-{	
+{
 	private static immutable _reservedHeaderNames = [ "http-version", "status-code", "reason-phrase", "status-line", "request-line", "method", "request-uri" ];
-	
+
 	///HTTP request headers constructor
 	///Конструктор для заголовков запроса
 	this(string[string] headers, bool isRequest = true)
@@ -236,7 +236,7 @@ class HTTPHeaders
 			}
 		}
 	}
-	
+
 	///HTTP response headers constructor
 	///Конструктор заголовков ответа
 	this()
@@ -245,16 +245,16 @@ class HTTPHeaders
 		_headers["status-code"] = "200";
 		_headers["reason-phrase"] = "OK";
 	}
-	
+
 	///Method for getting status line of HTTP response
 	///Метод для получения строки состояния HTTP ответа
 	string getStatusLine()
-	{	
+	{
 		if( _isRequest ) //Для запроса нет статусной строки
 			return null;
-		else 
+		else
 			return //Для ответа прописываем Status-Line
-				_headers["http-version"] ~ " " 
+				_headers["http-version"] ~ " "
 				~ _headers["status-code"] ~ " "
 				~ _headers.get("reason-phrase", "") ~ "\r\n";
 	}
@@ -280,7 +280,7 @@ class HTTPHeaders
 		}
 		return 0;
 	}
-	
+
 	///Method for getting HTTP headers as string (separated by "\r\n")
 	///Метод для получения HTTP заголовков в виде строки (разделённых символами переноса "\r\n")
 	string getString()
@@ -296,17 +296,17 @@ class HTTPHeaders
 		}
 		return result;
 	}
-	
+
 	///Operator for writing value of header
 	///Опреатор записи значения заголовка
-	void opIndexAssign(string value, string name) 
+	void opIndexAssign(string value, string name)
 	{
 		import std.string: strip;
 		import std.uni: toLower;
 		if( strip(value).length > 0 ) //Пустые значения не добавляем
 			_headers[ toLower(name) ] = value;
 	}
-	
+
 	///Operator for reading value of header
 	///Оператор чтения значения заголовка
 	string opIndex(string name)
@@ -314,7 +314,7 @@ class HTTPHeaders
 		import std.uni: toLower;
 		return _headers.get( toLower(name), null );
 	}
-	
+
 	///Method gets value of header with "name" or "defaultValue" if header is not exist
 	///Метод получает значение заголовка с именем name или defaultValue, если заголовок отсутствует
 	string get(string name, string defaultValue)
@@ -322,7 +322,7 @@ class HTTPHeaders
 		import std.uni: toLower;
 		return _headers.get( toLower(name), defaultValue );
 	}
-	
+
 	///Оператор in для класса
 	inout(string)* opBinaryRight(string op)(string name) inout if(op == "in")
 	{
@@ -335,14 +335,15 @@ class HTTPHeaders
 	string[string] toAA() {
 		return _headers.dup;
 	}
-	
+
 	///Response headers clear method
 	///Очистка заголовков ответа
 	void clear()
-	{	if( !_isRequest )
+	{
+		if( !_isRequest )
 			_headers = null;
 	}
-	
+
 protected:
 	string[string] _headers;
 	bool _isRequest;
