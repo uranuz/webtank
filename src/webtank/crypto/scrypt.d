@@ -1,4 +1,4 @@
-module webtank.common.crypto_scrypt;
+module webtank.crypto.scrypt;
 
 /*
  * Copyright 2009 Colin Percival

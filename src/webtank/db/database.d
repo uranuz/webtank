@@ -31,7 +31,7 @@ alias DBLogerMethod = void delegate(DBLogInfo logInfo);
 $(LOCALE_EN_US Base interface for database)
 $(LOCALE_RU_RU Базовый интерфейс для базы данных)
 +/
-interface IDatabase ///Интерфейс БД
+interface IDatabase
 {
 	/++
 	$(LOCALE_EN_US

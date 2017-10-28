@@ -1,3 +1,8 @@
 module webtank.datctrl;
 
-public import webtank.datctrl.data_field, webtank.datctrl.record, webtank.datctrl.record_format, webtank.datctrl.enum_format, webtank.datctrl.record_set;
+public import
+    webtank.datctrl.iface.data_field,
+    webtank.datctrl.iface.record,
+    webtank.datctrl.record_format,
+    webtank.datctrl.enum_format,
+    webtank.datctrl.iface.record_set;

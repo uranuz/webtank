@@ -1,0 +1,12 @@
+{
+	"name": "webtank",
+	"authors": [
+		"uranuz"
+	],
+	"description": "Server-side web application development framework",
+	"copyright": "Copyright © 2017, uranuz",
+	"license": "boost",
+	"excludedSourceFiles": [
+		"src/webtank/crypto/example/*"
+	]
+}

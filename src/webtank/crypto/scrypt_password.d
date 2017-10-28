@@ -1,4 +1,4 @@
-module webtank.common.scrypt_password;
+module webtank.crypto.scrypt_password;
 
 /*
  * Copyright (C) 2013 Isak Andersson (BitPuffin@lavabit.com)
@@ -7,7 +7,7 @@ module webtank.common.scrypt_password;
  * See LICENSE.txt in project root for more info
  */
 
-import webtank.common.crypto_scrypt;
+import webtank.crypto.scrypt;
 import std.string : indexOf;
 import std.exception : enforce;
 import std.digest.digest : toHexString;

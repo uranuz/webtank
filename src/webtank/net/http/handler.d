@@ -115,8 +115,6 @@ mixin template EventBasedHTTPHandlerImpl()
 			else
 				throw error; // Ни один обработчик не смог обработать ошибку
 		}
-		
-		return HTTPHandlingResult.unhandled;
 	}
 	
 	///Переопределяемый пользователем метод для обработки запроса

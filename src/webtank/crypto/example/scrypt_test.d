@@ -1,10 +1,8 @@
-module webtank.common.crypto_scrypt_benchmark;
+module webtank.crypto.scrypt_test;
 
 import std.stdio, std.datetime, std.file, std.conv, std.base64;
 
-pragma(lib, "/usr/local/lib/libtarsnap.a");
-
-import webtank.common.crypto_scrypt;
+import webtank.crypto.scrypt;
 
 uint N = 1024;
 uint r = 8;

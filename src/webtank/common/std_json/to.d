@@ -23,34 +23,33 @@ JSONValue toStdJSON(T)(T dValue)
 	}
 	else
 	{
-		JSONValue jValue;
 		static if( isBoolean!T ) {
-			jValue = dValue;
+			return JSONValue(dValue);
 		}
 		else static if( isIntegral!T )
 		{
 			static if( isSigned!T ) {
-				jValue = dValue.to!long;
+				return JSONValue(dValue.to!long);
 			} else static if( isUnsigned!T ) {
-				jValue = dValue.to!ulong;
+				return JSONValue(dValue.to!ulong);
 			} else {
 				static assert(false, "This should never happen!!!"); //Это не должно произойти))
 			}
 		} else static if( isFloatingPoint!T ) {
-			jValue = dValue.to!real;
+			return JSONValue(dValue.to!real);
 		}
 		else static if( isSomeString!T )
 		{
 			if( dValue is null ) {
-				jValue = null;
+				return JSONValue(null);
 			} else {
-				jValue = dValue.to!string;
+				return JSONValue(dValue.to!string);
 			}
 		}
 		else static if( isArray!T )
 		{
 			if( dValue is null ) {
-				jValue = null;
+				return JSONValue(null);
 			}
 			else
 			{
@@ -61,7 +60,7 @@ JSONValue toStdJSON(T)(T dValue)
 					jArray[i] = toStdJSON(elem);
 				}
 
-				jValue = jArray;
+				return JSONValue(jArray);
 			}
 		}
 		else static if( isAssociativeArray!T )
@@ -69,7 +68,7 @@ JSONValue toStdJSON(T)(T dValue)
 			static if( isSomeString!(KeyType!T) )
 			{
 				if( dValue is null ) {
-					jValue = null;
+					return JSONValue(null);
 				}
 				else
 				{
@@ -86,7 +85,7 @@ JSONValue toStdJSON(T)(T dValue)
 							jArray[key.to!string] = toStdJSON(val);
 						}
 					}
-					jValue = jArray;
+					return JSONValue(jArray);
 				}
 			} else {
 				static assert(false, "Only string types are allowed for object keys!!!");
@@ -101,11 +100,11 @@ JSONValue toStdJSON(T)(T dValue)
 				jArray[i] = toStdJSON(elem);
 			}
 
-			jValue = jArray;
+			return JSONValue(jArray);
 		} else static if( isOptional!T ) {
-			jValue = dValue.isSet? toStdJSON(dValue.value): JSONValue(null);
+			return dValue.isSet? toStdJSON(dValue.value): JSONValue(null);
 		} else static if( is( T == OptionalDate ) ) {
-			jValue = JSONValue([
+			return JSONValue([
 				"day": toStdJSON(dValue.day),
 				"month": toStdJSON(dValue.month),
 				"year": toStdJSON(dValue.year)
@@ -113,7 +112,7 @@ JSONValue toStdJSON(T)(T dValue)
 		}
 		else static if( is(T == Date) || is(T == DateTime) || is(T == TimeOfDay) || is(T == SysTime) ) {
 			// Строковый формат для дат и времени более компактен и привычен, поэтому выводим в нём вместо объекта JSON
-			jValue = dValue.toISOExtString();
+			return JSONValue(dValue.toISOExtString());
 		} else static if(
 			is(T == struct)
 			&& __traits(hasMember, T, "toStdJSON") // Проверка, что это собственный метод структуры
@@ -141,7 +140,7 @@ JSONValue toStdJSON(T)(T dValue)
 					}
 				}
 			}
-			jValue = jArray;
+			return JSONValue(jArray);
 		}
 		else static if(
 			(is(T == class) || is(T == interface))
@@ -156,6 +155,5 @@ JSONValue toStdJSON(T)(T dValue)
 		} else {
 			static assert(false, "This value's type is not of one implemented JSON type!!!" );
 		}
-		return jValue;
 	}
 }

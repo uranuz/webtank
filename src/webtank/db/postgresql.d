@@ -1,7 +1,5 @@
 module webtank.db.postgresql;
 
-//pragma(lib, "pq");
-
 import std.string, std.exception, std.conv;
 
 import webtank.db.database;
@@ -88,6 +86,7 @@ class DBPostgreSQL : IDatabase
 {
 protected:
 	PGconn* _conn;
+	string _connStr;
 	DBLogerMethod _logerMethod;
 
 	void _logMsg(string msg)
@@ -111,22 +110,47 @@ protected:
 		}
 	}
 
+	// Проверка и установка соединения с БД
+	private void _checkConnection()
+	{
+		if( !this.isConnected ) {
+			_warningMsg(`No connection to database established. Attempt to (re)connect...`);
+			this.connect(_connStr);
+		}
+	}
+
+	private immutable ExecStatusType[] goodStatuses = [
+		ExecStatusType.PGRES_EMPTY_QUERY,
+		ExecStatusType.PGRES_COMMAND_OK,
+		ExecStatusType.PGRES_TUPLES_OK
+	];
+
 public:
 	//Конструктор объекта, принимает строку подключения как параметр
 	this(string connStr, DBLogerMethod logerMethod = null) //Конструктор объекта, принимает строку подключения
 	{
 		_logerMethod = logerMethod;
-		connect(connStr);
+		_connStr = connStr;
 	}
 
 	override {
 		//Ф-ция подключения к БД
 		bool connect(string connStr)
 		{
-			_conn = PQconnectdb(toStringz(connStr));
-			if (_conn is null) {
-				return false; //TODO: Сделать что-нибудь
+			if( connStr.length && _connStr != connStr )
+			{
+				// Попытка подключиться к другой БД
+				_connStr = connStr;
+				this.disconnect(); // Отключаемся от старой БД
 			}
+
+			_conn = PQconnectdb(toStringz(_connStr));
+			if( !this.isConnected ) {
+				static immutable errorMsg = `Cannot establish database connection!`;
+				_errorMsg(errorMsg);
+				throw new DBException(errorMsg);
+			}
+			_logMsg(`Database connection established`);
 			return true;
 		}
 
@@ -134,12 +158,6 @@ public:
 		bool isConnected() @property {
 			return PQstatus(_conn) == ConnStatusType.CONNECTION_OK;
 		}
-
-		private immutable ExecStatusType[] goodStatuses = [
-			ExecStatusType.PGRES_EMPTY_QUERY,
-			ExecStatusType.PGRES_COMMAND_OK,
-			ExecStatusType.PGRES_TUPLES_OK
-		];
 
 		//Запрос к БД, строка запроса в качестве параметра
 		//Возвращает объект унаследованный от интерфейса результата запроса
@@ -149,6 +167,7 @@ public:
 			import std.exception: assumeUnique;
 
 			_logMsg(cast(string) queryStr);
+			_checkConnection();
 
 			//Выполняем запрос
 			PGresult* res = PQexec(_conn, toStringz(queryStr));
@@ -177,6 +196,7 @@ public:
 		{
 			if( _conn !is null )
 			{
+				_warningMsg(`Disconnecting from database...`);
 				PQfinish(_conn);
 				_conn = null;
 			}
