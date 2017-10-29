@@ -153,18 +153,16 @@ immutable(size_t) messageBodyLimit = 4_194_304;
 //или кидается исключениями при ошибках
 auto readHTTPDataFromSocket(Socket sock)
 {
+	import std.conv: text;
 	assert( sock, "Socket is null" );
 
-// 	size_t bytesRead;
 	char[] startBuf;
 	startBuf.length = startBufLength;
 
 	//Читаем из сокета в буфер
-// 	bytesRead =
-	sock.receive(startBuf);
-	//TODO: Проверить сколько байт прочитано
+	size_t startBufBytesRead = sock.receive(startBuf);
 
-	auto headersParser = new HTTPHeadersParser(startBuf.idup);
+	auto headersParser = new HTTPHeadersParser(cast(string) startBuf[0..startBufBytesRead]);
 	auto headers = headersParser.getHeaders();
 
 	if( headers is null )
@@ -185,19 +183,37 @@ auto readHTTPDataFromSocket(Socket sock)
 		);
 	}
 
-	string messageBody;
-	char[] bodyBuf;
-	size_t extraBytesInHeaderBuf = startBufLength - headersParser.headerData.length;
+	string messageBody = headersParser.bodyData;
+	
+	size_t extraBytesInHeaderBuf = startBufBytesRead - headersParser.headerData.length;
 	//Нужно определить сколько ещё нужно прочитать
 	if( contentLength > extraBytesInHeaderBuf )
 	{
-		bodyBuf.length = contentLength - extraBytesInHeaderBuf + 20;
-		size_t received = sock.receive(bodyBuf);
-		messageBody = headersParser.bodyData ~ bodyBuf[0..received].idup;
-	}
-	else
-	{
-		messageBody = headersParser.bodyData;
+		size_t bytesToRead = contentLength - extraBytesInHeaderBuf;
+		char[] bodyBuf;
+		bodyBuf.length = bytesToRead + 20;
+		size_t allReceived = 0;
+		// Мы можем прочитать не всё за раз, поэтому делаем это в цикле
+		while( allReceived < bytesToRead )
+		{
+			char[] bodyBufSlice = bodyBuf[allReceived..$]; // Set position where to read into
+			size_t received = sock.receive(bodyBufSlice);
+			if( received == 0 ) break; // Remote side closed connection
+			if( received == Socket.ERROR ) {
+				throw new HTTPException(
+					"Error on socket",
+					503 // 400 Bad gateway
+				);
+			}
+			allReceived += received;
+		}
+		if( allReceived < bytesToRead ) {
+			throw new HTTPException(
+				`Number of bytes read by server ` ~ allReceived.text ~ ` doesn't match requested ` ~ bytesToRead.text,
+				503 // 400 Bad gateway
+			);
+		}
+		messageBody ~= bodyBuf[0..allReceived];
 	}
 
 	return tuple!("headers", "messageBody")(headers, messageBody);
