@@ -238,7 +238,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 
 /+
 	int opCmp(RHS)(auto ref inout(RHS) rhs)
-		const /+pure @safe nothrow+/
+		const // pure @safe nothrow
 		if( isOptional!RHS )
 	{	int r;
 		if( !isNull )
@@ -253,7 +253,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 	}
 
 	int opCmp(RHS)(auto ref inout(RHS) rhs)
-		const /+pure @safe nothrow+/
+		const // pure @safe nothrow
 		if( isOptional!RHS )
 	{	int r;
 		if ( !isNull && !rhs.isNull)
@@ -267,7 +267,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 	}
 
 	int opCmp( RHS : typeof(null) )( RHS rhs )
-		const /+pure @safe nothrow+/
+		const // pure @safe nothrow
 	{ return !isNull ? 1 : 0; }
 +/
 
@@ -306,8 +306,17 @@ This function is also called for the implicit conversion to $(D T).
 	}
 
 	auto ref inout(T) get()(auto ref inout(T) defaultValue) 
-		inout /+pure @safe nothrow+/
+		inout pure @safe nothrow
 	{	return isSet? _value: defaultValue;
+	}
+
+	auto ref T getOrSet()(auto ref T defaultValue) 
+		pure @safe nothrow
+	{	
+		if( !isSet ) {
+			this = defaultValue;
+		}
+		return _value;
 	}
 	
 	string toString()
