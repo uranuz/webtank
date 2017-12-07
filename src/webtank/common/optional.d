@@ -9,9 +9,15 @@ class OptionalException : Exception
 	}
 }
 
+import std.traits: isDynamicArray, isAssociativeArray;
+
 ///Returns true if T is nullable type
-template isNullableType(T)
-{	enum bool isNullableType = __traits( compiles, { bool aaa = T.init is null; } );
+template isNullableType(T) {
+	enum bool isNullableType = __traits( compiles, { bool aaa = T.init is null; } );
+}
+
+template isUnsafelyNullable(T) {
+	enum bool isUnsafelyNullable = isNullableType!T && !isDynamicArray!T && !isAssociativeArray!T;
 }
 
 ///Шаблон, возвращает true, если T является Nullable или NullableRef
@@ -87,6 +93,35 @@ unittest
 	assert( !isNullableType!(double) );
 }
 
+unittest
+{	
+	interface Vasya {}
+	
+	class Petya {}
+	
+	struct Vova {}
+	
+	alias void function(int) FuncType;
+	alias bool delegate(string, int) DelType;
+	
+	//Check that these types are nullable
+	assert( isUnsafelyNullable!Vasya );
+	assert( isUnsafelyNullable!Petya );
+	assert( isUnsafelyNullable!(int*) );
+	assert( isUnsafelyNullable!(FuncType) );
+	assert( isUnsafelyNullable!(DelType) );
+	assert( isUnsafelyNullable!(dchar[7]*) );
+	
+	//Check that these types are not nullable
+	assert( !isUnsafelyNullable!Vova );
+	assert( !isUnsafelyNullable!(double) );
+	assert( !isUnsafelyNullable!(int[8]) );
+	assert( !isUnsafelyNullable!(double) );
+	assert( !isUnsafelyNullable!(string) );
+	assert( !isUnsafelyNullable!(int[]) );
+	assert( !isUnsafelyNullable!(string[string]) );
+}
+
 unittest {
 	assert(!isOptional!int);
 	assert(!isOptional!string);
@@ -121,7 +156,7 @@ struct Optional(T, bool isUndefable = false)
 	import std.conv: to;
 
 	private T _value;
-	static if( !isNullableType!T || isUndefable ) {
+	static if( !isUnsafelyNullable!T || isUndefable ) {
 		private OptState _state = isUndefable? OptState.Undef: OptState.Null;
 	}
 
@@ -130,7 +165,7 @@ Constructor binding $(D this) with $(D value).
  */
 	this(RHS)(auto ref RHS rhs)
 		pure @safe nothrow
-		if( !is( RHS == typeof(null) ) )
+		if( !is(RHS == typeof(null)) && !is(RHS == void[]) )
 	{
 		_assign(rhs);
 	}
@@ -141,11 +176,21 @@ Constructor binding $(D this) with $(D value).
 		_assign(rhs);
 	}
 
+	static if( isDynamicArray!T || isAssociativeArray!T )
+	{
+		this(RHS)(RHS rhs)
+			pure @safe nothrow
+			if( is( RHS == void[]) )
+		{
+			_assign(T.init);
+		}
+	}
+
 	private void _assign(RHS: typeof(null))(RHS)
 		pure @safe nothrow
 	{
 		_value = typeof(_value).init;
-		static if( !isNullableType!T || isUndefable ) {
+		static if( !isUnsafelyNullable!T || isUndefable ) {
 			_state = OptState.Null;
 		}
 	}
@@ -155,23 +200,31 @@ Constructor binding $(D this) with $(D value).
 		if( !isOptional!RHS && !is(RHS == typeof(null)) )
 	{
 		_value = rhs;
-		static if( isNullableType!RHS && isUndefable ) {
+		static if( isUnsafelyNullable!RHS && isUndefable ) {
 			_state = rhs is null? OptState.Null: OptState.Set;
-		} else static if( !isNullableType!RHS ) {
+		} else static if( !isUnsafelyNullable!RHS ) {
 			_state = OptState.Set;
 		}
 	}
 
 	private void _assign(RHS)(auto ref RHS rhs)
-		pure @safe nothrow
 		if( isOptional!RHS )
 	{
 		alias rhsT = OptionalValueType!(RHS);
 
-		_value = rhs.isSet? rhs._value: typeof(_value).init;
-		static if( !isNullableType!T || isUndefable )
+		if( rhs.isSet ) {
+			_value = rhs._value;
+		} else {
+			static if( isNullableType!rhsT ) {
+				_value = null; // Explicitly set as null to solve problems with arrays
+			} else {
+				_value = typeof(_value).init;
+			}
+		}
+
+		static if( !isUnsafelyNullable!T || isUndefable )
 		{
-			static if( !isNullableType!rhsT || OptionalIsUndefable!RHS ) {
+			static if( !isUnsafelyNullable!rhsT || OptionalIsUndefable!RHS ) {
 				_state = rhs._state;
 			} else {
 				_state = rhs.isSet? OptState.Set: OptState.Null;
@@ -185,9 +238,9 @@ Returns $(D true) if and only if $(D this) is in the null state.
 	bool isNull() @property
 		inout pure @safe nothrow
 	{
-		static if( isNullableType!T && !isUndefable ) {
+		static if( isUnsafelyNullable!T && !isUndefable ) {
 			return _value is null;
-		} else static if( isNullableType!T ) {
+		} else static if( isUnsafelyNullable!T ) {
 			return _state == OptState.Null || (_value is null && _state != OptState.Undef);
 		} else {
 			return _state == OptState.Null;
@@ -205,9 +258,9 @@ Returns $(D true) if and only if $(D this) is in the null state.
 	bool isSet() @property
 		inout pure @safe nothrow
 	{
-		static if( isNullableType!T && !isUndefable ) {
+		static if( isUnsafelyNullable!T && !isUndefable ) {
 			return _value !is null;
-		} else static if( isNullableType!T ) {
+		} else static if( isUnsafelyNullable!T ) {
 			return _state == OptState.Set && _value !is null;
 		} else {
 			return _state == OptState.Set;
@@ -229,7 +282,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 			}
 
 			return isSet && rhs.isSet && _value == rhs._value;
-		} else static if( isNullableType!RHS ) {
+		} else static if( isUnsafelyNullable!RHS ) {
 			return _value == rhs;
 		} else {
 			return isSet && _value == rhs;
@@ -276,8 +329,25 @@ Assigns $(D value) to the internally-held state.
  */
 	void opAssign(RHS)(auto ref RHS rhs) 
 		pure @safe nothrow
+		if( !is(RHS == typeof(null)) && !is(RHS == void[]) )
 	{
 		_assign(rhs);
+	}
+
+	void opAssign(RHS: typeof(null))(RHS rhs) 
+		pure @safe nothrow
+	{
+		_assign(null);
+	}
+
+	static if( isDynamicArray!T || isAssociativeArray!T )
+	{
+		void opAssign(RHS)(RHS rhs) 
+			pure @safe nothrow
+			if( is(RHS == void[]) )
+		{
+			_assign(T.init);
+		}
 	}
 
 	// Postplit is added in order to get rid of error:
@@ -345,6 +415,92 @@ unittest
 	assert(b.isSet);
 	assert(!b.isNull);
 	assert(b + 1 == 6);
+}
+
+unittest
+{
+	// Some tests for arrays
+	Optional!(int[]) a;
+
+	assert(a.isNull);
+	assert(a == null);
+	assert(!a.isSet);
+
+	Optional!(int[]) b = [];
+
+	assert(!b.isNull);
+	assert(b != null);
+	assert(b is null); // Because array is implicitly extracted from optional
+
+	Optional!(int[]) c;
+	c = [];
+	assert(!c.isNull);
+	assert(c.isSet);
+	assert(c != null);
+	assert(c is null);
+
+	Optional!(int[]) d = null;
+	assert(d is null);
+	assert(d.isNull);
+	assert(!d.isSet);
+
+	Optional!(int[]) f;
+	f = null;
+	assert(f.isNull);
+	assert(!f.isSet);
+	assert(f == null);
+	assert(f is null);
+
+	Optional!(int[]) e;
+	e = f;
+	assert(e.isNull);
+	assert(!e.isSet);
+	assert(e == null);
+	assert(e is null);
+}
+
+unittest
+{
+	// Some tests for arrays with Undefable
+	Undefable!(int[]) a;
+
+	assert(a.isUndef);
+	assert(!a.isNull);
+	assert(!a.isSet);
+	assert(a != null);
+	assert(a is null); // Because array is implicitly extracted from optional
+
+	Undefable!(int[]) b = [];
+
+	assert(!b.isUndef);
+	assert(!b.isNull);
+	assert(b != null);
+	assert(b is null); // Because array is implicitly extracted from optional
+	assert(b.isSet);
+
+	Undefable!(int[]) c = null;
+
+	assert(!c.isUndef);
+	assert(c.isNull);
+	assert(!c.isSet);
+	assert(c == null);
+	assert(c is null); // Because array is implicitly extracted from optional
+
+	Undefable!(int[]) d;
+	d = [];
+	assert(!d.isUndef);
+	assert(!d.isNull);
+	assert(d.isSet);
+	assert(d != null);
+	assert(d is null);
+
+	Undefable!(int[]) f;
+	f = null;
+	assert(!f.isUndef);
+	assert(f.isNull);
+	assert(!f.isSet);
+	assert(f == null);
+	assert(f is null);
 }
 
 unittest

@@ -10,7 +10,7 @@ T conv(T, V)(V value)
 	import std.algorithm: canFind;
 	import std.traits: isSomeString, OriginalType, isDynamicArray, isArray;
 	import std.algorithm: startsWith;
-	import webtank.common.optional: Optional, isNullableType, isOptional;
+	import webtank.common.optional: Optional, isUnsafelyNullable, isOptional;
 	static if( is(T == enum) )
 	{
 		static if( isSomeString!( OriginalType!(T) ) && isSomeString!(V) )
@@ -43,7 +43,7 @@ T conv(T, V)(V value)
 				if( value.length > 0 )
 					result = conv!(OptionalValueType!T)(value);
 			}
-			else static if( isNullableType!(V) )
+			else static if( isUnsafelyNullable!(V) )
 			{
 				if( value !is null )
 					result = conv!(OptionalValueType!T)(value);

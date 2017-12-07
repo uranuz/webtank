@@ -196,6 +196,7 @@ unittest
 		`datesAAParam__end`: [`2019-11-25`],
 		`intArrayParam1`: [`5,4,3,2`],
 		`intArrayParam2`: [`3`,`4`,`5`],
+		`nullIntArrayParam`: [`null`],
 		`optDateParam1`: [`2019-10-23`],
 		`optDateParam2__day`: [`23`],
 		`optDateParam2__month`: [`10`],
@@ -234,6 +235,8 @@ unittest
 		Optional!string stringParam;
 		Optional!Date partDateParam;
 		Optional!Date wholeDateParam;
+		Optional!(int[]) emptyIntArrayParam;
+		Optional!(int[]) nullIntArrayParam;
 		Optional!InternalStruct1 structParam;
 		OptionalDate optDateParam1;
 		OptionalDate optDateParam2;
@@ -266,6 +269,10 @@ unittest
 	assert(structData2.stringParam == `testParam`);
 	assert(structData2.partDateParam.toISOExtString() == `2017-08-15`);
 	assert(structData2.wholeDateParam.toISOExtString() == `2017-08-16`);
+	assert(structData2.emptyIntArrayParam.isNull);
+	assert(!structData2.emptyIntArrayParam.isSet);
+	assert(structData2.nullIntArrayParam.isNull);
+	assert(!structData2.nullIntArrayParam.isSet);
 	assert(structData2.structParam.intSub == -30);
 	assert(structData2.structParam.floatSub == -30.3);
 	assert(structData2.structParam.stringSub == `trololo`);

@@ -154,6 +154,9 @@ template callJSON_RPC_Method(alias Method)
 		JSONValue result = null; // По-умолчанию в качестве результата null
 		size_t expectedParamsCount = 0; // Ожидаемое число параметров в jParams
 
+		import std.stdio;
+		writeln(`jParams: `, jParams);
+
 		//Считаем количество параметров, которые должны были быть переданы
 		foreach( type; ParamTypes )
 		{
