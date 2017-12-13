@@ -304,12 +304,18 @@ public:
 
 	private auto _getLogFile()( bool force = false )
 	{
+		import std.path: dirName;
+		import std.file: mkdirRecurse, exists;
 		Date currDate = cast(Date) Clock.currTime();
 		if( currDate.day != _fileDate.day || force )
 		{
 			_file.close();
 			_fileDate = currDate;
 			string fileName = stripExtension(_filePrefix) ~ "_" ~ _fileDate.toISOExtString() ~ extension(_filePrefix);
+			string dir = dirName(fileName);
+			if( !exists(dir) ) {
+				mkdirRecurse(dir);
+			}
 			_file = File( fileName, "a" );
 		}
 		assert( _file.isOpen(), "Error while writing to log file!!!" );
