@@ -44,6 +44,7 @@ public:
 mixin template RecordSetImpl(bool isWriteableFlag)
 {
 protected:
+	import std.range.interfaces: InputRange;
 	static if( isWriteableFlag )
 	{
 		import webtank.datctrl.cursor_record: WriteableCursorRecord;

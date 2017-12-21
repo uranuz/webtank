@@ -339,16 +339,18 @@ struct ErrorEvent( ErrorHandler, Opts... )
 	alias ParameterTypeTuple!(ErrorHandler) ParamTypes;
 
 	struct ErrorHandlerPair
-	{	ErrorHandler method;
+	{
+		ErrorHandler method;
 		TypeInfo_Class typeInfo;
 	}
 
 	static if (isSynchronized)
 		private Object lock = new Object();
 	private R MaybeSynchronous(R)(R delegate() d)
-	{	static if (isSynchronized)
-		{	synchronized (lock)
-			{
+	{
+		static if (isSynchronized)
+		{
+			synchronized (lock) {
 				return d();
 			}
 		}
@@ -368,30 +370,38 @@ struct ErrorEvent( ErrorHandler, Opts... )
 	)
 	+/
 	bool fire(ParamTypes params)
-	{	return MaybeSynchronous({
+	{
+		return MaybeSynchronous({
 			_sortHandlers();
 
 			static if( stopHandlingOnValue )
 				bool stopFlag = false;
 
 			foreach( pair; prioriteErrorPairs )
-			{	if( typeid(params[0]).isInheritsOf(pair.typeInfo) )
-				{	if( pair.method(params) )
-					{	static if( stopHandlingOnValue )
+			{
+				if( typeid(params[0]).isInheritsOf(pair.typeInfo) )
+				{	
+					if( pair.method(params) )
+					{
+						static if( stopHandlingOnValue )
 							stopFlag = true;
 					}
 				}
 			}
 
 			static if( stopHandlingOnValue )
-			{	if( stopFlag )
+			{
+				if( stopFlag )
 					return true;
 			}
 
 			foreach( pair; errorPairs )
-			{	if( typeid(params[0]).isInheritsOf(pair.typeInfo) )
-				{	static if( stopHandlingOnValue )
-					{	if( pair.method(params) == stopHandlingValue  )
+			{
+				if( typeid(params[0]).isInheritsOf(pair.typeInfo) )
+				{
+					static if( stopHandlingOnValue )
+					{
+						if( pair.method(params) == stopHandlingValue  )
 							return true;
 					}
 					else
@@ -412,7 +422,8 @@ struct ErrorEvent( ErrorHandler, Opts... )
 	)
 	+/
 	private void _sortHandlers()
-	{	MaybeSynchronous({
+	{
+		MaybeSynchronous({
 			sort!( (a, b) { return countDerivations(a.typeInfo) > countDerivations(b.typeInfo); } )( prioriteErrorPairs );
 			sort!( (a, b) { return countDerivations(a.typeInfo) > countDerivations(b.typeInfo); } )( errorPairs );
 		});
@@ -429,15 +440,18 @@ struct ErrorEvent( ErrorHandler, Opts... )
 	)
 	+/
 	void join(SomeErrorHandler)(SomeErrorHandler handler, bool isPriorite = false)
-		if( isCallable!(SomeErrorHandler) && is( ParameterTypeTuple!(SomeErrorHandler)[0] : ParamTypes[0] ) )
-	{	alias ParameterTypeTuple!(SomeErrorHandler)[0] SomeError;
+		if( isCallable!(SomeErrorHandler) && is( ParameterTypeTuple!(SomeErrorHandler)[0]: ParamTypes[0] ) )
+	{
+		alias SomeError = ParameterTypeTuple!(SomeErrorHandler)[0];
 		this.join(
 			typeid(SomeError),
 			(ParamTypes params)
-			{	static if( !is ( ReturnType!(ErrorHandler) == void )  )
+			{
+				static if( !is ( ReturnType!(ErrorHandler) == void ) ) {
 					return handler( cast(SomeError) params[0], params[1..$] );
-				else
+				} else {
 					handler( cast(SomeError) params[0], params[1..$] );
+				}
 			},
 			isPriorite
 		);
@@ -447,12 +461,12 @@ struct ErrorEvent( ErrorHandler, Opts... )
 		ditto
 	+/
 	void join()(TypeInfo_Class errorTypeinfo, ErrorHandler handler, bool isPriorite = false)
-	{	MaybeSynchronous({
-			if( isPriorite )
-			{	prioriteErrorPairs ~= ErrorHandlerPair( handler, errorTypeinfo );
-			}
-			else
-			{	errorPairs ~= ErrorHandlerPair( handler, errorTypeinfo );
+	{
+		MaybeSynchronous({
+			if( isPriorite ) {
+				prioriteErrorPairs ~= ErrorHandlerPair( handler, errorTypeinfo );
+			} else {
+				errorPairs ~= ErrorHandlerPair( handler, errorTypeinfo );
 			}
 		});
 	}
