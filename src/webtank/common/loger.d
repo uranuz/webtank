@@ -75,15 +75,7 @@ enum LogEventType
 	)
 	+/
 	trace
-};
-
-// //Степень подробности описания события
-// enum Verbosity
-// {	none,  ///Не записываем в журнал
-// 	low,   ///Сжато
-// 	norm,  ///Стандартно
-// 	high   ///Подробно
-// };
+}
 
 /++
 $(LOCALE_EN_US
@@ -104,7 +96,7 @@ enum LogLevel
 	dbg,
 	trace,
 	full
-};
+}
 
 /++
 $(LOCALE_EN_US
@@ -117,14 +109,16 @@ $(LOCALE_RU_RU
 )
 +/
 struct LogEvent
-{	import std.datetime: SysTime;
+{
+	import std.datetime: SysTime;
+	import core.thread: ThreadID;
 	LogEventType type;   ///Тип записи в журнал
 	string mod;       ///Имя модуля
 	string file;       ///Имя файла
 	size_t line;      ///Номер строки
 	string text;      ///Текст записи
 	string title;
-// 	Tid threadId;
+	ThreadID threadId;
  	string funcName;      ///Имя функции или метода
  	string prettyFuncName;
 	SysTime timestamp;     ///Время записи
@@ -165,7 +159,7 @@ public:
 	)
 
 	$(LOCALE_RU_RU
-		общая функция для вывода сообщений в журнал
+		Общая функция для вывода сообщений в журнал
 	)
 	+/
 	void write(	LogEventType eventType, string text, string title = null,
@@ -174,6 +168,7 @@ public:
 		string mod = __MODULE__)
 	{
 		import std.datetime;
+		import core.thread: Thread, ThreadID;
 		LogEvent event;
 		event.type = eventType;
 		event.text = text;
@@ -184,7 +179,7 @@ public:
 		event.funcName = funcName;
 		event.prettyFuncName = prettyFuncName;
 		event.timestamp = std.datetime.Clock.currTime();
-//  		event.threadId = thisTid;
+		event.threadId = Thread.getThis().id;
 
 		writeEvent( event );
 	}
@@ -358,16 +353,25 @@ $(LOCALE_RU_RU
 )
 +/
 class ThreadedLoger: Loger
-{	import std.concurrency;
+{
+	import std.concurrency;
 public:
-
-
-	this(shared(Loger) baseLoger)
-	{	_logerTid = spawn(&_run, thisTid, baseLoger);
+	this(shared(Loger) baseLoger) {
+		_baseLoger = baseLoger;
 	}
 
 	override void writeEvent(LogEvent event)
-	{	send(_logerTid, event);
+	{
+		if( _logerTid == Tid.init ) {
+			_initLogingThread();
+		}
+		send(_logerTid, event);
+	}
+
+	void _initLogingThread()() {
+		synchronized {
+			_logerTid = spawn(&_run, thisTid, _baseLoger);
+		}
 	}
 
 	/++
@@ -381,11 +385,12 @@ public:
 		нить исполнения. Логер переходит в нерабочее состояние после этого
 	)
 	+/
-	void stop()
-	{	send(_logerTid, LogStopMsg());
+	void stop() {
+		send(_logerTid, LogStopMsg());
 	}
 
 protected:
+	shared(Loger) _baseLoger;
 	Tid _logerTid;
 
 	struct LogStopMsg {}
@@ -395,8 +400,10 @@ protected:
 		bool cont = true;
 		auto loger = cast(Loger) baseLoger;
 		while(cont)
-		{	receive(
+		{
+			receive(
 				(LogEvent ev) {
+					assert(loger, `Base loger object reference is null!!!`);
 					loger.writeEvent(ev);
 				},
 				(LogStopMsg msg) {
@@ -410,44 +417,3 @@ protected:
 		}
 	}
 }
-
-//TODO: Реализовать продвинутую фильтрацию логов
-// class LogFilter: Loger
-// {
-// 	override void writeEvent(LogEvent event)
-// 	{
-//
-// 	}
-//
-// }
-
-
-// private {
-// 	__gshared shared(Loger)[] _logers;
-// }
-//
-// __gshared Loger log;
-//
-// import core.thread, std.datetime;
-//
-// void func()
-// {	for(size_t i = 0; i < 10; i++)
-// 	{	Thread.sleep( dur!("seconds")( 1 ) );
-// 		log.write( LogEventType.warn, "Сообщение" );
-// 	}
-//
-// }
-//
-//
-//
-// void main()
-// {
-// 	log = new ThreadedLoger( new FileLoger("test.log", LogLevel.warn) );
-// 	pragma(msg, typeof(log));
-//
-// 	auto th = new Thread(&func);
-// 	th.start();
-//
-// 	log.crit( "Произошла страшно непонятная ошибка!!!", "Абсолютно неизвестная ошибка" );
-//
-// }
