@@ -7,6 +7,7 @@ import std.datetime: Date, DateTime, SysTime, TimeOfDay;
 import std.range: ElementType, chain;
 import std.algorithm: filter, startsWith, skipOver, canFind, map, uniq;
 import std.array: array;
+import std.exception: ifThrown;
 
 import webtank.common.conv: conv;
 import webtank.common.optional;
@@ -62,6 +63,8 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 	FormData formData, ref ResultBaseType result, string prefix = null)
 {
 	import std.algorithm: splitter;
+	import std.json;
+	import webtank.common.std_json.from;
 
 	static if( isOptional!ResultBaseType ) {
 		alias ResultType = OptionalValueType!ResultBaseType;
@@ -78,14 +81,20 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 			}
 			else static if( isArray!ResultType )
 			{
-				alias Elem = ElementType!ResultType;
-				static if( isPlainType!Elem ) {
-					if( formData.array(prefix).length == 1 ) {
-						result = splitter(*formFieldPtr, arrayElemDelim).map!( (it) => convertPlainType!Elem(it) )().array;
+				ResultType arrayResult;
+				foreach( ref item; formData.array(prefix) )
+				{
+					JSONValue jData = parseJSON(item).ifThrown!JSONException(JSONValue());
+					if( jData.type == JSON_TYPE.ARRAY ) {
+						arrayResult ~= fromStdJSON!ResultType(jData);
 					} else {
-						result = formData.array(prefix).conv!(Elem[]);
+						alias Elem = ElementType!ResultType;
+						static if( isPlainType!Elem ) {
+							arrayResult ~= splitter(item, arrayElemDelim).map!( (it) => convertPlainType!Elem(it) )().array;
+						}
 					}
 				}
+				result = arrayResult;
 			}
 		}
 		else
@@ -202,7 +211,11 @@ unittest
 		`optDateParam2__month`: [`10`],
 		`optDateParam2__year`: [`2019`],
 		`optDateParam3`: [`null-10-null`],
-		`optDateParam4`: [`null`]
+		`optDateParam4`: [`null`],
+		`jsonIntArray`: [`[1, 2, 3]`],
+		`jsonStringArray`: [`["may", "jun", "jul"]`],
+		`json2DimStringArray`: [`[["key1", "val1"], ["key2", "val2"], ["key3", "val3"] ]`],
+		`json2DimIntArray`: [`[ [123, 456], [789, 1011], [543, 321] ]`]
 	];
 	FormData formData1 = new FormData(rawData1);
 	static struct InternalStruct1
@@ -225,6 +238,10 @@ unittest
 		Date[string] datesAAParam;
 		int[] intArrayParam1;
 		int[] intArrayParam2;
+		int[] jsonIntArray;
+		string[] jsonStringArray;
+		int[][] json2DimIntArray;
+		string[][] json2DimStringArray;
 	}
 
 	static struct StructData2
@@ -242,6 +259,10 @@ unittest
 		OptionalDate optDateParam2;
 		OptionalDate optDateParam3;
 		OptionalDate optDateParam4;
+		Optional!(int[]) jsonIntArray;
+		Optional!(string[]) jsonStringArray;
+		Optional!(int[][]) json2DimIntArray;
+		Optional!(string[][]) json2DimStringArray;
 	}
 
 	StructData1 strucData1;
@@ -260,6 +281,10 @@ unittest
 	assert(strucData1.datesAAParam[`end`].toISOExtString() == `2019-11-25`);
 	assert(equal(strucData1.intArrayParam1, [5,4,3,2]));
 	assert(equal(strucData1.intArrayParam2, [3,4,5]));
+	assert(equal(strucData1.jsonIntArray, [1, 2, 3]));
+	assert(equal(strucData1.jsonStringArray, ["may", "jun", "jul"]));
+	assert(equal(strucData1.json2DimIntArray, [[123, 456], [789, 1011], [543, 321]]));
+	assert(equal(strucData1.json2DimStringArray, [["key1", "val1"], ["key2", "val2"], ["key3", "val3"]]));
 
 	StructData2 structData2;
 	formDataToStruct(formData1, structData2);
@@ -282,4 +307,8 @@ unittest
 	assert(structData2.optDateParam3.month == 10);
 	assert(structData2.optDateParam3.day.isNull);
 	assert(structData2.optDateParam4.isNull);
+	assert(equal(structData2.jsonIntArray.value, [1, 2, 3]));
+	assert(equal(structData2.jsonStringArray.value, ["may", "jun", "jul"]));
+	assert(equal(structData2.json2DimIntArray.value, [[123, 456], [789, 1011], [543, 321]]));
+	assert(equal(structData2.json2DimStringArray.value, [["key1", "val1"], ["key2", "val2"], ["key3", "val3"]]));
 }
