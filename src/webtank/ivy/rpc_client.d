@@ -4,7 +4,7 @@ import webtank.ivy.datctrl;
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
 
 import webtank.net.std_json_rpc_client: remoteCall;
-import webtank.ivy.rpc_client: remoteCall;
+import webtank.ivy.rpc_client: remoteCall; // Maybe this line triggers compiler to fail
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
 
