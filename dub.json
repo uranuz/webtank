@@ -8,5 +8,16 @@
 	"license": "boost",
 	"excludedSourceFiles": [
 		"src/webtank/crypto/example/*"
-	]
+	],
+	"configurations": [{
+		"name": "without_ivy",
+		"excludedSourceFiles": [
+			"src/webtank/ivy/*"
+		]
+	}, {
+		"name": "with_ivy",
+		"dependencies": {
+			"ivy": ">=0.0.0"
+		}
+	}]
 }
