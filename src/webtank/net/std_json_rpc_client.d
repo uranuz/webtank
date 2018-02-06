@@ -71,7 +71,7 @@ private void _checkJSON_RPCErrors(ref JSONValue response)
 
 /// Перегрузка метода, которая возвращает результат в формате std.json
 JSONValue remoteCall(Result)( string requestURI, string rpcMethod, JSONValue params = JSONValue.init )
-	if( is(Result: JSONValue) )
+	if( is(Result == JSONValue) )
 {
 	auto response = remoteCall!HTTPInput(requestURI, rpcMethod, params);
 
@@ -83,7 +83,7 @@ JSONValue remoteCall(Result)( string requestURI, string rpcMethod, JSONValue par
 
 /// Перегрузка метода, c возможностью передать HTTP заголовки запроса
 JSONValue remoteCall(Result)( string requestURI, string rpcMethod, string[string] headers, JSONValue params = JSONValue.init )
-	if( is(Result: JSONValue) )
+	if( is(Result == JSONValue) )
 {
 	auto response = remoteCall!HTTPInput(requestURI, rpcMethod, headers, params);
 
@@ -117,7 +117,7 @@ import webtank.net.http.context;
 
 /// Перегрузка метода с возможностью передачи контекста
 JSONValue remoteCall(Result)( string requestURI, string rpcMethod, HTTPContext context, JSONValue params = JSONValue.init )
-	if( is(Result: JSONValue) )
+	if( is(Result == JSONValue) )
 {
 	assert( context !is null, `HTTP context is null` );
 	return remoteCall!JSONValue(requestURI, rpcMethod, _getAllowedRequestHeaders(context), params);

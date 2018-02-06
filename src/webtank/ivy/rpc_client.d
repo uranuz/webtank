@@ -3,8 +3,7 @@ module webtank.ivy.rpc_client;
 import webtank.ivy.datctrl;
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
 
-import webtank.net.std_json_rpc_client: remoteCall;
-import webtank.ivy.rpc_client: remoteCall;
+import webtank.net.std_json_rpc_client: remoteCallA = remoteCall;
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
 
@@ -96,7 +95,7 @@ import std.json: JSONValue;
 TDataNode remoteCall(Result)( string requestURI, string rpcMethod, JSONValue jsonParams = JSONValue.init )
 	if( is(Result == TDataNode) )
 {
-	auto response = remoteCall!HTTPInput(requestURI, rpcMethod, jsonParams);
+	auto response = remoteCallA!HTTPInput(requestURI, rpcMethod, jsonParams);
 
 	TDataNode ivyJSON = parseIvyJSON(response.messageBody);
 	_checkIvyJSON_RPCErrors(ivyJSON);
@@ -108,7 +107,7 @@ TDataNode remoteCall(Result)( string requestURI, string rpcMethod, JSONValue jso
 TDataNode remoteCall(Result)( string requestURI, string rpcMethod, string[string] headers, JSONValue jsonParams = JSONValue.init )
 	if( is(Result == TDataNode) )
 {
-	auto response = remoteCall!HTTPInput(requestURI, rpcMethod, headers, jsonParams);
+	auto response = remoteCallA!HTTPInput(requestURI, rpcMethod, headers, jsonParams);
 
 	TDataNode ivyJSON = parseIvyJSON(response.messageBody);
 	_checkIvyJSON_RPCErrors(ivyJSON);
