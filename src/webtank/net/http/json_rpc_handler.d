@@ -43,7 +43,7 @@ class JSON_RPC_Router: IHTTPHandler
 				return HTTPHandlingResult.mismatched;
 
 			_processRequestInternal(context, jResponse);
-		} catch(Exception ex) {
+		} catch(Throwable ex) {
 			jResponse["error"] = [
 				"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
 				"message": JSONValue(ex.msg),
@@ -164,7 +164,7 @@ template callJSON_RPC_Method(alias Method)
 
 		if( expectedParamsCount > 0 && (jParams.type != JSON_TYPE.OBJECT || jParams.object.length != expectedParamsCount) ) {
 			throw new JSON_RPC_Exception(
-				`Expected JSON object with ` ~ expectedParamsCount.to!string	~ ` params in JSON-RPC call, but got: `
+				`Expected JSON object with ` ~ expectedParamsCount.to!string ~ ` params in JSON-RPC call, but got: `
 				~ (jParams.type == JSON_TYPE.OBJECT ? jParams.object.length.to!string : jParams.type.to!string)
 			);
 		}

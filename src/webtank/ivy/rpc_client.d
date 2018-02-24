@@ -3,7 +3,7 @@ module webtank.ivy.rpc_client;
 import webtank.ivy.datctrl;
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
 
-import webtank.net.std_json_rpc_client: remoteCallA = remoteCall;
+import webtank.net.std_json_rpc_client: remoteCallA = remoteCall, _getRequestURI;
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
 
@@ -92,10 +92,10 @@ import std.json: JSONValue;
 
 /// Выполняет вызов метода rpcMethod по протоколу JSON-RPC с узла requestURI и параметрами jsonParams в формате JSON
 /// Возвращает результат выполнения метода, разобранный в формате данных шаблонизатора Ivy
-TDataNode remoteCall(Result)( string requestURI, string rpcMethod, JSONValue jsonParams = JSONValue.init )
+TDataNode remoteCall(Result, Address)(Address address, string rpcMethod, JSONValue jsonParams = JSONValue.init)
 	if( is(Result == TDataNode) )
 {
-	auto response = remoteCallA!HTTPInput(requestURI, rpcMethod, jsonParams);
+	auto response = remoteCallA!HTTPInput(_getRequestURI(address), rpcMethod, jsonParams);
 
 	TDataNode ivyJSON = parseIvyJSON(response.messageBody);
 	_checkIvyJSON_RPCErrors(ivyJSON);
@@ -104,10 +104,10 @@ TDataNode remoteCall(Result)( string requestURI, string rpcMethod, JSONValue jso
 }
 
 // Перегрузка remoteCall, которая позволяет передать словарь с HTTP заголовками
-TDataNode remoteCall(Result)( string requestURI, string rpcMethod, string[string] headers, JSONValue jsonParams = JSONValue.init )
+TDataNode remoteCall(Result, Address)(Address address, string rpcMethod, string[string] headers, JSONValue jsonParams = JSONValue.init)
 	if( is(Result == TDataNode) )
 {
-	auto response = remoteCallA!HTTPInput(requestURI, rpcMethod, headers, jsonParams);
+	auto response = remoteCallA!HTTPInput(_getRequestURI(address), rpcMethod, headers, jsonParams);
 
 	TDataNode ivyJSON = parseIvyJSON(response.messageBody);
 	_checkIvyJSON_RPCErrors(ivyJSON);
@@ -118,10 +118,10 @@ TDataNode remoteCall(Result)( string requestURI, string rpcMethod, string[string
 import webtank.net.std_json_rpc_client: _getAllowedRequestHeaders;
 
 // Перегрузка remoteCall для удобства, которая позволяет передать HTTP контекст для извлечения заголовков
-TDataNode remoteCall(Result)( string requestURI, string rpcMethod, HTTPContext context, JSONValue jsonParams = JSONValue.init )
+TDataNode remoteCall(Result, Address)(Address address, string rpcMethod, HTTPContext context, JSONValue jsonParams = JSONValue.init)
 	if( is(Result == TDataNode) )
 {
 	assert( context !is null, `HTTP context is null` );
-	return remoteCall!TDataNode(requestURI, rpcMethod, _getAllowedRequestHeaders(context), jsonParams);
+	return remoteCall!TDataNode(_getRequestURI(address), rpcMethod, _getAllowedRequestHeaders(context), jsonParams);
 }
 

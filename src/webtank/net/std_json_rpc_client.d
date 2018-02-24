@@ -1,14 +1,25 @@
 module webtank.net.std_json_rpc_client;
 
 import webtank.net.http.input, webtank.net.http.output, webtank.net.uri, webtank.net.http.client;
+import webtank.net.service.endpoint: EndPoint;
 
 import std.json;
 
+string _getRequestURI(Address)(Address addr)
+	if( is( Address == string ) || is( Address == EndPoint ) )
+{
+	static if( is( Address == string ) ) {
+		return addr;
+	} else {
+		return addr.URI;
+	}
+}
+
 /// Вспомогательный метод для запросов по протоколу JSON-RPC
-/// Нужно задать адрес узла requestURI, название RPC-метода (не HTTP-метода)
+/// Нужно задать адрес узла addr, название RPC-метода (не HTTP-метода)
 /// params - JSON-объект с параметрами, которые будут отправлены HTTP-методом "POST"
 /// Вызов блокирующий, т.е. ждёт возврата результата удалённым узлом
-HTTPInput remoteCall(Result)( string requestURI, string rpcMethod, JSONValue params = JSONValue.init )
+HTTPInput remoteCall(Result, Address)( Address addr, string rpcMethod, JSONValue params = JSONValue.init )
 	if( is(Result: HTTPInput) )
 {
 	JSONValue payload;
@@ -18,11 +29,11 @@ HTTPInput remoteCall(Result)( string requestURI, string rpcMethod, JSONValue par
 
 	// Будем выводить NaN, -Infinity и Infinity в виде строк, чтобы не падать на стороне отправителя данных
 	// Если приёмная сторона "захочет", то может распарсить, либо "упасть"
-	return sendBlocking( requestURI, "POST", payload.toJSON(false, JSONOptions.specialFloatLiterals) );
+	return sendBlocking( _getRequestURI(addr), "POST", payload.toJSON(false, JSONOptions.specialFloatLiterals) );
 }
 
 /// Перегрузка метода с возможностью передать словарь с HTTP-заголовками
-HTTPInput remoteCall(Result)( string requestURI, string rpcMethod, string[string] headers, JSONValue params = JSONValue.init )
+HTTPInput remoteCall(Result, Address)( Address addr, string rpcMethod, string[string] headers, JSONValue params = JSONValue.init )
 	if( is(Result: HTTPInput) )
 {
 	JSONValue payload;
@@ -30,7 +41,7 @@ HTTPInput remoteCall(Result)( string requestURI, string rpcMethod, string[string
 	payload["method"] = rpcMethod;
 	payload["params"] = params;
 
-	return sendBlocking( requestURI, "POST", headers, payload.toJSON(false, JSONOptions.specialFloatLiterals) );
+	return sendBlocking( _getRequestURI(addr), "POST", headers, payload.toJSON(false, JSONOptions.specialFloatLiterals) );
 }
 
 /// Проверяем, если произошла ошибка во время вызова и бросаем исключение, если так
@@ -70,10 +81,10 @@ private void _checkJSON_RPCErrors(ref JSONValue response)
 }
 
 /// Перегрузка метода, которая возвращает результат в формате std.json
-JSONValue remoteCall(Result)( string requestURI, string rpcMethod, JSONValue params = JSONValue.init )
+JSONValue remoteCall(Result, Address)( Address addr, string rpcMethod, JSONValue params = JSONValue.init )
 	if( is(Result == JSONValue) )
 {
-	auto response = remoteCall!HTTPInput(requestURI, rpcMethod, params);
+	auto response = remoteCall!HTTPInput(_getRequestURI(addr), rpcMethod, params);
 
 	JSONValue bodyJSON = response.messageBody.parseJSON();
 	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
@@ -82,10 +93,10 @@ JSONValue remoteCall(Result)( string requestURI, string rpcMethod, JSONValue par
 }
 
 /// Перегрузка метода, c возможностью передать HTTP заголовки запроса
-JSONValue remoteCall(Result)( string requestURI, string rpcMethod, string[string] headers, JSONValue params = JSONValue.init )
+JSONValue remoteCall(Result, Address)( Address addr, string rpcMethod, string[string] headers, JSONValue params = JSONValue.init )
 	if( is(Result == JSONValue) )
 {
-	auto response = remoteCall!HTTPInput(requestURI, rpcMethod, headers, params);
+	auto response = remoteCall!HTTPInput(_getRequestURI(addr), rpcMethod, headers, params);
 
 	JSONValue bodyJSON = response.messageBody.parseJSON();
 	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
@@ -116,9 +127,9 @@ string[string] _getAllowedRequestHeaders(HTTPContext ctx)
 import webtank.net.http.context;
 
 /// Перегрузка метода с возможностью передачи контекста
-JSONValue remoteCall(Result)( string requestURI, string rpcMethod, HTTPContext context, JSONValue params = JSONValue.init )
+JSONValue remoteCall(Result, Address)( Address addr, string rpcMethod, HTTPContext context, JSONValue params = JSONValue.init )
 	if( is(Result == JSONValue) )
 {
 	assert( context !is null, `HTTP context is null` );
-	return remoteCall!JSONValue(requestURI, rpcMethod, _getAllowedRequestHeaders(context), params);
+	return remoteCall!JSONValue(_getRequestURI(addr), rpcMethod, _getAllowedRequestHeaders(context), params);
 }

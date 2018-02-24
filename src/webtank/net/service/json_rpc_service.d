@@ -1,4 +1,4 @@
-module webtank.net.service.main_service;
+module webtank.net.service.json_rpc_service;
 
 import webtank.common.loger;
 import webtank.net.http.context;
@@ -15,7 +15,7 @@ import std.json: JSONValue, parseJSON;
 // Класс основного сервиса работающего по протоколу JSON-RPC.
 // Служит для чтения и хранения конфигурации, единого доступа к логам,
 // маршрутизации и выполнения аутентификации запросов
-class MainService: IWebService
+class JSON_RPCService: IWebService
 {
 	mixin ServiceConfigImpl;
 protected:
