@@ -32,7 +32,7 @@ struct EnumFormat( T, bool withNames )
 				if( pair[0] == value )
 					return pair[1];
 			}
-			assert( 0, "Attempt to get name for value *" ~ value.conv!string ~ "* that doesn't exist in EnumFormat object!!" ~ _pairs.conv!string );
+			throw new Exception("Attempt to get name for value *" ~ value.conv!string ~ "* that doesn't exist in EnumFormat object!!" ~ _pairs.conv!string);
 		}
 
 		ValueType getValue(string name) const
@@ -42,7 +42,7 @@ struct EnumFormat( T, bool withNames )
 				if( pair[1] == name )
 					return pair[0];
 			}
-			assert( 0, "Attempt to get value for name that doesn't exist in EnumFormat object!!" );
+			throw new Exception("Attempt to get value for name that doesn't exist in EnumFormat object!!");
 		}
 
 		bool hasName(string name) const {
@@ -80,8 +80,10 @@ struct EnumFormat( T, bool withNames )
 		///Оператор для обхода значений перечислимого типа через foreach
 		///Первый параметр - имя (строка), второй - значение
 		int opApply(int delegate(string name, ValueType value) dg) const
-		{	foreach( ref pair; _pairs )
-			{	auto result = dg(pair[1], pair[0]);
+		{
+			foreach( ref pair; _pairs )
+			{
+				auto result = dg(pair[1], pair[0]);
 				if(result)
 					return result;
 			}
@@ -91,8 +93,10 @@ struct EnumFormat( T, bool withNames )
 		///Оператор для обхода значений перечислимого типа через foreach
 		///в случае одного параметра (значения)
 		int opApply(int delegate(ValueType value) dg)
-		{	foreach( ref pair; _pairs )
-			{	auto result = dg(pair[0]);
+		{
+			foreach( ref pair; _pairs )
+			{
+				auto result = dg(pair[0]);
 				if(result)
 					return result;
 			}
@@ -145,7 +149,8 @@ struct EnumFormat( T, bool withNames )
 			static if( isSomeString!(ValueType) )
 			{
 				import std.algorithm : canFind;
-				assert( _values.canFind(value), "Value is not present in enum format!" );
+				if( !_values.canFind(value) )
+					throw new Exception("Value is not present in enum format!");
 				return value.conv!string;
 			}
 			else static if( is( ValueType == enum ) )
@@ -154,7 +159,8 @@ struct EnumFormat( T, bool withNames )
 				static if( isSomeString!(BaseType) )
 				{
 					import std.algorithm : canFind;
-					assert( _values.canFind(value), "Value is not present in enum format!" );
+					if( !_values.canFind(value) )
+						throw new Exception("Value is not present in enum format!");
 					return value.conv!string;
 				}
 				else
@@ -166,7 +172,8 @@ struct EnumFormat( T, bool withNames )
 			else
 			{
 				import std.algorithm : canFind;
-				assert( _values.canFind(value), "Value is not present in enum format!" );
+				if( !_values.canFind(value) )
+					throw new Exception("Value is not present in enum format!");
 				return value.conv!string;
 			}
 		}
