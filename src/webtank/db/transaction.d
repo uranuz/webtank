@@ -38,8 +38,8 @@ class PostgreSQLTransaction: IDBTransaction
 		string readMode;
 		final switch(mode) with(WriteMode)
 		{
-			case ReadOnly: readMode = `READ WRITE`; break;
-			case ReadWrite: readMode = `READ ONLY`; break;
+			case ReadOnly: readMode = `READ ONLY`; break;
+			case ReadWrite: readMode = `READ WRITE`; break;
 		}
 
 		_db.query(`start transaction isolation level ` ~ lvl ~ ` ` ~ readMode);
