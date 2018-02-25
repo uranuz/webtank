@@ -11,7 +11,7 @@ $(LOCALE_RU_RU
 	Функция десериализует структуру std.json.JSONValue в значение языка D
 )
 +/
-T fromStdJSON(T, uint recursionLevel = 1)(JSONValue jValue)
+T fromStdJSON(T)(JSONValue jValue)
 {
 	import std.conv: text, to;
 	import std.traits;
@@ -74,7 +74,7 @@ T fromStdJSON(T, uint recursionLevel = 1)(JSONValue jValue)
 		{
 			T result;
 			foreach( key, val; jValue.object ) {
-				result[key.to!AAKeyType] = fromStdJSON!( AAValueType, recursionLevel-1 )(val);
+				result[key.to!AAKeyType] = fromStdJSON!(AAValueType)(val);
 			}
 			return result;
 		} else if( jValue.type == JSON_TYPE.NULL ) {
@@ -92,7 +92,7 @@ T fromStdJSON(T, uint recursionLevel = 1)(JSONValue jValue)
 		{
 			T array;
 			foreach( i, val; jValue.array ) {
-				array ~= fromStdJSON!( AElementType, recursionLevel-1 )(val);
+				array ~= fromStdJSON!(AElementType)(val);
 			}
 			return array;
 		} else if( jValue.type == JSON_TYPE.NULL ) {
@@ -114,7 +114,7 @@ T fromStdJSON(T, uint recursionLevel = 1)(JSONValue jValue)
 
 				T result;
 				foreach( i, ref element; result ) {
-					element = fromStdJSON!( typeof(element), recursionLevel-1 )(jValue.array[i]);
+					element = fromStdJSON!(typeof(element))(jValue.array[i]);
 				}
 				return result;
 			} else {

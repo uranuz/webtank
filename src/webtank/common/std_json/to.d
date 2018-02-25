@@ -75,13 +75,12 @@ JSONValue toStdJSON(T)(T dValue)
 					JSONValue[string] jArray;
 					foreach( key, val; dValue )
 					{
+						bool isUndef = false;
 						// Не будем выводить свойства которые имеют тип Undefable с состоянием isUndef
-						static if( isOptional!(ValueType!T) && OptionalIsUndefable!(ValueType!T) )
-						{
-							if( !val.isUndef ) {
-								jArray[key.to!string] = toStdJSON(val);
-							}
-						} else {
+						static if( isOptional!(ValueType!T) && OptionalIsUndefable!(ValueType!T) ) {
+							isUndef = val.isUndef;
+						}
+						if( !isUndef ) {
 							jArray[key.to!string] = toStdJSON(val);
 						}
 					}
@@ -102,6 +101,7 @@ JSONValue toStdJSON(T)(T dValue)
 
 			return JSONValue(jArray);
 		} else static if( isOptional!T ) {
+			// Здесь нам не удастся различить состояние isUndef и isNull для Undefable
 			return dValue.isSet? toStdJSON(dValue.value): JSONValue(null);
 		} else static if( is( T == OptionalDate ) ) {
 			return JSONValue([
@@ -109,8 +109,7 @@ JSONValue toStdJSON(T)(T dValue)
 				"month": toStdJSON(dValue.month),
 				"year": toStdJSON(dValue.year)
 			]);
-		}
-		else static if( is(T == Date) || is(T == DateTime) || is(T == TimeOfDay) || is(T == SysTime) ) {
+		} else static if( is(T == Date) || is(T == DateTime) || is(T == TimeOfDay) || is(T == SysTime) ) {
 			// Строковый формат для дат и времени более компактен и привычен, поэтому выводим в нём вместо объекта JSON
 			return JSONValue(dValue.toISOExtString());
 		} else static if(
@@ -129,14 +128,21 @@ JSONValue toStdJSON(T)(T dValue)
 					auto test = __traits(getMember, dValue, name);
 				})) {
 					alias FieldType = typeof(__traits(getMember, dValue, name));
+					bool isUndef = false;
 					// Не будем выводить свойства которые имеют тип Undefable с состоянием isUndef
-					static if( isOptional!FieldType && OptionalIsUndefable!FieldType )
-					{
-						if( !__traits(getMember, dValue, name).isUndef ) {
+					static if( isOptional!FieldType && OptionalIsUndefable!FieldType ) {
+						isUndef = __traits(getMember, dValue, name).isUndef;
+					}
+					if( !isUndef ) {
+						import std.traits: getUDAs;
+						alias Serializer = getUDAs!(__traits(getMember, dValue, name), FieldSerializer);
+						static if( Serializer.length == 0 ) {
 							jArray[name] = toStdJSON( __traits(getMember, dValue, name) );
+						} else static if( Serializer.length == 1 ) {
+							Serializer[0].Serialize!(name)(dValue, jArray);
+						} else {
+							static assert(false, `Only one field serializer for field is allowed!!!`);
 						}
-					} else {
-						jArray[name] = toStdJSON( __traits(getMember, dValue, name) );
 					}
 				}
 			}
@@ -156,4 +162,8 @@ JSONValue toStdJSON(T)(T dValue)
 			static assert(false, "This value's type is not of one implemented JSON type!!!" );
 		}
 	}
+}
+
+struct FieldSerializer(alias F) {
+	alias Serialize = F;
 }
