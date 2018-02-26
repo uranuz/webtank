@@ -109,6 +109,7 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 {
 	import std.conv, std.string;
 	import std.algorithm: canFind;
+	import std.array: replace;
 
 	string[string] result;
 
@@ -119,50 +120,42 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 
 	if( jsonDatabases.type == JSON_TYPE.OBJECT ) foreach( string dbCaption, jsonDb; jsonDatabases )
 	{
-		string connStr = "";
-		bool isHostFound = false;
+		string connStr;
+		static immutable stringOnlyParams = [
+			"dbname", "host", "user", "password"
+		];
 
-		if( "dbname" in jsonDb )
+		foreach( string param, ref JSONValue jValue; jsonDb )
 		{
-			if( jsonDb["dbname"].type == JSON_TYPE.STRING ) {
-				connStr ~= "dbname=" ~ jsonDb["dbname"].str ~ " ";
-			}
-		}
-
-		if( "host" in jsonDb )
-		{
-			if( jsonDb["host"].type == JSON_TYPE.STRING )
+			string value;
+			if( stringOnlyParams.canFind(param) )
 			{
-				isHostFound = true;
-				connStr ~= "host=" ~ jsonDb["host"].str ~ " ";
+				if( jValue.type == JSON_TYPE.STRING ) {
+					value = jValue.str;
+				} else {
+					throw new Exception(`Expected string as value of database param: ` ~ param ~ ` for DB with id: ` ~ dbCaption);
+				}
 			}
-		}
 
-		if( "port" in jsonDb )
-		{
-			if( jsonDb["host"].type == JSON_TYPE.UINTEGER )
+			if( param == "port" )
 			{
-				if( !isHostFound )
-					connStr ~= "host=127.0.0.1";
+				switch(jValue.type)
+				{
+					case JSON_TYPE.STRING: value = jValue.str; break;
+					case JSON_TYPE.UINTEGER: value = jValue.uinteger.to!string; break;
+					case JSON_TYPE.INTEGER: value = jValue.integer.to!string; break;
+					default:
+						throw new Exception(`Unexpected type of value for param: ` ~ param ~ ` for DB with id: ` ~ dbCaption);
+				}
+			}
 
-				connStr ~= ":" ~ jsonDb["host"].uinteger.to!string ~ " ";
+			if( value.length )
+			{
+				if( connStr.length )
+					connStr ~= ` `;
+				connStr ~= param ~ "='" ~ value.replace(`'`, `\'`) ~ "'";
 			}
 		}
-
-		if( "username" in jsonDb )
-		{
-			if( jsonDb["username"].type == JSON_TYPE.STRING ) {
-				connStr ~= "user=" ~ jsonDb["username"].str ~ " ";
-			}
-		}
-
-		if( "password" in jsonDb )
-		{
-			if( jsonDb["password"].type == JSON_TYPE.STRING ) {
-				connStr ~= "password=" ~ jsonDb["password"].str ~ " ";
-			}
-		}
-
 		result[dbCaption] = strip(connStr);
 	}
 
