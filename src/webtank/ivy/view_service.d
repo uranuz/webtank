@@ -1,4 +1,4 @@
-module webtank.net.service.ivy_view_service;
+module webtank.ivy.view_service;
 
 import webtank.common.loger;
 import webtank.common.event;
