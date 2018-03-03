@@ -36,6 +36,27 @@ mixin template GetStdJSONDataImpl()
 	}
 }
 
+mixin template RecordSetToStdJSONImpl()
+{
+	import std.json: JSONValue;
+	JSONValue toStdJSON()
+	{
+		auto jValues = this.getStdJSONFormat();
+
+		JSONValue[] jData;
+		jData.length = this.length;
+
+		foreach( i; 0..this.length ) {
+			jData[i] = this.getStdJSONData(i);
+		}
+
+		jValues["d"] = jData;
+		jValues["t"] = "recordset";
+
+		return jValues;
+	}
+}
+
 mixin template GetStdJSONFieldFormatImpl()
 {
 	import std.json: JSONValue;

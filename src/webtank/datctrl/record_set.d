@@ -3,6 +3,7 @@ module webtank.datctrl.record_set;
 import webtank.datctrl.iface.data_field;
 import webtank.datctrl.iface.record;
 import webtank.datctrl.iface.record_set;
+import webtank.datctrl.record_set_slice;
 
 
 /++
@@ -152,27 +153,14 @@ public:
 		import webtank.datctrl.common;
 		mixin GetStdJSONFormatImpl;
 		mixin GetStdJSONDataImpl;
-
-		import std.json: JSONValue;
-		JSONValue toStdJSON()
-		{
-			auto jValues = this.getStdJSONFormat();
-
-			JSONValue[] jData;
-			jData.length = this.length;
-
-			foreach( i; 0..this.length ) {
-				jData[i] = this.getStdJSONData(i);
-			}
-
-			jValues["d"] = jData;
-			jValues["t"] = "recordset";
-
-			return jValues;
-		}
+		mixin RecordSetToStdJSONImpl;
 
 		RangeIface opSlice() {
 			return new Range(this);
+		}
+
+		IBaseRecordSet opSlice(size_t begin, size_t end) {
+			return new RecordSetSlice(this, begin, end);
 		}
 
 		size_t getIndexByStringKey(string recordKey)
@@ -182,77 +170,8 @@ public:
 		}
 	} // override
 
-	static class Range: RangeIface
-	{
-		private RecordSetIface _rs;
-		private size_t _index = 0;
-
-		this(RecordSetIface rs) {
-			_rs = rs;
-		}
-
-		template _opApplyImpl(Rec, bool withIndex)
-		{
-			static if( withIndex ) {
-				alias DelegateType = scope int delegate(size_t, Rec);
-			} else {
-				alias DelegateType = scope int delegate(Rec);
-			}
-
-			int _opApplyImpl(DelegateType dg)
-			{
-				int result = 0;
-				foreach( i; 0.._rs.length )
-				{
-					static if( withIndex ) {
-						result = dg(i, _rs.getRecord(i));
-					} else {
-						result = dg(_rs.getRecord(i));
-					}
-					if (result)
-						break;
-				}
-				return result;
-			}
-		}
-
-		public override {
-			bool empty() @property {
-				return _index >= _rs.length;
-			}
-
-			RecordIface front() @property {
-				return _rs.getRecord(_index);
-			}
-
-			RecordIface moveFront() {
-				assert(false, `Not implemented yet!`);
-			}
-
-			void popFront() {
-				_index++;
-			}
-
-			static if( isWriteableFlag )
-			{
-				int opApply(scope int delegate(IBaseRecord) dg) {
-					return _opApplyImpl!(IBaseRecord, false)(dg);
-				}
-
-				int opApply(scope int delegate(size_t, IBaseRecord) dg) {
-					return _opApplyImpl!(IBaseRecord, true)(dg);
-				}
-			}
-
-			int opApply(scope int delegate(RecordIface) dg) {
-				return _opApplyImpl!(RecordIface, false)(dg);
-			}
-
-			int opApply(scope int delegate(size_t, RecordIface) dg) {
-				return _opApplyImpl!(RecordIface, true)(dg);
-			}
-		}
-	}
+	import webtank.datctrl.record_set_range;
+	mixin RecordSetRangeImpl;
 }
 
 IBaseWriteableRecordSet makeMemoryRecordSet(RecordFormatT)(RecordFormatT format)

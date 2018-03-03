@@ -124,6 +124,8 @@ interface IBaseRecordSet
 	+/
 	IRecordSetRange opSlice();
 
+	IBaseRecordSet opSlice(size_t begin, size_t end);
+
 	/++
 	$(LOCALE_EN_US
 		Returns record index by string representation of key $(D_PARAM recordKey).
