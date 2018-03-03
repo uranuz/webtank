@@ -2,6 +2,7 @@ module webtank.ivy.datctrl.recordset_adapter;
 
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
 import webtank.ivy.datctrl.record_adapter;
+import webtank.ivy.datctrl.recordset_adapter_slice;
 import webtank.ivy.datctrl.deserialize;
 
 class RecordSetAdapter: IClassNode
@@ -98,6 +99,10 @@ public:
 		return new Range(this);
 	}
 
+	override RecordSetAdapterSlice opSlice(size_t begin, size_t end) {
+		return new RecordSetAdapterSlice(this, begin, end);
+	}
+
 	override TDataNode opIndex(size_t index) {
 		return _makeRecord(index);
 	}
@@ -126,5 +131,25 @@ public:
 		// Maybe we should make deep copy of it there, but because of productivity
 		// we shall not do it now. Just say for now that nobody should modifiy serialized data
 		return _rawRS;
+	}
+
+	size_t length() @property {
+		return _rawData.array.length;
+	}
+
+	TDataNode serializeSlice(size_t begin, size_t end)
+	{
+		TDataNode result;
+		
+		if( _rawRS.type == DataNodeType.AssocArray )
+		foreach( string key, TDataNode val; _rawRS.assocArray )
+		{
+			if( key != "d" ) {
+				result[key] = val;
+			} else if( val.type == DataNodeType.Array ) {
+				result[key] = val.array[begin..end];
+			}
+		}
+		return result;
 	}
 }

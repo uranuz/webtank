@@ -92,6 +92,10 @@ public:
 		return new Range(this);
 	}
 
+	override IClassNode opSlice(size_t, size_t) {
+		assert(false, `opSlice for RecordAdapter is not implemented yet`);
+	}
+
 	override TDataNode opIndex(size_t index)
 	{
 		import std.conv: text;
