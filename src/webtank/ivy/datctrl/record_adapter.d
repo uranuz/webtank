@@ -129,4 +129,8 @@ public:
 		// we shall not do it now. Just say for now that nobody should modifiy serialized data
 		return _rawRec;
 	}
+
+	override size_t length() @property {
+		return _rawFormat.array.length;
+	}
 }

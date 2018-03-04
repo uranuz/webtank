@@ -89,7 +89,7 @@ public:
 		return _rs.serializeSlice(_begin, _end);
 	}
 
-	size_t length() @property {
+	override size_t length() @property {
 		return _end - _begin;
 	}
 }

@@ -133,7 +133,7 @@ public:
 		return _rawRS;
 	}
 
-	size_t length() @property {
+	override size_t length() @property {
 		return _rawData.array.length;
 	}
 
