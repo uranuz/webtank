@@ -48,8 +48,12 @@ auto convertPlainType(T)(string value)
 	}
 }
 
-void setOfMaybeNull(string fieldName, StrucBase, T)(ref StrucBase result, auto ref T value)
+void setOfMaybeNull(string fieldName, StrucBase, T)(ref StrucBase result, ref T value)
 {
+	static if( isOptional!T ) {
+		if( value.isNull )
+			return;
+	}
 	static if( isOptional!StrucBase ) {
 		if( !result.isSet ) {
 			result = OptionalValueType!(StrucBase)();
@@ -65,6 +69,7 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 	import std.algorithm: splitter;
 	import std.json;
 	import webtank.common.std_json.from;
+	import std.conv: ConvException;
 
 	static if( isOptional!ResultBaseType ) {
 		alias ResultType = OptionalValueType!ResultBaseType;
@@ -74,10 +79,20 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 
 	if( auto formFieldPtr = prefix in formData )
 	{
-		if( !isOptional!ResultBaseType || isSomeString!ResultType || (*formFieldPtr).length > 0 && (*formFieldPtr) != "null" )
-		{
+		if(
+			isSomeString!ResultType // All values allowed for string type
+			|| (!isSomeString!ResultType && (*formFieldPtr).length > 0 && (*formFieldPtr) != "null") // Empty string or null is treated as isNull for Optional
+			|| isArray!ResultType && (
+					formData.array(prefix).length > 1
+					|| formData.array(prefix).length == 1 && (*formFieldPtr).length > 0 && (*formFieldPtr) != "null"
+			) // Non empty arrays are treated as non null
+		) {
 			static if( isPlainType!ResultType ) {
-				result = convertPlainType!ResultType(*formFieldPtr);
+				try {
+					result = convertPlainType!ResultType(*formFieldPtr);
+				} catch(ConvException ex) {
+					throw new ConvException(`Error while extracting form field: ` ~ prefix ~ `. Error msg: ` ~ ex.msg);
+				}
 			}
 			else static if( isArray!ResultType )
 			{
@@ -89,18 +104,24 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 						arrayResult ~= fromStdJSON!ResultType(jData);
 					} else {
 						alias Elem = ElementType!ResultType;
+						static assert(!isOptional!(Elem), `TODO: Handling of this is not supported yet! Сорян, чувак!`);
 						static if( isPlainType!Elem ) {
-							arrayResult ~= splitter(item, arrayElemDelim).map!( (it) => convertPlainType!Elem(it) )().array;
+							if(
+								isSomeString!Elem
+								|| (!isSomeString!Elem && item.length > 0 && item != "null")
+							) {
+								arrayResult ~= splitter(item, arrayElemDelim).map!( (it) {
+									try {
+										return convertPlainType!Elem(it);
+									} catch(ConvException ex) {
+										throw new ConvException(`Error while extracting form field array item: ` ~ prefix ~ `. Error msg: ` ~ ex.msg);
+									}
+								})().array;
+							}
 						}
 					}
 				}
 				result = arrayResult;
-			}
-		}
-		else
-		{
-			static if( isOptional!ResultBaseType ) {
-				result = null;
 			}
 		}
 	}
@@ -134,7 +155,8 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 				}
 
 				if( thisLvlKeys.canFind(structFieldName) ) {
-					BaseFieldType innerStruct;
+					// Принудительно делаем Optional, чтобы не получить значение по умолчанию вместо null
+					Optional!FieldType innerStruct;
 					// Здесь может быть функция-свойство, а не простое поле, поэтому читаем значение, затем меняем
 					// и снова записываем, чтобы изменить в структуре только те поля, которые надо
 					static if( isOptional!ResultBaseType ) {
@@ -144,7 +166,6 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 					} else {
 						innerStruct = __traits(getMember, result, structFieldName);
 					}
-
 					formDataToStruct(
 						formData,
 						innerStruct,
@@ -193,6 +214,12 @@ unittest
 		`partDateParam__month`: [`8`],
 		`partDateParam__day`: [`15`],
 		`wholeDateParam`: [`2017-08-16`],
+		`emptyDateParam__day`: [``],
+		`emptyDateParam__month`: [``],
+		`emptyDateParam__year`: [``],
+		`optEmptyDateParam__day`: [``],
+		`optEmptyDateParam__month`: [``],
+		`optEmptyDateParam__year`: [``],
 		`structParam__boolSub`: [`true`],
 		`structParam__intSub`: [`-30`],
 		`structParam__floatSub`: [`-30.3`],
@@ -252,6 +279,8 @@ unittest
 		Optional!string stringParam;
 		Optional!Date partDateParam;
 		Optional!Date wholeDateParam;
+		Optional!Date emptyDateParam;
+		OptionalDate optEmptyDateParam;
 		Optional!(int[]) emptyIntArrayParam;
 		Optional!(int[]) nullIntArrayParam;
 		Optional!InternalStruct1 structParam;
@@ -294,6 +323,8 @@ unittest
 	assert(structData2.stringParam == `testParam`);
 	assert(structData2.partDateParam.toISOExtString() == `2017-08-15`);
 	assert(structData2.wholeDateParam.toISOExtString() == `2017-08-16`);
+	assert(structData2.emptyDateParam.isNull);
+	assert(structData2.optEmptyDateParam.isNull);
 	assert(structData2.emptyIntArrayParam.isNull);
 	assert(!structData2.emptyIntArrayParam.isSet);
 	assert(structData2.nullIntArrayParam.isNull);

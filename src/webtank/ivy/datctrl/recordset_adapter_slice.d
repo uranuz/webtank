@@ -16,12 +16,22 @@ private:
 public:
 	this(RecordSetAdapter rs, size_t begin, size_t end)
 	{
-		if( rs is null || begin > rs.length || end > rs.length || begin > end )
+		if( rs is null )
 			throw new Exception(`Wrong input for RecordSetAdapterSlice`);
 
 		_rs = rs;
 		_begin = begin;
 		_end = end;
+
+		if( _begin > _rs.length ) {
+			_begin = rs.length;
+		}
+		if( _end > _rs.length ) {
+			_end = rs.length;
+		}
+		if( _begin > _end ) {
+			_begin = _end;
+		}
 	}
 
 	static class Range: IDataNodeRange

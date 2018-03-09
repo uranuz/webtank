@@ -361,6 +361,7 @@ This function is also called for the implicit conversion to $(D T).
 	ref inout(T) value() @property
 		inout pure /+@safe nothrow+/
 	{
+		import std.conv: to;
 		import std.traits: isArray, isAssociativeArray;
 		import std.exception: enforceEx;
 		static if( !isArray!T && !isAssociativeArray!T )
@@ -636,4 +637,11 @@ unittest
 	assert(!ko5.isNull);
 	assert(ko5.isSet);
 	assert(ko5 == ko5);
+}
+
+unittest {
+	import std.datetime: Date;
+	Optional!Date dt;
+	assert(dt.isNull);
+	assert(!dt.isSet);
 }
