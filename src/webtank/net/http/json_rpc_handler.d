@@ -58,6 +58,7 @@ class JSON_RPC_Router: IHTTPHandler
 				foreach( inf; ex.info ) backTrace ~= inf.idup;
 				jResponse["error"]["data"]["backtrace"] = JSONValue(backTrace.data);
 			}
+			onError.fire(ex, context); // Just notify error handler about error for now
 		}
 		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
 

@@ -121,7 +121,7 @@ public:
 		auto messages = makeErrorMsg(error);
 		loger.error(messages.details);
 
-		throw error;
+		return true;
 	}
 
 	override HTTPRouter rootRouter() @property {

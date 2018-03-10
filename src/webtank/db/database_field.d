@@ -8,6 +8,7 @@ import webtank.datctrl.record_format;
 import webtank.datctrl.enum_format;
 
 import webtank.common.conv;
+import std.exception: enforce;
 
 ///Класс ключевого поля
 class DatabaseField(FormatT) : IDataField!( FormatT )
@@ -86,7 +87,7 @@ public:
 		bool isNull(size_t index)
 		{
 			import std.conv;
-			assert( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
+			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
 			return
 				( _isNullable?
@@ -101,24 +102,36 @@ public:
 		///Получение данных из поля по порядковому номеру index
 		ValueType get(size_t index)
 		{
-			assert( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
+			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			return _queryResult.get(_fieldIndex, index).conv!ValueType;
+			try {
+				return _queryResult.get(_fieldIndex, index).conv!ValueType;
+			} catch(ConvException ex) {
+				throw new ConvException(
+					`Exception during parsing value for field with name "` ~ name
+					~ `" at index: ` ~ index.to!string ~ `. Error msg:` ~ ex.to!string);
+			}
 		}
 
 		///Получение данных из поля по порядковому номеру index
 		///Возвращает defaultValue, если значение поля пустое
 		ValueType get(size_t index, ValueType defaultValue)
 		{
-			assert( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
+			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			return ( isNull(index) ? defaultValue: _queryResult.get(_fieldIndex, index).conv!ValueType );
+			try {
+				return ( isNull(index) ? defaultValue: _queryResult.get(_fieldIndex, index).conv!ValueType );
+			} catch(ConvException ex) {
+				throw new ConvException(
+					`Exception during parsing value for field with name "` ~ name
+					~ `" at index: ` ~ index.to!string ~ `. Error msg:` ~ ex.to!string);
+			}
 		}
 
 		///Получает строковое представление данных
 		string getStr(size_t index)
 		{
-			assert( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
+			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
 
 			static if( isEnumFormat!(FormatType) )
@@ -126,7 +139,13 @@ public:
 				if( isNull(index) ) {
 					return null;
 				} else {
-					return _enumFormat.getStr( _queryResult.get(_fieldIndex, index).conv!ValueType );
+					try {
+						return _enumFormat.getStr( _queryResult.get(_fieldIndex, index).conv!ValueType );
+					} catch(ConvException ex) {
+						throw new ConvException(
+							`Exception during parsing value for field with name "` ~ name
+							~ `" at index: ` ~ index.to!string ~ `. Error msg:` ~ ex.to!string);
+					}
 				}
 			}
 			else
@@ -139,7 +158,7 @@ public:
 		///Получает строковое представление данных
 		string getStr(size_t index, string defaultValue)
 		{
-			assert( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
+			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
 
 			if( isNull(index) ) {
@@ -148,7 +167,13 @@ public:
 			else
 			{
 				static if( isEnumFormat!(FormatType) ) {
-					return _enumFormat.getStr( _queryResult.get(_fieldIndex, index).conv!ValueType );
+					try {
+						return _enumFormat.getStr( _queryResult.get(_fieldIndex, index).conv!ValueType );
+					} catch(ConvException ex) {
+						throw new ConvException(
+							`Exception during parsing value for field with name "` ~ name
+							~ `" at index: ` ~ index.to!string ~ `. Error msg:` ~ ex.to!string);
+					}
 				} else {
 					//TODO: добавить проверку на соответствие значения базовому типу поля
 					return _queryResult.get(_fieldIndex, index).to!string;
