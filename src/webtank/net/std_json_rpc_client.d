@@ -86,10 +86,14 @@ JSONValue remoteCall(Result, Address)( Address addr, string rpcMethod, JSONValue
 {
 	auto response = remoteCall!HTTPInput(_getRequestURI(addr), rpcMethod, params);
 
-	JSONValue bodyJSON = response.messageBody.parseJSON();
-	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
+	try {
+		JSONValue bodyJSON = response.messageBody.parseJSON();
+		_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
 
-	return bodyJSON["result"];
+		return bodyJSON["result"];
+	} catch (JSONException ex) {
+		throw new JSONException("Unable to parse json response:\"" ~ response.messageBody);
+	}
 }
 
 /// Перегрузка метода, c возможностью передать HTTP заголовки запроса
@@ -98,10 +102,14 @@ JSONValue remoteCall(Result, Address)( Address addr, string rpcMethod, string[st
 {
 	auto response = remoteCall!HTTPInput(_getRequestURI(addr), rpcMethod, headers, params);
 
-	JSONValue bodyJSON = response.messageBody.parseJSON();
-	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
+	try {
+		JSONValue bodyJSON = response.messageBody.parseJSON();
+		_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
 
-	return bodyJSON["result"];
+		return bodyJSON["result"];
+	} catch (JSONException ex) {
+		throw new JSONException("Unable to parse json response:\"" ~ response.messageBody);
+	}
 }
 
 

@@ -57,10 +57,6 @@ public:
 			void popFront() {
 				++i;
 			}
-
-			DataNodeType aggrType() @property {
-				return DataNodeType.Array;
-			}
 		}
 	}
 
