@@ -23,8 +23,9 @@ protected:
 	// Производные поля
 	URI _requestURI;
 	CookieCollection _cookies;
-	FormData _bodyForm;
-	FormData _queryForm;
+	IFormData _bodyForm;
+	IFormData _queryForm;
+	IFormData _form;
 
 public:
 	this(
@@ -108,7 +109,7 @@ public:
 	}
 	
 	///Данные HTTP формы переданные через адресную строку
-	FormData queryForm() @property
+	IFormData queryForm() @property
 	{
 		if( _queryForm is null ) {
 			// Класс FormData ожидает строку запроса в сыром виде, потому что сам её декодирует
@@ -118,17 +119,21 @@ public:
 	}
 
 	///Данные HTTP формы переданные в теле сообщения через HTTP методы POST, PUT и др.
-	FormData bodyForm() @property
+	IFormData bodyForm() @property
 	{	
 		if( _bodyForm is null )
 			_bodyForm = new FormData(messageBody);
 		return _bodyForm;
 	}
 
-	//TODO: Реализовать HTTPInput.form
-	///Объединённый словарь данных HTTP формы переданных через адресную
-	///строку и тело сообщения
-	//	FormData form() @property {}
+	/// Объединённый словарь данных HTTP формы переданных через адресную
+	/// строку и тело сообщения
+	IFormData form() @property
+	{
+		if( _form is null )
+			_form = new AggregateFormData(queryForm, bodyForm);
+		return _form;
+	}
 
 	///Возвращает набор HTTP Cookie для текущего запроса
 	CookieCollection cookies() @property {

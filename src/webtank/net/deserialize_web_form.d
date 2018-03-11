@@ -13,7 +13,7 @@ import webtank.common.conv: conv;
 import webtank.common.optional;
 import webtank.common.optional_date;
 import webtank.common.std_json.exception;
-import webtank.net.web_form: FormData;
+import webtank.net.web_form: FormData, IFormData;
 
 template isPlainType(T)
 {
@@ -64,7 +64,7 @@ void setOfMaybeNull(string fieldName, StrucBase, T)(ref StrucBase result, ref T 
 
 /** Автоматический перевод web-формы в структуру Struc */
 void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayElemDelim = ",")(
-	FormData formData, ref ResultBaseType result, string prefix = null)
+	IFormData formData, ref ResultBaseType result, string prefix = null)
 {
 	import std.algorithm: splitter;
 	import std.json;
@@ -244,7 +244,7 @@ unittest
 		`json2DimStringArray`: [`[["key1", "val1"], ["key2", "val2"], ["key3", "val3"] ]`],
 		`json2DimIntArray`: [`[ [123, 456], [789, 1011], [543, 321] ]`]
 	];
-	FormData formData1 = new FormData(rawData1);
+	IFormData formData1 = new FormData(rawData1);
 	static struct InternalStruct1
 	{
 		bool boolSub;

@@ -34,8 +34,22 @@ T[][T] parseFormData(T)(T input)
 	return result;
 }
 
+interface IFormData
+{
+	string opIndex(string name) const;
+	string[] keys() @property const;
+	string[] values() @property const;
+	string[] array(string name) @property const;
+	string get(string name, string defValue);
+	int opApply(int delegate(ref string value) del);
+	int opApply(int delegate(ref string name, ref string value) del);
+	int opApply(int delegate(ref string name, string[] values) del);
+	inout(string)* opIn_r(string name) inout;
+	string toString();
+}
+
 ///Объект с интерфейсом, подобным ассоциативному массиву для хранения данных HTML формы
-class FormData
+class FormData: IFormData
 {
 private:
 	string[][string] _data;
@@ -49,6 +63,7 @@ public:
 		_data = extractFormData( formDataStr );
 	}
 
+override {
 	string opIndex(string name) const {
 		return _data[name][0];
 	}
@@ -99,8 +114,16 @@ public:
 		return 0;
 	}
 
-	auto opBinaryRight(string op)(string name) const
-		if( op == "in" )
+	int opApply(int delegate(ref string name, string[] values) del) //const
+	{
+		foreach( name, ref array; _data ) {
+			if( auto ret = del(name, array) )
+				return ret;
+		}
+		return 0;
+	}
+
+	inout(string)* opIn_r(string name) inout
 	{
 		auto array = name in _data;
 		if( array )
@@ -109,11 +132,146 @@ public:
 			return null;
 	}
 
-	override string toString()
+	string toString()
 	{
 		import std.conv;
 		return _data.to!string;
 	}
+} // override
+
+}
+
+class AggregateFormData: IFormData
+{
+private:
+	IFormData _queryForm;
+	IFormData _bodyForm;
+public:
+	this(IFormData queryForm, IFormData bodyForm)
+	{
+		_queryForm = queryForm;
+		_bodyForm = _bodyForm;
+		assert(_queryForm, `_queryForm is null`);
+		assert(_bodyForm, `_bodyForm is null`);
+	}
+
+override {
+	string opIndex(string name) const
+	{
+		if( auto val = name in _queryForm )
+			return *val;
+		else
+			return _bodyForm[name];
+	}
+
+	string[] keys() @property const
+	{
+		import std.range: chain;
+		import std.array: array;
+		import std.algorithm: uniq;
+		return chain(_queryForm.keys, _bodyForm.keys).uniq.array;
+	}
+
+	string[] values() @property const
+	{
+		string[] result;
+		foreach( key; this.keys )
+		{
+			if( auto val = key in _queryForm ) {
+				result ~= *val;
+			} else if( auto val = key in _bodyForm ) {
+				result ~= *val;
+			}
+		}
+		return result;
+	}
+
+	string[] array(string name) @property const
+	{
+		if( name in _queryForm )
+			return _queryForm.array(name);
+		else
+			return _bodyForm.array(name);
+	}
+
+	string get(string name, string defValue) const
+	{
+		if( auto val = name in _queryForm ) {
+			return *val;
+		} else if( auto val = name in _bodyForm ) {
+			return *val;
+		}
+		return defValue;
+	}
+
+	int opApply(int delegate(ref string value) del) //const
+	{
+		foreach( key; this.keys )
+		{
+			if( auto val = key in _queryForm )
+			{
+				if( auto ret = del(*val) )
+					return ret;
+			} else if( auto val = key in _bodyForm ) {
+				if( auto ret = del(*val) )
+					return ret;
+			}
+		}
+		return 0;
+	}
+
+	int opApply(int delegate(ref string name, ref string value) del) //const
+	{
+		foreach( key; this.keys )
+		{
+			if( auto val = key in _queryForm )
+			{
+				if( auto ret = del(key, *val) )
+					return ret;
+			} else if( auto val = key in _bodyForm ) {
+				if( auto ret = del(key, *val) )
+					return ret;
+			}
+		}
+		return 0;
+	}
+
+	int opApply(int delegate(ref string name, string[] values) del) //const
+	{
+		foreach( key; this.keys )
+		{
+			if( key in _queryForm )
+			{
+				if( auto ret = del(key, _queryForm.array(key)) )
+					return ret;
+			} else if( key in _bodyForm ) {
+				if( auto ret = del(key, _bodyForm.array(key)) )
+					return ret;
+			}
+		}
+		return 0;
+	}
+
+	inout(string)* opIn_r(string name) inout
+	{
+		if( auto val = name in _queryForm )
+			return val;
+		else
+			return name in _bodyForm;
+	}
+
+	string toString()
+	{
+		import std.conv;
+		string[][string] data;
+		foreach( string key, string[] vals; this ) {
+			data[key] = vals;
+		}
+		return data.to!string;
+	}
+
+} // override
+
 
 }
 
