@@ -188,6 +188,7 @@ public:
 		auto pageURIData = _uriPattern.match(context.request.uri.path);
 		if( pageURIData.isMatched )
 		{
+			context.request.requestURIMatch = pageURIData;
 			_handler(context);
 			return HTTPHandlingResult.handled; // Запрос обработан
 		}
@@ -212,6 +213,8 @@ class URIPageRouter: ICompositeHTTPHandler
 	HTTPHandlingResult customProcessRequest( HTTPContext context )
 	{
 		auto uriData = _uriPattern.match(context.request.uri.path);
+		if( uriData.isMatched )
+			context.request.requestURIMatch = uriData;
 
 		onPostPoll.fire(context, uriData.isMatched);
 

@@ -32,6 +32,8 @@ class JSON_RPC_Router: IHTTPHandler
 		try {
 			//-----Опрос обработчика запроса-----
 			auto uriData = _uriPattern.match(context.request.uri.path);
+			if( uriData.isMatched )
+				context.request.requestURIMatch = uriData;
 
 			bool isRequestMatched =
 				uriData.isMatched &&

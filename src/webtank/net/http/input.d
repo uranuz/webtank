@@ -4,6 +4,7 @@ import std.json, std.socket;
 import std.typecons: tuple;
 
 import webtank.net.http.cookie, webtank.net.uri, webtank.net.web_form, webtank.net.http.http, webtank.net.http.headers;
+import webtank.net.uri_pattern: URIMatchingData;
 
 
 // version = cgi_script;
@@ -22,6 +23,7 @@ protected:
 
 	// Производные поля
 	URI _requestURI;
+	URIMatchingData _uriMatch;
 	CookieCollection _cookies;
 	IFormData _bodyForm;
 	IFormData _queryForm;
@@ -133,6 +135,14 @@ public:
 		if( _form is null )
 			_form = new AggregateFormData(queryForm, bodyForm);
 		return _form;
+	}
+
+	URIMatchingData requestURIMatch() @property {
+		return _uriMatch;
+	}
+
+	void requestURIMatch(URIMatchingData data) @property {
+		_uriMatch = data;
 	}
 
 	///Возвращает набор HTTP Cookie для текущего запроса
