@@ -108,7 +108,8 @@ protected:
 	{
 		import std.conv: to;
 		_headers["content-length"] = _messageBody.data.length.to!string;
-		_headers["content-type"] = "text/html; charset=\"utf-8\"";
+		if( "content-type" !in headers )
+			_headers["content-type"] = "text/html; charset=\"utf-8\"";
 
 		return
 			_headers.getStatusLine()
@@ -120,7 +121,8 @@ protected:
 	{
 		import std.conv: to;
 		_headers["content-length"] = _messageBody.data.length.to!string;
-		_headers["content-type"] = "text/html; charset=\"utf-8\"";
+		if( "content-type" !in headers )
+			_headers["content-type"] = "text/html; charset=\"utf-8\"";
 
 		return
 			_headers.getRequestLine()
