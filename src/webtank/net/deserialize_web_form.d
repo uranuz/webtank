@@ -50,15 +50,29 @@ auto convertPlainType(T)(string value)
 
 void setOfMaybeNull(string fieldName, StrucBase, T)(ref StrucBase result, ref T value)
 {
-	static if( isOptional!T ) {
+	static if( isOptional!StrucBase && OptionalIsUndefable!StrucBase ) {
+		// Если сюда попали, то какие-то поля структуры уже должны присутствовать, но они все могут быть null
+		// для Undefable в этому случае нужно явно установить в null
+		if( result.isUndef ) {
+			result = null;
+		}
+	}
+
+	static if( isOptional!T && !OptionalIsUndefable!T ) {
 		if( value.isNull )
 			return;
+	} else static if( isOptional!T && OptionalIsUndefable!T ) {
+		if( value.isUndef )
+			return;
 	}
+
 	static if( isOptional!StrucBase ) {
+		// Нужно проинициализировать перед установкой поля, чтобы не получить ошибку
 		if( !result.isSet ) {
 			result = OptionalValueType!(StrucBase)();
 		}
 	}
+
 	__traits(getMember, result, fieldName) = value;
 }
 
@@ -123,6 +137,8 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 				}
 				result = arrayResult;
 			}
+		} else static if( isOptional!ResultBaseType ) {
+			result = null; // Если у нас Undefable, то должны явно задать null, если поле есть, но пустое
 		}
 	}
 
@@ -155,8 +171,13 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 				}
 
 				if( thisLvlKeys.canFind(structFieldName) ) {
-					// Принудительно делаем Optional, чтобы не получить значение по умолчанию вместо null
-					Optional!FieldType innerStruct;
+					// Принудительно делаем Optional, либо Undefable, чтобы не получить значение по умолчанию вместо null
+					static if( isOptional!BaseFieldType && OptionalIsUndefable!BaseFieldType ) {
+						Undefable!FieldType innerStruct;
+					} else {
+						Optional!FieldType innerStruct;
+					}
+
 					// Здесь может быть функция-свойство, а не простое поле, поэтому читаем значение, затем меняем
 					// и снова записываем, чтобы изменить в структуре только те поля, которые надо
 					static if( isOptional!ResultBaseType ) {
@@ -166,6 +187,7 @@ void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayE
 					} else {
 						innerStruct = __traits(getMember, result, structFieldName);
 					}
+
 					formDataToStruct(
 						formData,
 						innerStruct,
@@ -210,6 +232,10 @@ unittest
 		`intParam`: [`10`],
 		`floatParam`: [`13.13`],
 		`stringParam`: [`testParam`],
+		`emptyBoolParam`: [``],
+		`emptyIntParam`: [``],
+		`emptyFloatParam`: [``],
+		`emptyStringParam`: [``],
 		`partDateParam__year`: [`2017`],
 		`partDateParam__month`: [`8`],
 		`partDateParam__day`: [`15`],
@@ -232,6 +258,7 @@ unittest
 		`datesAAParam__end`: [`2019-11-25`],
 		`intArrayParam1`: [`5,4,3,2`],
 		`intArrayParam2`: [`3`,`4`,`5`],
+		`emptyIntArrayParam`: [``],
 		`nullIntArrayParam`: [`null`],
 		`optDateParam1`: [`2019-10-23`],
 		`optDateParam2__day`: [`23`],
@@ -342,4 +369,54 @@ unittest
 	assert(equal(structData2.jsonStringArray.value, ["may", "jun", "jul"]));
 	assert(equal(structData2.json2DimIntArray.value, [[123, 456], [789, 1011], [543, 321]]));
 	assert(equal(structData2.json2DimStringArray.value, [["key1", "val1"], ["key2", "val2"], ["key3", "val3"]]));
+
+	struct StructData3
+	{
+		Undefable!bool boolParam;
+		Undefable!int intParam;
+		Undefable!double floatParam;
+		Undefable!string stringParam;
+		Undefable!bool emptyBoolParam;
+		Undefable!int emptyIntParam;
+		Undefable!float emptyFloatParam;
+		Undefable!string emptyStringParam;
+		Undefable!Date partDateParam;
+		Undefable!Date wholeDateParam;
+		Undefable!Date emptyDateParam;
+		Undefable!(int[]) emptyIntArrayParam;
+		Undefable!(int[]) nullIntArrayParam;
+		Undefable!InternalStruct1 structParam;
+		Undefable!int nonExistentInt;
+		Undefable!string nonExistentString;
+		Undefable!Date nonExistentDate;
+	}
+
+	StructData3 structData3;
+	formDataToStruct(formData1, structData3);
+	assert(structData3.boolParam == true);
+	assert(structData3.intParam == 10);
+	assert(structData3.floatParam == 13.13);
+	assert(structData3.stringParam == `testParam`);
+	assert(structData3.emptyBoolParam.isNull);
+	assert(!structData3.emptyBoolParam.isUndef);
+	assert(structData3.emptyIntParam.isNull);
+	assert(!structData3.emptyIntParam.isUndef);
+	assert(structData3.emptyFloatParam.isNull);
+	assert(!structData3.emptyFloatParam.isUndef);
+	assert(!structData3.emptyStringParam.isNull); // Not treated as null when empty string
+	assert(!structData3.emptyStringParam.isUndef); // Not treated as null when empty string
+	assert(structData3.partDateParam.toISOExtString() == `2017-08-15`);
+	assert(structData3.wholeDateParam.toISOExtString() == `2017-08-16`);
+	assert(structData3.emptyDateParam.isNull);
+	assert(!structData3.emptyDateParam.isUndef);
+	assert(structData3.emptyIntArrayParam.isNull);
+	assert(!structData3.emptyIntArrayParam.isSet);
+	assert(structData3.nullIntArrayParam.isNull);
+	assert(!structData3.nullIntArrayParam.isSet);
+	assert(structData3.structParam.intSub == -30);
+	assert(structData3.structParam.floatSub == -30.3);
+	assert(structData3.structParam.stringSub == `trololo`);
+	assert(structData3.nonExistentInt.isUndef);
+	assert(structData3.nonExistentString.isUndef);
+	assert(structData3.nonExistentDate.isUndef);
 }
