@@ -7,13 +7,17 @@ import std.process: spawnProcess, wait;
 
 import webtank.net.server.common: ensureBindSocket;
 
-void startDispatchProcess(ushort port, string workerPath, string workerSockAddr)
+void startDispatchProcess(ushort port, string workerPath, string workerSockAddr = null)
 {
 	import std.exception: enforce;
 	enforce(port > 0, `Port is not set!`);
 	enforce(workerPath.length > 0, `workerPath is not set!`);
-	enforce(workerSockAddr.length > 0, `workerSockAddr is not set!`);
-	
+	import std.path: baseName, buildNormalizedPath, withExtension;
+	import std.file: getcwd;
+	if( workerSockAddr.length == 0 ) {
+		workerSockAddr = buildNormalizedPath(getcwd(), baseName(workerPath) ~ `.sock`);
+	}
+
 	Socket listener = new TcpSocket();
 	scope(exit)
 	{
@@ -24,6 +28,7 @@ void startDispatchProcess(ushort port, string workerPath, string workerSockAddr)
 	listener.ensureBindSocket(port);
 	while(true)
 	{
+		listener.listen(1);
 		auto pid = spawnProcess([workerPath, `--workerSockAddr`, workerSockAddr]);
 		Thread.sleep( dur!("seconds")(1) );
 		Socket workerSock = new Socket(AddressFamily.UNIX, SocketType.STREAM);
