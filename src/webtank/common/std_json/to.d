@@ -167,3 +167,19 @@ JSONValue toStdJSON(T)(T dValue)
 struct FieldSerializer(alias F) {
 	alias Serialize = F;
 }
+
+unittest
+{
+	size_t sizeVal = 20;
+	string strVal = "webtank";
+	float floatVal = 30.3;
+	bool boolVal = true;
+	int[] intArrVal = [3,2,1];
+	string[] strArrVal = ["webtank", "common", "to"];
+	assert(sizeVal.toStdJSON() == JSONValue(sizeVal));
+	assert(strVal.toStdJSON() == JSONValue(strVal));
+	assert(floatVal.toStdJSON() == JSONValue(floatVal));
+	assert(boolVal.toStdJSON() == JSONValue(boolVal));
+	assert(intArrVal.toStdJSON() == JSONValue(intArrVal));
+	assert(strArrVal.toStdJSON() == JSONValue(strArrVal));
+}
