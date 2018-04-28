@@ -16,6 +16,8 @@ import
 	webtank.datctrl.enum_format,
 	webtank.common.std_json;
 
+public import webtank.datctrl.iface.data_field: PrimaryKey;
+
 /++
 $(LOCALE_EN_US Struct representing format of record or record set)
 $(LOCALE_RU_RU Структура представляющая формат записи или набора записей)

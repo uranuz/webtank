@@ -13,6 +13,7 @@ protected:
 	ValueType[] _values;
 	bool[] _nullFlags;
 	bool _isNullable;
+	import std.exception: enforce;
 
 	static if( isEnumFormat!(FormatType) )
 	{
@@ -62,23 +63,24 @@ protected:
 			return true;
 		}
 
+		static immutable OUT_OF_BOUNDS = `Data field value index out of bounds!!!`;
 		bool isNull(size_t index)
 		{
-			assert(index < _nullFlags.length);
+			enforce(index < _nullFlags.length, OUT_OF_BOUNDS);
 			return isNullable? _nullFlags[index]: false;
 		}
 
 		string getStr(size_t index)
 		{
 			import std.conv: to;
-			assert(index < _values.length);
+			enforce(index < _values.length, OUT_OF_BOUNDS);
 			return isNull(index)? null: _values[index].to!string;
 		}
 
 		string getStr(size_t index, string defaultValue)
 		{
 			import std.conv: to;
-			assert(index < _values.length);
+			enforce(index < _values.length, OUT_OF_BOUNDS);
 			return isNull(index)? defaultValue: _values[index].to!string;
 		}
 
@@ -92,7 +94,7 @@ protected:
 
 		ValueType get(size_t index, ValueType defaultValue)
 		{
-			assert(index < _values.length);
+			enforce(index < _values.length, OUT_OF_BOUNDS);
 			return isNull(index)? defaultValue: _values[index];
 		}
 
@@ -105,16 +107,16 @@ protected:
 
 		void set(ValueType value, size_t index)
 		{
-			assert(index < _nullFlags.length);
-			assert(index < _values.length);
+			enforce(index < _nullFlags.length, OUT_OF_BOUNDS);
+			enforce(index < _values.length, OUT_OF_BOUNDS);
 			_nullFlags[index] = false;
 			_values[index] = value;
 		}
 
 		void nullify(size_t index)
 		{
-			assert(index < _nullFlags.length);
-			assert(index < _values.length);
+			enforce(index < _nullFlags.length, OUT_OF_BOUNDS);
+			enforce(index < _values.length, OUT_OF_BOUNDS);
 			_nullFlags[index] = true;
 			_values[index] = ValueType.init;
 		}
@@ -143,6 +145,22 @@ protected:
 			}
 			_values.insertInPlace(index, values);
 			_nullFlags.insertInPlace(index, false.repeat(values.length));
+		}
+
+		import std.json: JSONValue, JSON_TYPE;
+		void fromStdJSONValue(JSONValue jValue, size_t index)
+		{
+			enforce(index < _nullFlags.length, OUT_OF_BOUNDS);
+			enforce(index < _values.length, OUT_OF_BOUNDS);
+			
+			import webtank.common.std_json.from: fromStdJSON;
+			if( jValue.type == JSON_TYPE.NULL ) {
+				_nullFlags[index] = true;
+				_values[index] = ValueType.init;
+			} else {
+				_nullFlags[index] = false;
+				_values[index] = fromStdJSON!ValueType(jValue);
+			}
 		}
 	} //override
 }

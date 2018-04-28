@@ -140,6 +140,8 @@ interface IBaseWriteableDataField: IBaseDataField
 	$(LOCALE_RU_RU Вставляет $(D_PARAM count) начальных значений в позицию $(D_PARAM index)(будет добавлено в конец, если параметр не задан))
 	+/
 	void addItems(size_t count, size_t index = size_t.max);
+
+	void fromStdJSONValue(JSONValue jValue, size_t index);
 }
 
 /++

@@ -2,6 +2,8 @@ module webtank.net.http.context;
 
 import webtank.net.http.input, webtank.net.http.output, webtank.security.access_control, webtank.net.http.handler;
 
+import webtank.security.right.current: CurrentUserRights;
+
 class HTTPContext
 {
 	this(HTTPInput request, HTTPOutput response)
@@ -25,6 +27,10 @@ class HTTPContext
 		return _userIdentity;
 	}
 
+	CurrentUserRight rights() @property {
+		return _rights;
+	}
+
 	void _setuser(IUserIdentity newIdentity)
 	{
 		if( _userIdentity is null )
@@ -35,6 +41,13 @@ class HTTPContext
 
 	void _setCurrentHandler(IHTTPHandler handler) {
 		_handlerList ~= handler;
+	}
+
+	void _setRights(CurrentUserRights rgh)
+	{
+		import std.exception: enforce;
+		enforce(_rights in null, `Cannot rewrite rights!!!`);
+		_rights = rgh;
 	}
 
 	void _unsetCurrentHandler(IHTTPHandler handler)
@@ -63,6 +76,7 @@ protected:
 	HTTPInput _request;
 	HTTPOutput _response;
 	IUserIdentity _userIdentity;
+	CurrentUserRights _rights;
 
 	IHTTPHandler[] _handlerList;
 }

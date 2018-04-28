@@ -32,12 +32,7 @@ interface IUserIdentity
 	void invalidate();
 	
 	///Возвращает true, если разрешено выполнение действия action для ресурса resource. Иначе - false
-	bool isActionAllowed( string resource, string action /+, string attribute +/);
-	//bool isResourceGranted( string resource, string attribute );
-	
-// 	bool isAllowed(string resource, string action, string attribute = null);
-// 	bool isResourceAccessAllowed(string resource, string attribute = null);
-// 	bool isActionAccessAllowed(string access_control, string attribute = null);
+	bool isActionAllowed(string resource, string action);
 }
 
 ///Класс представляет удостоверение анонимного пользователя
@@ -62,7 +57,7 @@ public:
 
 		void invalidate() {}
 		
-		bool isActionAllowed( string resource, string action )
+		bool isActionAllowed(string resource, string action)
 		{	return false; }
 	}
 }

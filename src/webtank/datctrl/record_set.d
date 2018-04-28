@@ -36,9 +36,59 @@ public:
 			}
 		}
 
-		void addItems(IBaseWriteableRecord[] records, size_t index = size_t.max) {
-			assert(false);
+		void addItems(IBaseWriteableRecord[] records, size_t index = size_t.max)
+		{
+			import std.exception: enforce;
+			enforce(false, `Not implemented yet!!!`);
 		}
+	}
+
+	import std.json: JSONValue, JSON_TYPE;
+	static WriteableRecordSet fromStdJSONByFormat(RecordFormatT)(JSONValue jRecordSet)
+	{
+		import std.exception: enforce;
+		enforce(jRecordSet.type == JSON_TYPE.OBJECT, `Expected JSON object as RecordSet serialized data!!!`);
+		enforce(`_type` in jRecordSet, `Expected "_type" field in RecordSet serialized data!!!`);
+		enforce(`d` in jRecordSet, `Expected "d" field in RecordSet serialized data!!!`);
+		enforce(`f` in jRecordSet, `Expected "f" field in RecordSet serialized data!!!`);
+		JSONValue jFormat = jRecordSet[`f`];
+		JSONValue jData = jRecordSet[`d`];
+		enforce(jData.type == JSON_TYPE.ARRAY, `RecordSet serialized data field "d" must be JSON array!!!`);
+		enforce(jFormat.type == JSON_TYPE.ARRAY, `RecordSet serialized data field "f" must be JSON array!!!`);
+		
+
+		size_t[string] fieldToIndex;
+		foreach( size_t index, JSONValue jField; jFormat )
+		{
+			enforce(jField.type == JSON_TYPE.OBJECT, `RecordSet serialized field format must be object!!!`);
+			enforce(`n` in jField, `RecordSet serialized field format must have "n" field`);
+			enforce(jField[`n`].type == JSON_TYPE.STRING, `RecordSet serialized field name must be JSON string!!!`);
+			string fieldName = jField[`n`].str;
+			enforce(fieldName !in fieldToIndex, `RecordSet field name must be unique!!!`);
+			fieldToIndex[fieldName] = index;
+		}
+
+		import webtank.datctrl.memory_data_field: makeMemoryDataFields;
+		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(format);
+
+		auto newRS = new WriteableRecordSet(dataFields, RecordFormatT.getKeyFieldIndex!());
+		newRS.addItems(jData.length); // Expand fields to desired size
+
+		enum size_t expectedFieldCount = RecordFormatT.tupleOfNames().length;
+		foreach( size_t recIndex, JSONValue jRecord; jData )
+		{
+			enforce(jRecord.type == JSON_TYPE.ARRAY, `Record serialized data expected to be JSON array!!!`);
+			enforce(jRecord.array.length >= expectedFieldCount, `Not enough items in serialized Record`);
+			foreach( formatFieldIndex, name; RecordFormatT.names )
+			{
+				enforce(name in fieldToIndex, `Expected field in recordset with name: ` ~ name);
+				dataFields[formatFieldIndex].fromStdJSONValue(jRecord[fieldToIndex[name]], recIndex);
+			}
+		}
+
+		newRS._reindexFields();
+		newRS._reindexRecords();
+		return newRS; // Hope we have done there
 	}
 }
 

@@ -10,6 +10,7 @@ import webtank.net.http.context;
 import webtank.net.http.output: HTTPOutput;
 import webtank.net.utils;
 import webtank.ivy;
+import webtank.security.right.controller: AccessRightController;
 
 import ivy;
 import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
@@ -31,9 +32,10 @@ protected:
 	ProgrammeCache!(useTemplatesCache) _templateCache;
 
 	IAccessController _accessController;
+	AccessRightController _rights;
 
 public:
-	this(string serviceName, IAccessController accessController, string pageURIPatternStr)
+	this(string serviceName, IAccessController accessController, string pageURIPatternStr, AccessRightController rights)
 	{
 		_serviceName = serviceName;
 		readConfig(); // Читаем конфиг при старте сервиса
@@ -48,6 +50,7 @@ public:
 		_rootRouter.addHandler(_pageRouter);
 
 		_accessController = accessController;
+		_rights = rights;
 		_subscribeRoutingEvents();
 	}
 
@@ -166,7 +169,12 @@ public:
 	}
 
 	IAccessController accessController() @property {
-		assert( _accessController, `Main service access controller is not initialized!` );
+		assert( _accessController, `View service access controller is not initialized!` );
 		return _accessController;
+	}
+
+	AccessRightController rights() @property {
+		assert( _rights, `View service rights controller is not initialized!` );
+		return _rights;
 	}
 }

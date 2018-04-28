@@ -8,6 +8,7 @@ import webtank.net.service.config;
 import webtank.net.service.iface;
 import webtank.net.utils: makeErrorMsg;
 import webtank.security.access_control;
+import webtank.security.right.controller: AccessRightController;
 
 
 import std.json: JSONValue, parseJSON;
@@ -31,9 +32,10 @@ protected:
 	Loger _databaseLoger;
 
 	IAccessController _accessController;
+	AccessRightController _rights;
 
 public:
-	this(string serviceName, IAccessController accessController)
+	this(string serviceName, IAccessController accessController, AccessRightController rights)
 	{
 		_serviceName = serviceName;
 		readConfig();
@@ -45,6 +47,7 @@ public:
 		_rootRouter.addHandler(_jsonRPCRouter);
 
 		_accessController = accessController;
+		_rights = rights;
 		_subscribeRoutingEvents();
 	}
 
@@ -139,4 +142,8 @@ public:
 		return _accessController;
 	}
 
+	AccessRightController rights() @property {
+		assert( _rights, `Main service rights controller is not initialized!` );
+		return _rights;
+	}
 }
