@@ -4,6 +4,7 @@ import webtank.net.http.handler: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
 import webtank.common.loger: Loger;
 import webtank.net.server.common: ProcessRequestImpl, ensureBindSocket, makeErrorMsg;
+import webtank.net.service.iface: IWebService;
 
 import std.parallelism: TaskPool, task;
 import std.socket: Socket, TcpSocket, InternetAddress, socket_t, AddressFamily;
@@ -14,29 +15,27 @@ class ThreadPoolServer
 protected:
 	ushort _port = 8082;
 	socket_t _socketHandle;
-	IHTTPHandler _handler;
 	size_t _threadCount;
-	Loger _loger;
 	bool _isShared;
 	Socket _listener;
 	TaskPool _taskPool;
 
 public:
-	this(ushort port, IHTTPHandler handler, Loger loger, size_t threadCount)
+	this(ushort port, IWebService service, size_t threadCount)
 	{
+		assert(service, `Service object expected`);
 		_port = port;
-		_handler = handler;
+		_service = service;
 		_threadCount = threadCount;
-		_loger = loger;
 		_isShared = false;
 	}
 
-	this(socket_t socketHandle, IHTTPHandler handler, Loger loger, size_t threadCount)
+	this(socket_t socketHandle, IWebService service, size_t threadCount)
 	{
+		assert(service, `Service object expected`);
 		_socketHandle = socketHandle;
-		_handler = handler;
+		_service = service;
 		_threadCount = threadCount;
-		_loger = loger;
 		_isShared = true;
 	}
 
@@ -49,7 +48,7 @@ public:
 				Socket client = _listener.accept();
 				if( client is null )
 				{
-					this._loger.crit(`accepted socket is null`);
+					_service.loger.crit(`accepted socket is null`);
 					continue;
 				}
 
@@ -57,7 +56,7 @@ public:
 			}
 			catch(Throwable exc)
 			{
-				this._loger.fatal( makeErrorMsg(exc) );
+				_service.loger.fatal( makeErrorMsg(exc) );
 				throw exc;
 			}
 		}

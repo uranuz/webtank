@@ -3,13 +3,14 @@ module webtank.net.server.worker;
 import std.socket: Socket, SocketShutdown, AddressFamily, SocketType, UnixAddress;
 import std.socket: CMSG_SPACE, CMSG_FIRSTHDR, CMSG_LEN, SOL_SOCKET, SCM_RIGHTS, CMSG_DATA, socket_t, cmsghdr, msghdr, iovec, ssize_t, recvmsg;
 
+import webtank.net.service.iface: IWebService;
+
 struct WorkerOpts
 {
 	string workerSockAddr;
 	ushort port = 8082;
 	size_t threadCount = 5;
-	IHTTPHandler handler;
-	Loger loger;
+	IWebService service;
 	string kind;
 }
 
@@ -31,8 +32,9 @@ void runServer(ref WorkerOpts opts)
 {
 	import std.exception: enforce;
 
-	enforce(opts.handler !is null, `Server main handler is null`);
-	enforce(opts.loger !is null, `Server main loger is null`);
+	enforce(opts.service !is null, `Server service object is null`);
+	enforce(opts.service.rootRouter !is null, `Server main handler is null`);
+	enforce(opts.service.loger !is null, `Server main loger is null`);
 	
 	socket_t serverSock;
 	if(opts.workerSockAddr.length > 0) {
@@ -41,13 +43,13 @@ void runServer(ref WorkerOpts opts)
 	
 	if( opts.kind == `thread_per_connection` ) {
 		auto server = (opts.workerSockAddr.length > 0?
-			new ThreadPerConnectionServer(serverSock, opts.handler, opts.loger):
-			new ThreadPerConnectionServer(opts.port, opts.handler, opts.loger));
+			new ThreadPerConnectionServer(serverSock, opts.service):
+			new ThreadPerConnectionServer(opts.port, opts.service));
 		server.start();
 	} else {
 		auto server = (opts.workerSockAddr.length > 0?
-			new ThreadPoolServer(serverSock, opts.handler, opts.loger, opts.threadCount):
-			new ThreadPoolServer(opts.port, opts.handler, opts.loger, opts.threadCount));
+			new ThreadPoolServer(serverSock, opts.service, opts.threadCount):
+			new ThreadPoolServer(opts.port, opts.service, opts.threadCount));
 		server.start();
 	}
 }

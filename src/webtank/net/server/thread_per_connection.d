@@ -4,6 +4,7 @@ import webtank.net.http.handler: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
 import webtank.common.loger: Loger;
 import webtank.net.server.common: ProcessRequestImpl, ensureBindSocket;
+import webtank.net.service.iface: IWebService;
 
 import std.socket: Socket, TcpSocket, InternetAddress, SocketShutdown, SocketOSException, socket_t, AddressFamily;
 import core.thread: Thread;
@@ -14,25 +15,24 @@ class ThreadPerConnectionServer
 protected:
 	ushort _port;
 	socket_t _socketHandle;
-	IHTTPHandler _handler;
-	Loger _loger;
+	IWebService _service;
 	Socket _listenSocket;
 	bool _isShared = false;
 
 public:
-	this(ushort port, IHTTPHandler handler, Loger loger)
+	this(ushort port, IWebService service)
 	{
+		assert(service, `Service object expected`);
 		_port = port;
-		_handler = handler;
-		_loger = loger;
+		_service = service;
 		_isShared = false;
 	}
 
-	this(socket_t socketHandle, IHTTPHandler handler, Loger loger)
+	this(socket_t socketHandle, IWebService service)
 	{
+		assert(service, `Service object expected`);
 		_socketHandle = socketHandle;
-		_handler = handler;
-		_loger = loger;
+		_service = service;
 		_isShared = true;
 	}
 
@@ -63,7 +63,7 @@ public:
 		while(true) //Цикл приёма соединений через серверный сокет
 		{
 			Socket currSock = listener.accept(); //Принимаем соединение
-			auto workingThread = new ServerWorkingThread(currSock, _handler, _loger);
+			auto workingThread = new ServerWorkingThread(currSock, _service);
 			workingThread.start();
 		}
 
@@ -75,15 +75,14 @@ class ServerWorkingThread: Thread
 {
 protected:
 	Socket _socket;
-	IHTTPHandler _handler;
-	Loger _loger;
 
 public:
-	this(Socket sock, IHTTPHandler handler, Loger loger)
+	this(Socket sock, IWebService service)
 	{
+		assert(sock, `Socket object expected`);
+		assert(service, `Service object expected`);
 		_socket = sock;
-		_handler = handler;
-		_loger = loger;
+		_service = service;
 		super(&_work);
 	}
 

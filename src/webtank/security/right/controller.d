@@ -1,7 +1,7 @@
 module webtank.security.right.controller;
 
-import webtank.security.right.access_rule;
-import webtank.security.right.data_source;
+import webtank.security.right.iface.access_rule: IAccessRule;
+import webtank.security.right.iface.data_source: IRightDataSource;
 
 class AccessObject
 {
@@ -34,12 +34,6 @@ public:
 	}
 }
 
-import webtank.security.access_control: IUserIdentity;
-interface IRightController
-{
-	bool isAllowed(IUserIdentity user, string accessObject, string accessKind, string[string] data);
-}
-
 struct AccessRightKey
 {
 	size_t roleNum;
@@ -47,10 +41,15 @@ struct AccessRightKey
 	string accessKind;
 }
 
-class AccessRightController
+import webtank.security.right.iface.controller: IRightController;
+
+class AccessRightController: IRightController
 {
 	
 private:
+	import webtank.security.right.core_storage: CoreAccessRuleStorage;
+	import webtank.security.access_control: IUserIdentity;
+	import webtank.security.right.composite_rule: CompositeAccessRule, RulesRelation;
 	CoreAccessRuleStorage _coreStorage;
 	IRightDataSource _dataSource;
 	IAccessRule[size_t] _allRules;
@@ -94,8 +93,12 @@ public:
 			reloadRightsData();
 	}
 
-	bool isAllowed(IUserIdentity user, string accessObject, string accessKind, string[string] data)
+	override public bool isAllowed(IUserIdentity user, string accessObject, string accessKind, string[string] data)
 	{
+		if( !user.isAuthenticated() ) {
+			return false; // Not permission if user is not authenticated
+		}
+
 		_assureLoaded(); // Will load rights lazily
 		
 		import std.array: split, array;
@@ -105,7 +108,7 @@ public:
 			return false;
 		size_t objectNum = _objectNumByName[accessObject];
 
-		// Get nonempty role names tha mentioned in list
+		// Get nonempty role names tha mentioned in the list
 		string[] userRoles =
 			user.data.get("accessRoles", null).split(";")
 			.map!( (it) => it.strip() )

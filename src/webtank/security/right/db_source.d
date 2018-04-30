@@ -7,7 +7,7 @@ import webtank.db.database: IDatabase;
 import webtank.datctrl.iface.record_set: IBaseRecordSet;
 import webtank.datctrl.typed_record_set: TypedRecordSet;
 
-import webtank.security.right.data_source;
+import webtank.security.right.iface.data_source: IRightDataSource, ruleRecFormat, objectRecFormat, roleRecFormat, rightRecFormat;
 
 class RightDatabaseSource: IRightDataSource
 {

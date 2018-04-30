@@ -56,6 +56,10 @@ mixin template ProcessRequestImpl()
 	import webtank.net.server.common: makeErrorMsg, makeErrorResponse;
 	import webtank.net.http.input: HTTPInput, readHTTPInputFromSocket;
 	import webtank.net.http.output: HTTPOutput;
+	import webtank.net.service.iface: IWebService;
+
+private:
+	IWebService _service;
 
 	private void _processRequest(Socket sock)
 	{
@@ -72,14 +76,14 @@ mixin template ProcessRequestImpl()
 
 			if( request is null )
 			{
-				this._loger.crit( `request is null` );
+				_service.loger.crit( `request is null` );
 				return;
 			}
 
-			auto context = new HTTPContext(request, new HTTPOutput());
+			auto context = new HTTPContext(request, new HTTPOutput(), _service);
 
 			//Запуск обработки HTTP-запроса
-			this._handler.processRequest(context);
+			_service.rootRouter.processRequest(context);
 
 			//Наш сервер не поддерживает соединение
 			context.response.headers["connection"] = "close";
@@ -87,14 +91,14 @@ mixin template ProcessRequestImpl()
 		}
 		catch(Exception exc)
 		{
-			this._loger.crit( makeErrorMsg(exc) ); //Хотим знать, что случилось
+			_service.loger.crit( makeErrorMsg(exc) ); //Хотим знать, что случилось
 			sock.send( makeErrorResponse(exc).getResponseString() );
 
 			return; // На эксепшоне не падаем - а тихо-мирно завершаемся
 		}
 		catch(Throwable exc)
 		{
-			this._loger.fatal( makeErrorMsg(exc) ); //Хотим знать, что случилось
+			_service.loger.fatal( makeErrorMsg(exc) ); //Хотим знать, что случилось
 			sock.send( makeErrorResponse(exc).getResponseString() );
 
 			throw exc; // С Throwable не связываемся - и просто роняем Thread

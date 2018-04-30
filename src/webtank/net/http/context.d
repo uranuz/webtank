@@ -2,14 +2,16 @@ module webtank.net.http.context;
 
 import webtank.net.http.input, webtank.net.http.output, webtank.security.access_control, webtank.net.http.handler;
 
-import webtank.security.right.current: CurrentUserRights;
+import webtank.security.right.user_rights: UserRights;
+import webtank.net.service.iface: IWebService;
 
 class HTTPContext
 {
-	this(HTTPInput request, HTTPOutput response)
+	this(HTTPInput request, HTTPOutput response, IWebService service)
 	{
 		_request = request;
 		_response = response;
+		_service = service;
 	}
 
 	///Запрос к серверу по протоколу HTTP
@@ -22,32 +24,26 @@ class HTTPContext
 		return _response;
 	}
 
+	///Экземпляр сервиса, с общими для процесса данными
+	IWebService service() @property {
+		return _service;
+	}
+
 	///Удостоверение пользователя
-	IUserIdentity user() @property {
+	IUserIdentity user() @property
+	{
+		if( _userIdentity is null && _service.accessController !is null ) {
+			_userIdentity = _service.accessController.authenticate(this);
+		}
 		return _userIdentity;
 	}
 
-	CurrentUserRight rights() @property {
-		return _rights;
-	}
-
-	void _setuser(IUserIdentity newIdentity)
-	{
-		if( _userIdentity is null )
-			_userIdentity = newIdentity;
-		else
-			throw new Exception("Access ticket for connection is already set!!!");
+	UserRights rights() @property {
+		return UserRights(this);
 	}
 
 	void _setCurrentHandler(IHTTPHandler handler) {
 		_handlerList ~= handler;
-	}
-
-	void _setRights(CurrentUserRights rgh)
-	{
-		import std.exception: enforce;
-		enforce(_rights in null, `Cannot rewrite rights!!!`);
-		_rights = rgh;
 	}
 
 	void _unsetCurrentHandler(IHTTPHandler handler)
@@ -75,8 +71,8 @@ class HTTPContext
 protected:
 	HTTPInput _request;
 	HTTPOutput _response;
+	IWebService _service;
 	IUserIdentity _userIdentity;
-	CurrentUserRights _rights;
 
 	IHTTPHandler[] _handlerList;
 }

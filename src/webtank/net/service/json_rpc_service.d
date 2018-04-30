@@ -8,7 +8,7 @@ import webtank.net.service.config;
 import webtank.net.service.iface;
 import webtank.net.utils: makeErrorMsg;
 import webtank.security.access_control;
-import webtank.security.right.controller: AccessRightController;
+import webtank.security.right.iface.controller: IRightController;
 
 
 import std.json: JSONValue, parseJSON;
@@ -32,10 +32,10 @@ protected:
 	Loger _databaseLoger;
 
 	IAccessController _accessController;
-	AccessRightController _rights;
+	IRightController _rights;
 
 public:
-	this(string serviceName, IAccessController accessController, AccessRightController rights)
+	this(string serviceName, IAccessController accessController, IRightController rights)
 	{
 		_serviceName = serviceName;
 		readConfig();
@@ -97,13 +97,6 @@ public:
 		import std.exception: assumeUnique;
 		import std.conv;
 
-		// Обработчик выполняет аутентификацию и устанавливает полученный "билет" в контекст запроса
-		_rootRouter.onPostPoll ~= (HTTPContext context, bool isMatched) {
-			if( isMatched ) {
-				context._setuser( _accessController.authenticate(context) );
-			}
-		};
-
 		// Логирование приходящих JSON-RPC запросов для отладки
 		_jsonRPCRouter.onPostPoll ~= ( (HTTPContext context, bool) {
 			import std.conv: to;
@@ -142,7 +135,7 @@ public:
 		return _accessController;
 	}
 
-	AccessRightController rights() @property {
+	override IRightController rightController() @property {
 		assert( _rights, `Main service rights controller is not initialized!` );
 		return _rights;
 	}

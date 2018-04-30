@@ -1,6 +1,6 @@
 module webtank.security.right.source_method;
 
-import webtank.security.right.data_source: IRightDataSource;
+import webtank.security.right.iface.data_source: IRightDataSource;
 
 import std.json: JSONValue;
 JSONValue getAccessRightList(IRightDataSource rightSource)

@@ -2,7 +2,8 @@ module webtank.net.service.iface;
 
 import webtank.common.loger: Loger;
 import webtank.net.http.handler: ICompositeHTTPHandler;
-import webtank.security.access_control;
+import webtank.security.access_control: IAccessController;
+import webtank.security.right.iface.controller: IRightController;
 import webtank.net.service.endpoint: EndPoint;
 
 interface IWebService
@@ -14,4 +15,5 @@ interface IWebService
 	Loger loger() @property;
 	ICompositeHTTPHandler rootRouter() @property;
 	IAccessController accessController() @property;
+	IRightController rightController() @property;
 }

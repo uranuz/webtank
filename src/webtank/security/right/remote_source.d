@@ -5,7 +5,7 @@ import webtank.datctrl.iface.data_field: PrimaryKey;
 import webtank.datctrl.iface.record_set: IBaseRecordSet, IBaseWriteableRecordSet;
 import webtank.datctrl.typed_record_set: TypedRecordSet;
 
-import webtank.security.right.data_source;
+import webtank.security.right.iface.data_source: IRightDataSource, ruleRecFormat, objectRecFormat, roleRecFormat, rightRecFormat;
 import webtank.net.service.iface: IWebService;
 
 class RightRemoteSource: IRightDataSource

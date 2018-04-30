@@ -1,4 +1,4 @@
-module webtank.security.right.data_source;
+module webtank.security.right.iface.data_source;
 
 import webtank.datctrl.iface.data_field: PrimaryKey;
 import webtank.datctrl.typed_record_set: TypedRecordSet;
