@@ -48,7 +48,7 @@ public:
 	{
 		import std.exception: enforce;
 		enforce(jRecordSet.type == JSON_TYPE.OBJECT, `Expected JSON object as RecordSet serialized data!!!`);
-		enforce(`_type` in jRecordSet, `Expected "_type" field in RecordSet serialized data!!!`);
+		enforce(`t` in jRecordSet, `Expected "t" field in RecordSet serialized data!!!`);
 		enforce(`d` in jRecordSet, `Expected "d" field in RecordSet serialized data!!!`);
 		enforce(`f` in jRecordSet, `Expected "f" field in RecordSet serialized data!!!`);
 		JSONValue jFormat = jRecordSet[`f`];
@@ -69,16 +69,18 @@ public:
 		}
 
 		import webtank.datctrl.memory_data_field: makeMemoryDataFields;
-		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(format);
+		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init); // Fill with init format for now
 
 		auto newRS = new WriteableRecordSet(dataFields, RecordFormatT.getKeyFieldIndex!());
-		newRS.addItems(jData.length); // Expand fields to desired size
+		newRS.addItems(jData.array.length); // Expand fields to desired size
 
-		enum size_t expectedFieldCount = RecordFormatT.tupleOfNames().length;
+		enum size_t expectedFieldCount = RecordFormatT.tupleOfNames!().length;
+		import std.conv: text;
 		foreach( size_t recIndex, JSONValue jRecord; jData )
 		{
 			enforce(jRecord.type == JSON_TYPE.ARRAY, `Record serialized data expected to be JSON array!!!`);
-			enforce(jRecord.array.length >= expectedFieldCount, `Not enough items in serialized Record`);
+			enforce(jRecord.array.length >= expectedFieldCount,
+				`Not enough items in serialized Record. Expected ` ~ expectedFieldCount.text ~ ` got ` ~ jRecord.array.length.text);
 			foreach( formatFieldIndex, name; RecordFormatT.names )
 			{
 				enforce(name in fieldToIndex, `Expected field in recordset with name: ` ~ name);

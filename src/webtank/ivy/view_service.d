@@ -11,6 +11,7 @@ import webtank.net.http.output: HTTPOutput;
 import webtank.net.utils;
 import webtank.ivy;
 import webtank.security.right.iface.controller: IRightController;
+import webtank.ivy.rights: IvyUserRights;
 
 import ivy;
 import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
@@ -66,8 +67,20 @@ public:
 		return _loger;
 	}
 
-	ProgrammeCache!(useTemplatesCache) templateCache() @property {
-		return _templateCache;
+	TDataNode runIvyModule(string moduleName, HTTPContext ctx = null, TDataNode dataDict = TDataNode.init)
+	{
+		import std.exception: enforce;
+		enforce(_templateCache !is null, `ViewService template cache is null!!!`);
+		TDataNode[string] extraGlobals;
+		extraGlobals[`userRights`] = new IvyUserRights(ctx.rights);
+		return _templateCache.getByModuleName(moduleName).run(dataDict, extraGlobals);
+	}
+
+	TDataNode runIvyModule(string moduleName, TDataNode dataDict)
+	{
+		import std.exception: enforce;
+		enforce(_templateCache !is null, `ViewService template cache is null!!!`);
+		return _templateCache.getByModuleName(moduleName).run(dataDict);
 	}
 
 	private void _startLoging()

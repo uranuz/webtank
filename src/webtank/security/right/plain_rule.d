@@ -25,7 +25,7 @@ public:
 
 		bool isAllowed(IUserIdentity identity, string[string] data = null)
 		{
-			if( _del !is null ) {
+			if( _del is null ) {
 				return false;
 			}
 			return _del(identity, data);

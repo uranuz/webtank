@@ -254,7 +254,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 
 	import std.json: JSONValue;
 	static auto fromStdJSON()(JSONValue jRecordSet) {
-		return _recordSet.fromStdJSONByFormat!FormatType(jRecordSet);
+		return ThisRecordSet(RecordSetType.fromStdJSONByFormat!FormatType(jRecordSet));
 	}
 
 	template set(string fieldName)

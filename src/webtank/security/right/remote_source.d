@@ -3,6 +3,7 @@ module webtank.security.right.remote_source;
 import webtank.datctrl.record_format: RecordFormat;
 import webtank.datctrl.iface.data_field: PrimaryKey;
 import webtank.datctrl.iface.record_set: IBaseRecordSet, IBaseWriteableRecordSet;
+import webtank.datctrl.record_set: WriteableRecordSet;
 import webtank.datctrl.typed_record_set: TypedRecordSet;
 
 import webtank.security.right.iface.data_source: IRightDataSource, ruleRecFormat, objectRecFormat, roleRecFormat, rightRecFormat;
@@ -34,7 +35,7 @@ public:
 	void _assureLoaded()
 	{
 		if( _ruleRS is null || _objectRS is null || _roleRS is null || _rightRS is null )
-			_loadRights;
+			_loadRights();
 	}
 
 	void _loadRights()
@@ -48,31 +49,36 @@ public:
 		enforce(`objects` in jRightsData, `Expected objects RecordSet in rights data!!!`);
 		enforce(`roles` in jRightsData, `Expected roles RecordSet in rights data!!!`);
 		enforce(`rights` in jRightsData, `Expected rights RecordSet in rights data!!!`);
+
 		import webtank.common.std_json.from: fromStdJSON;
-		auto tmpRules = fromStdJSON!(TypedRecordSet!(typeof(ruleRecFormat), IBaseWriteableRecordSet))(jRightsData[`rules`]);
+		auto tmpRules = fromStdJSON!(TypedRecordSet!(typeof(ruleRecFormat), WriteableRecordSet))(jRightsData[`rules`]);
 		_ruleRS = TypedRecordSet!(typeof(ruleRecFormat), IBaseRecordSet)(tmpRules);
-		auto tmpObjects = fromStdJSON!(TypedRecordSet!(typeof(objectRecFormat), IBaseWriteableRecordSet))(jRightsData[`objects`]);
+		auto tmpObjects = fromStdJSON!(TypedRecordSet!(typeof(objectRecFormat), WriteableRecordSet))(jRightsData[`objects`]);
 		_objectRS = TypedRecordSet!(typeof(objectRecFormat), IBaseRecordSet)(tmpObjects);
-		auto tmpRoles = fromStdJSON!(TypedRecordSet!(typeof(objectRecFormat), IBaseWriteableRecordSet))(jRightsData[`roles`]);
+		auto tmpRoles = fromStdJSON!(TypedRecordSet!(typeof(roleRecFormat), WriteableRecordSet))(jRightsData[`roles`]);
 		_roleRS = TypedRecordSet!(typeof(roleRecFormat), IBaseRecordSet)(tmpRoles);
-		auto tmpRights = fromStdJSON!(TypedRecordSet!(typeof(rightRecFormat), IBaseWriteableRecordSet))(jRightsData[`rights`]);
+		auto tmpRights = fromStdJSON!(TypedRecordSet!(typeof(rightRecFormat), WriteableRecordSet))(jRightsData[`rights`]);
 		_rightRS = TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet)(tmpRights);
 	}
 
 	public override {
 		TypedRecordSet!(typeof(ruleRecFormat), IBaseRecordSet) getRules() {
+			_assureLoaded();
 			return _ruleRS;
 		}
 
 		TypedRecordSet!(typeof(objectRecFormat), IBaseRecordSet) getObjects() {
+			_assureLoaded();
 			return _objectRS;
 		}
 
 		TypedRecordSet!(typeof(roleRecFormat), IBaseRecordSet) getRoles() {
+			_assureLoaded();
 			return _roleRS;
 		}
 
 		TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet) getRights() {
+			_assureLoaded();
 			return _rightRS;
 		}
 	}

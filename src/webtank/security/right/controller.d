@@ -113,7 +113,7 @@ public:
 			user.data.get("accessRoles", null).split(";")
 			.map!( (it) => it.strip() )
 			.filter!( (it) => it.length && it in _roleNumByName ).array;
-		
+
 		foreach( roleName; userRoles )
 		{
 			AccessRightKey rightKey = {
@@ -147,16 +147,16 @@ public:
 		}
 		
 		string ruleName = ruleRec.get!"name";
-		if( ruleName.length > 0 && ruleName in _coreStorage ) {
-			return _coreStorage[ruleName];
-		} else if( auto existing = ruleRec.get!"num" in _allRules ) {
-			return *existing;
+		IAccessRule newRule;
+		if( auto coreRule = ruleName in _coreStorage ) {
+			newRule = *coreRule;
+		} else {
+			newRule = new CompositeAccessRule(
+				ruleName,
+				cast(RulesRelation) ruleRec.get!"relation"(RulesRelation.none),
+				_loadChildRules(ruleRec, rulesRS)
+			);
 		}
-		IAccessRule newRule = new CompositeAccessRule(
-			ruleName,
-			cast(RulesRelation) ruleRec.get!"relation"(RulesRelation.none),
-			_loadChildRules(ruleRec, rulesRS)
-		);
 		_allRules[ruleRec.get!"num"] = newRule;
 		return newRule;
 	}
