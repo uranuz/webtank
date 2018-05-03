@@ -6,18 +6,25 @@ import webtank.security.right.iface.data_source: IRightDataSource;
 class AccessObject
 {
 private:
+	import webtank.common.optional: Optional;
 	string _name;
 	AccessObject[] _children;
+	Optional!size_t _parentNum;
 
 public:
-	this(string name, AccessObject[] children = null)
+	this(string name, AccessObject[] children = null, Optional!size_t parent = Optional!size_t())
 	{
 		_name = name;
 		_children = children;
+		_parentNum = parent;
 	}
 
 	string name() @property {
 		return _name;
+	}
+
+	Optional!size_t parentNum() @property {
+		return _parentNum;
 	}
 
 	import std.json: JSONValue;
@@ -57,7 +64,7 @@ private:
 	string[size_t] _allRoles;
 	IAccessRule[AccessRightKey] _rulesByRightKey;
 
-	size_t[string] _objectNumByName;
+	size_t[string] _objectNumByFullName;
 	size_t[string] _roleNumByName;
 
 public:
@@ -104,9 +111,9 @@ public:
 		import std.array: split, array;
 		import std.algorithm: filter, map;
 		import std.string: strip;
-		if( accessObject !in _objectNumByName )
+		if( accessObject !in _objectNumByFullName )
 			return false;
-		size_t objectNum = _objectNumByName[accessObject];
+		size_t objectNum = _objectNumByFullName[accessObject];
 
 		// Get nonempty role names tha mentioned in the list
 		string[] userRoles =
@@ -191,16 +198,36 @@ public:
 		}
 
 		_allObjects.clear();
-		_objectNumByName.clear();
+		_objectNumByFullName.clear();
 		foreach( objRec; objRS ) {
 			_loadObjectWithChildren(objRec, objRS, childKeys);
 		}
 
 		import std.exception: enforce;
-		foreach( key, obj; _allObjects ) {
-			enforce( obj.name !in _objectNumByName, `Duplicated access object name: ` ~ obj.name );
-			_objectNumByName[obj.name] = key;
+		foreach( key, obj; _allObjects )
+		{
+			string fullName = getFullObjectName(obj);
+			enforce(fullName !in _objectNumByFullName, `Duplicated access object name: ` ~ obj.name);
+			_objectNumByFullName[fullName] = key;
 		}
+	}
+
+	string getFullObjectName(AccessObject obj)
+	{
+		import std.exception: enforce;
+		import std.conv: text;
+		string result;
+		while(obj !is null)
+		{
+			result = obj.name ~ (result.length? ".": null) ~ result;
+			if( obj.parentNum.isNull ) {
+				break;
+			}
+			auto parentPtr = obj.parentNum.value in _allObjects;
+			enforce(parentPtr !is null, `Could not find parent access object by num: ` ~ obj.parentNum.text);
+			obj = *parentPtr;
+		}
+		return result;
 	}
 
 	AccessObject _loadObjectWithChildren(REC, RS)(ref REC objRec, ref RS objRS, size_t[][size_t] childKeys)
@@ -219,7 +246,13 @@ public:
 				childObjs ~= _loadObjectWithChildren(childRec, objRS, childKeys);
 			}
 		}
-		AccessObject newObj = new AccessObject(objRec.get!"name", childObjs);
+		import webtank.common.optional: Optional;
+		AccessObject newObj = new AccessObject(
+			objRec.get!"name", childObjs,
+			(objRec.isNull("parent_num")?
+				Optional!size_t():
+				Optional!size_t(objRec.get!"parent_num"))
+		);
 		_allObjects[objRec.get!"num"] = newObj;
 		return newObj;
 	}
