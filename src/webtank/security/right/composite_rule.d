@@ -31,7 +31,7 @@ public:
 			return _name;
 		}
 
-		bool isAllowed(IUserIdentity identity, string[string] data)
+		bool hasRight(IUserIdentity identity, string[string] data)
 		{
 			if( _children.length == 0 ) {
 				return false; // If there is no rules then access is denied
@@ -41,7 +41,7 @@ public:
 				// "Or" relation among children must be explicitly set, because it is less restrictive
 				foreach( child; _children )
 				{
-					if( child.isAllowed(identity, data) ) {
+					if( child.hasRight(identity, data) ) {
 						return true; // One of items returns true then access is allowed
 					}
 				}
@@ -51,7 +51,7 @@ public:
 				// By default we have "and" relation among children
 				foreach( child; _children )
 				{
-					if( !child.isAllowed(identity, data) ) {
+					if( !child.hasRight(identity, data) ) {
 						return false; // One of items returns false then access is denied
 					}
 				}

@@ -23,7 +23,7 @@ public:
 			return _name;
 		}
 
-		bool isAllowed(IUserIdentity identity, string[string] data = null)
+		bool hasRight(IUserIdentity identity, string[string] data = null)
 		{
 			if( _del is null ) {
 				return false;

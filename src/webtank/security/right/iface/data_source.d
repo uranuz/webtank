@@ -28,7 +28,8 @@ static immutable rightRecFormat = RecordFormat!(
 	size_t, "role_num",
 	size_t, "object_num",
 	size_t, "rule_num",
-	string, "access_kind"
+	string, "access_kind",
+	bool, "inheritance"
 )();
 
 interface IRightDataSource

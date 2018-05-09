@@ -43,8 +43,8 @@ public:
 				case `object`: return TDataNode(_accessObject);
 				case `kind`: return TDataNode(_accessKind);
 				case `data`: return TDataNode(_data);
-				case `isAllowed`: return TDataNode(
-					_rights.isAllowed(_accessObject, _accessKind, _data));
+				case `hasRight`: return TDataNode(
+					_rights.hasRight(_accessObject, _accessKind, _data));
 				default: break;
 			}
 			throw new Exception(`Unexpected IvyUserRights attribute: ` ~ attrName);

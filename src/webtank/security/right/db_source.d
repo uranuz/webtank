@@ -50,7 +50,8 @@ public:
 		TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet) getRights()
 		{
 			return _getDBFunc().query(`
-			select num, role_num, object_num, rule_num, access_kind from access_right
+			select num, role_num, object_num, rule_num, access_kind, inheritance
+			from access_right
 			`).getRecordSet(rightRecFormat);
 		}
 	}

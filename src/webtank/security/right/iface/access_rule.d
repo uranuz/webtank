@@ -5,7 +5,7 @@ interface IAccessRule
 	string name() @property;
 
 	import webtank.security.access_control: IUserIdentity;
-	bool isAllowed(IUserIdentity identity, string[string] data = null);
+	bool hasRight(IUserIdentity identity, string[string] data = null);
 
 	string toString();
 

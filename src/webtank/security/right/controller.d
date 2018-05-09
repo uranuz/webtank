@@ -46,6 +46,7 @@ struct AccessRightKey
 	size_t roleNum;
 	size_t objectNum;
 	string accessKind;
+	bool inheritance;
 }
 
 import webtank.security.right.iface.controller: IRightController;
@@ -57,12 +58,16 @@ private:
 	import webtank.security.right.core_storage: CoreAccessRuleStorage;
 	import webtank.security.access_control: IUserIdentity;
 	import webtank.security.right.composite_rule: CompositeAccessRule, RulesRelation;
+	import std.typecons: Tuple;
+
+	alias RuleWithFlag = Tuple!(IAccessRule, "rule", bool, "inheritance");
+
 	CoreAccessRuleStorage _coreStorage;
 	IRightDataSource _dataSource;
 	IAccessRule[size_t] _allRules;
 	AccessObject[size_t] _allObjects;
 	string[size_t] _allRoles;
-	IAccessRule[AccessRightKey] _rulesByRightKey;
+	RuleWithFlag[AccessRightKey] _rulesByRightKey;
 
 	size_t[string] _objectNumByFullName;
 	size_t[string] _roleNumByName;
@@ -100,7 +105,7 @@ public:
 			reloadRightsData();
 	}
 
-	override public bool isAllowed(IUserIdentity user, string accessObject, string accessKind, string[string] data)
+	override public bool hasRight(IUserIdentity user, string accessObject, string accessKind, string[string] data)
 	{
 		if( !user.isAuthenticated() ) {
 			return false; // Not permission if user is not authenticated
@@ -108,8 +113,9 @@ public:
 
 		_assureLoaded(); // Will load rights lazily
 		
-		import std.array: split, array;
-		import std.algorithm: filter, map;
+		import std.array: split, array, join;
+		import std.algorithm: filter, map, splitter;
+		import std.range: empty, dropBack, popBack, save;
 		import std.string: strip;
 		if( accessObject !in _objectNumByFullName )
 			return false;
@@ -121,6 +127,20 @@ public:
 			.map!( (it) => it.strip() )
 			.filter!( (it) => it.length && it in _roleNumByName ).array;
 
+		size_t[] parentObjects;
+		for(
+			string[] shortParentObjects = accessObject.splitter(".").filter!( (it) => it.length > 0 ).array.dropBack(1);
+			!shortParentObjects.empty;
+			shortParentObjects.popBack()
+		) {
+			string parentObj = shortParentObjects.save.join(".");
+			if( auto it = parentObj in _objectNumByFullName ) {
+				parentObjects ~= *it;
+			} else {
+				break; // If there is no innest parent then there is no logic to search for outer parent
+			}
+		}
+
 		foreach( roleName; userRoles )
 		{
 			AccessRightKey rightKey = {
@@ -129,9 +149,24 @@ public:
 				// Consider null and "" are the same
 				accessKind: (accessKind.length? accessKind: null)
 			};
-			if( auto rule = rightKey in _rulesByRightKey ) {
-				if( (*rule).isAllowed(user, data) )
+			if( auto item = rightKey in _rulesByRightKey ) {
+				if( item.rule.hasRight(user, data) )
 					return true;
+				continue; // Do not search in parent object if have specialized right
+			}
+			parents_loop:
+			foreach( parentObjNum; parentObjects )
+			{
+				rightKey.objectNum = parentObjNum;
+				if( auto item = rightKey in _rulesByRightKey ) {
+					if( !item.inheritance ) {
+						continue parents_loop;
+					} else if( item.rule.hasRight(user, data) ) {
+						return true;
+					} else {
+						break parents_loop;
+					}
+				}
 			}
 		}
 		return false;
@@ -292,8 +327,10 @@ public:
 				rightRec.get!"role_num",
 				rightRec.get!"object_num",
 				// Consider null and "" are the same
-				(rightRec.getStr!"access_kind"().length? rightRec.getStr!"access_kind"(): null)
-			)] = rule;
+				(rightRec.getStr!"access_kind".length? rightRec.getStr!"access_kind": null)
+			)] = RuleWithFlag(
+				rule, (rightRec.isNull("inheritance")? false: rightRec.get!"inheritance")
+			);
 		}
 	}
 
