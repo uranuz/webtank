@@ -12,6 +12,7 @@ import webtank.net.utils;
 import webtank.ivy;
 import webtank.security.right.iface.controller: IRightController;
 import webtank.ivy.rights: IvyUserRights;
+import webtank.ivy.user: IvyUserIdentity;
 
 import ivy;
 import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
@@ -73,6 +74,8 @@ public:
 		enforce(_templateCache !is null, `ViewService template cache is null!!!`);
 		TDataNode[string] extraGlobals;
 		extraGlobals[`userRights`] = new IvyUserRights(ctx.rights);
+		extraGlobals[`userIdentity`] = new IvyUserIdentity(ctx.user);
+		extraGlobals[`vpaths`] = ctx.service.virtualPaths;
 		return _templateCache.getByModuleName(moduleName).run(dataDict, extraGlobals);
 	}
 

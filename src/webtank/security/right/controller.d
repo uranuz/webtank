@@ -117,8 +117,13 @@ public:
 		import std.algorithm: filter, map, splitter;
 		import std.range: empty, dropBack, popBack, save;
 		import std.string: strip;
-		if( accessObject !in _objectNumByFullName )
+		if( accessObject !in _objectNumByFullName ) {
+			debug {
+				import std.stdio: writeln;
+				writeln(`Обращение к несуществующему объекту прав: ` ~ accessObject);
+			}
 			return false;
+		}
 		size_t objectNum = _objectNumByFullName[accessObject];
 
 		// Get nonempty role names tha mentioned in the list

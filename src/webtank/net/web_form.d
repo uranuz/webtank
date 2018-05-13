@@ -150,7 +150,7 @@ public:
 	this(IFormData queryForm, IFormData bodyForm)
 	{
 		_queryForm = queryForm;
-		_bodyForm = _bodyForm;
+		_bodyForm = bodyForm;
 		assert(_queryForm, `_queryForm is null`);
 		assert(_bodyForm, `_bodyForm is null`);
 	}
