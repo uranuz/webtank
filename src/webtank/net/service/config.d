@@ -282,23 +282,17 @@ public:
 		_dbConnStrings = getServiceDatabases(service);
 	}
 
-	import webtank.net.service.endpoint: EndPoint;
-	override EndPoint endpoint(string serviceName, string endpointName)
+	override string endpoint(string serviceName, string endpointName)
 	{
 		import std.json: JSON_TYPE, JSONValue;
 		JSONValue service = _jsonConfig.getServiceConfig(serviceName);
 		if( `endpoints` !in service )
-			return EndPoint();
+			return null;
 		JSONValue endpoints = service[`endpoints`];
 		if( endpoints.type != JSON_TYPE.OBJECT )
-			return EndPoint();
-		if( endpointName !in endpoints )
-			return EndPoint();
-		JSONValue endpoint = endpoints[endpointName];
-		return EndPoint(
-			(endpoint.type == JSON_TYPE.STRING? endpoint.str: null),
-			serviceName,
-			endpointName
-		);
+			return null;
+		if( auto endpoint = endpointName in endpoints )
+			return endpoint.type == JSON_TYPE.STRING? endpoint.str: null;
+		return null;
 	}
 }

@@ -3,9 +3,10 @@ module webtank.ivy.rpc_client;
 import webtank.ivy.datctrl;
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
 
-import webtank.net.std_json_rpc_client: remoteCallA = remoteCall, _getRequestURI;
+import webtank.net.std_json_rpc_client: remoteCallA = remoteCall, _getRequestURI, RemoteCallInfo;
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
+public import webtank.net.std_json_rpc_client: endpoint;
 
 class OverridenTraceInfo: object.Throwable.TraceInfo
 {
@@ -92,36 +93,14 @@ import std.json: JSONValue;
 
 /// Выполняет вызов метода rpcMethod по протоколу JSON-RPC с узла requestURI и параметрами jsonParams в формате JSON
 /// Возвращает результат выполнения метода, разобранный в формате данных шаблонизатора Ivy
-TDataNode remoteCall(Result, Address)(Address address, string rpcMethod, JSONValue jsonParams = JSONValue.init)
-	if( is(Result == TDataNode) )
+TDataNode remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
+	if( is(Result == TDataNode) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
 {
-	auto response = remoteCallA!HTTPInput(_getRequestURI(address), rpcMethod, jsonParams);
+	auto response = remoteCallA!HTTPInput(address, rpcMethod, paramsObj);
 
 	TDataNode ivyJSON = parseIvyJSON(response.messageBody);
 	_checkIvyJSON_RPCErrors(ivyJSON);
 
 	return ivyJSON["result"].tryExtractLvlContainers();
-}
-
-// Перегрузка remoteCall, которая позволяет передать словарь с HTTP заголовками
-TDataNode remoteCall(Result, Address)(Address address, string rpcMethod, string[string] headers, JSONValue jsonParams = JSONValue.init)
-	if( is(Result == TDataNode) )
-{
-	auto response = remoteCallA!HTTPInput(_getRequestURI(address), rpcMethod, headers, jsonParams);
-
-	TDataNode ivyJSON = parseIvyJSON(response.messageBody);
-	_checkIvyJSON_RPCErrors(ivyJSON);
-
-	return ivyJSON["result"].tryExtractLvlContainers();
-}
-
-import webtank.net.std_json_rpc_client: _getAllowedRequestHeaders;
-
-// Перегрузка remoteCall для удобства, которая позволяет передать HTTP контекст для извлечения заголовков
-TDataNode remoteCall(Result, Address)(Address address, string rpcMethod, HTTPContext context, JSONValue jsonParams = JSONValue.init)
-	if( is(Result == TDataNode) )
-{
-	assert( context !is null, `HTTP context is null` );
-	return remoteCall!TDataNode(_getRequestURI(address), rpcMethod, _getAllowedRequestHeaders(context), jsonParams);
 }
 
