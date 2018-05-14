@@ -44,19 +44,19 @@ string[string] resolveConfigPaths(bool shouldExpandTilde = false)(
 	);
 
 	string rootPath;
-	if( jsonPaths.type == JSON_TYPE.OBJECT && rootPathName in jsonPaths )
+	if( jsonPaths.type == JSON_TYPE.OBJECT )
+	if( auto rootPathPtr = rootPathName in jsonPaths )
 	{
-		assert( jsonPaths[rootPathName].type == JSON_TYPE.STRING ||
-			jsonPaths[rootPathName].type == JSON_TYPE.NULL,
+		assert( [JSON_TYPE.STRING, JSON_TYPE.NULL].canFind(rootPathPtr.type),
 			`Config path "` ~ rootPathName  ~ `" value must be string or null!!!`
 		);
 
-		if( jsonPaths[rootPathName].type == JSON_TYPE.STRING )
+		if( rootPathPtr.type == JSON_TYPE.STRING )
 		{
 			static if( shouldExpandTilde )
-				rootPath = jsonPaths[rootPathName].str.expandTilde();
+				rootPath = rootPathPtr.str.expandTilde();
 			else
-				rootPath = jsonPaths[rootPathName].str;
+				rootPath = rootPathPtr.str;
 		}
 
 	}
@@ -71,7 +71,8 @@ string[string] resolveConfigPaths(bool shouldExpandTilde = false)(
 
 	assert( rootPath.length > 0 && isAbsolute(rootPath), `Config path "` ~ rootPathName  ~ `" value must be absolute!!!` );
 
-	if( jsonPaths.type == JSON_TYPE.OBJECT ) foreach( string pathName, jsonPath; jsonPaths )
+	if( jsonPaths.type == JSON_TYPE.OBJECT )
+	foreach( string pathName, jsonPath; jsonPaths )
 	{
 		if( pathName == rootPathName )
 			continue; //Ignore root path here
@@ -118,7 +119,8 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 		`Config section databases JSON value must be an object or null!!!`
 	);
 
-	if( jsonDatabases.type == JSON_TYPE.OBJECT ) foreach( string dbCaption, jsonDb; jsonDatabases )
+	if( jsonDatabases.type == JSON_TYPE.OBJECT )
+	foreach( string dbCaption, jsonDb; jsonDatabases )
 	{
 		string connStr;
 		static immutable stringOnlyParams = [
