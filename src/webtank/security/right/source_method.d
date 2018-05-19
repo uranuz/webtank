@@ -11,6 +11,7 @@ JSONValue getAccessRightList(IRightDataSource rightSource)
 		`rules`: rightSource.getRules().toStdJSON(),
 		`objects`: rightSource.getObjects().toStdJSON(),
 		`roles`: rightSource.getRoles().toStdJSON(),
-		`rights`: rightSource.getRights().toStdJSON()
+		`rights`: rightSource.getRights().toStdJSON(),
+		`groupObjects`: rightSource.getGroupObjects().toStdJSON()
 	]);
 }

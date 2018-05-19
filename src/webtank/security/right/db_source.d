@@ -7,7 +7,13 @@ import webtank.db.database: IDatabase;
 import webtank.datctrl.iface.record_set: IBaseRecordSet;
 import webtank.datctrl.typed_record_set: TypedRecordSet;
 
-import webtank.security.right.iface.data_source: IRightDataSource, ruleRecFormat, objectRecFormat, roleRecFormat, rightRecFormat;
+import webtank.security.right.iface.data_source:
+	IRightDataSource,
+	ruleRecFormat,
+	objectRecFormat,
+	roleRecFormat,
+	rightRecFormat,
+	groupObjectsRecFormat;
 
 class RightDatabaseSource: IRightDataSource
 {
@@ -35,7 +41,7 @@ public:
 		TypedRecordSet!(typeof(objectRecFormat), IBaseRecordSet) getObjects()
 		{
 			return _getDBFunc().query(`
-			select num, name, parent_num
+			select num, name, parent_num, is_group
 			from access_object
 			`).getRecordSet(objectRecFormat);
 		}
@@ -53,6 +59,14 @@ public:
 			select num, role_num, object_num, rule_num, access_kind, inheritance
 			from access_right
 			`).getRecordSet(rightRecFormat);
+		}
+
+		TypedRecordSet!(typeof(groupObjectsRecFormat), IBaseRecordSet) getGroupObjects()
+		{
+			return _getDBFunc().query(`
+			select num, group_num, object_num
+			from access_group_object
+			`).getRecordSet(groupObjectsRecFormat);
 		}
 	}
 }

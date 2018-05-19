@@ -15,7 +15,8 @@ static immutable ruleRecFormat = RecordFormat!(
 static immutable objectRecFormat = RecordFormat!(
 	PrimaryKey!(size_t), "num",
 	string, "name",
-	size_t, "parent_num"
+	size_t, "parent_num",
+	bool, "is_group"
 )();
 
 static immutable roleRecFormat = RecordFormat!(
@@ -32,10 +33,17 @@ static immutable rightRecFormat = RecordFormat!(
 	bool, "inheritance"
 )();
 
+static immutable groupObjectsRecFormat = RecordFormat!(
+	PrimaryKey!(size_t), "num",
+	size_t, "group_num",
+	size_t, "object_num"
+)();
+
 interface IRightDataSource
 {
 	TypedRecordSet!(typeof(ruleRecFormat), IBaseRecordSet) getRules();
 	TypedRecordSet!(typeof(objectRecFormat), IBaseRecordSet) getObjects();
 	TypedRecordSet!(typeof(roleRecFormat), IBaseRecordSet) getRoles();
 	TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet) getRights();
+	TypedRecordSet!(typeof(groupObjectsRecFormat), IBaseRecordSet) getGroupObjects();
 }

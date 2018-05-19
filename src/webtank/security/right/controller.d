@@ -8,19 +8,25 @@ class AccessObject
 private:
 	import webtank.common.optional: Optional;
 	string _name;
+	bool _isGroup;
 	AccessObject[] _children;
 	Optional!size_t _parentNum;
 
 public:
-	this(string name, AccessObject[] children = null, Optional!size_t parent = Optional!size_t())
+	this(string name, bool isGroup, AccessObject[] children = null, Optional!size_t parent = Optional!size_t())
 	{
 		_name = name;
+		_isGroup = isGroup;
 		_children = children;
 		_parentNum = parent;
 	}
 
 	string name() @property {
 		return _name;
+	}
+
+	bool isGroup() @property {
+		return _isGroup;
 	}
 
 	Optional!size_t parentNum() @property {
@@ -46,7 +52,6 @@ struct AccessRightKey
 	size_t roleNum;
 	size_t objectNum;
 	string accessKind;
-	bool inheritance;
 }
 
 import webtank.security.right.iface.controller: IRightController;
@@ -60,7 +65,11 @@ private:
 	import webtank.security.right.composite_rule: CompositeAccessRule, RulesRelation;
 	import std.typecons: Tuple;
 
-	alias RuleWithFlag = Tuple!(IAccessRule, "rule", bool, "inheritance");
+	alias RuleWithFlag = Tuple!(
+		IAccessRule, "rule",
+		bool, "inheritance",
+		size_t, "distance"
+	);
 
 	CoreAccessRuleStorage _coreStorage;
 	IRightDataSource _dataSource;
@@ -71,6 +80,7 @@ private:
 
 	size_t[string] _objectNumByFullName;
 	size_t[string] _roleNumByName;
+	size_t[][size_t] _groupObjKeys;
 
 public:
 	this(CoreAccessRuleStorage coreStorage, IRightDataSource dataSource)
@@ -92,10 +102,12 @@ public:
 
 	void reloadRightsData()
 	{
-		loadDBAccessRules();
-		loadDBAccessObjects();
-		loadDBAccessRoles();
-		loadDBAccessRights();
+		// Load of order is important
+		loadAccessRules();
+		loadAccessObjects();
+		loadGroupObjects();
+		loadAccessRoles();
+		loadAccessRights();
 	}
 
 	private void _assureLoaded()
@@ -178,7 +190,7 @@ public:
 	}
 
 	/++ Load all access rules from database into _allRules +/
-	void loadDBAccessRules()
+	void loadAccessRules()
 	{
 		auto ruleRS = _dataSource.getRules();
 		_allRules.clear();
@@ -218,7 +230,7 @@ public:
 		return childRules;
 	}
 
-	void loadDBAccessObjects()
+	void loadAccessObjects()
 	{
 		auto objRS = _dataSource.getObjects();
 
@@ -246,6 +258,9 @@ public:
 		import std.exception: enforce;
 		foreach( key, obj; _allObjects )
 		{
+			if( obj.isGroup )
+				continue; // Don't want to have ability to access group by name
+
 			string fullName = getFullObjectName(obj);
 			enforce(fullName !in _objectNumByFullName, `Duplicated access object name: ` ~ obj.name);
 			_objectNumByFullName[fullName] = key;
@@ -288,7 +303,9 @@ public:
 		}
 		import webtank.common.optional: Optional;
 		AccessObject newObj = new AccessObject(
-			objRec.get!"name", childObjs,
+			objRec.get!"name",
+			(objRec.isNull(`is_group`)? false: objRec.get!"is_group"),
+			childObjs,
 			(objRec.isNull("parent_num")?
 				Optional!size_t():
 				Optional!size_t(objRec.get!"parent_num"))
@@ -297,10 +314,12 @@ public:
 		return newObj;
 	}
 
-	void loadDBAccessRoles()
+	void loadAccessRoles()
 	{
 		auto roleRS = _dataSource.getRoles();
 
+		_allRoles.clear();
+		_roleNumByName.clear();
 		foreach( roleRec; roleRS )
 		{
 			_allRoles[roleRec.get!"num"] = roleRec.getStr!"name";
@@ -310,10 +329,11 @@ public:
 		}
 	}
 
-	void loadDBAccessRights()
+	void loadAccessRights()
 	{
 		auto rightRS = _dataSource.getRights();
 
+		_rulesByRightKey.clear();
 		foreach( rightRec; rightRS )
 		{
 			// Currently skip rights without role, or object, or rule specification
@@ -322,20 +342,73 @@ public:
 
 			if( rightRec.get!"role_num" !in _allRoles )
 				continue;
-			if( rightRec.get!"object_num" !in _allObjects )
+
+			AccessObject obj = _allObjects.get(rightRec.get!"object_num", null);
+			if( obj is null )
 				continue;
+
 			IAccessRule rule = _allRules.get(rightRec.get!"rule_num", null);
 			if( rule is null )
 				continue;
 
-			_rulesByRightKey[AccessRightKey(
+			_addObjectRight(rightRec.get!"object_num", obj, rightRec, rule, 0);
+		}
+	}
+
+	void _addObjectRight(R)(size_t objectNum, AccessObject obj, ref R rightRec, IAccessRule rule, size_t distance)
+	{
+		if( obj.isGroup )
+		{
+			// We can put links to other groups into group.
+			// In that case all of the objects get rights of group where it is placed
+			if( auto objKeys = objectNum in _groupObjKeys )
+			{
+				foreach( objKey; (*objKeys) )
+				{
+					if( auto currObj = objKey in _allObjects ) {
+						_addObjectRight(objKey, *currObj, rightRec, rule, distance + 1);
+					}
+				}
+			}
+		}
+		else
+		{
+			// If it is a plain object then assign rights to it
+			auto rightKey = AccessRightKey(
 				rightRec.get!"role_num",
-				rightRec.get!"object_num",
+				objectNum,
 				// Consider null and "" are the same
 				(rightRec.getStr!"access_kind".length? rightRec.getStr!"access_kind": null)
-			)] = RuleWithFlag(
-				rule, (rightRec.isNull("inheritance")? false: rightRec.get!"inheritance")
 			);
+
+			auto rulePtr = rightKey in _rulesByRightKey;
+			if( rulePtr is null || rulePtr.distance < distance )
+			{
+				// Override rule if it is more specific than existing in set
+				_rulesByRightKey[rightKey] = RuleWithFlag(
+					rule,
+					(rightRec.isNull("inheritance")? false: rightRec.get!"inheritance"),
+					distance
+				);
+			}
+		}
+	}
+
+	void loadGroupObjects()
+	{
+		auto groupObjRS = _dataSource.getGroupObjects();
+
+		_groupObjKeys.clear();
+		foreach( groupObj; groupObjRS )
+		{
+			if( groupObj.isNull(`group_num`) || groupObj.isNull(`object_num`) )
+				continue;
+
+			if( auto it = groupObj.get!"group_num" in _groupObjKeys ) {
+				(*it) ~= groupObj.get!"object_num";
+			} else {
+				_groupObjKeys[groupObj.get!"group_num"] = [groupObj.get!"object_num"];
+			}
 		}
 	}
 

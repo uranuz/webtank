@@ -6,7 +6,13 @@ import webtank.datctrl.iface.record_set: IBaseRecordSet, IBaseWriteableRecordSet
 import webtank.datctrl.record_set: WriteableRecordSet;
 import webtank.datctrl.typed_record_set: TypedRecordSet;
 
-import webtank.security.right.iface.data_source: IRightDataSource, ruleRecFormat, objectRecFormat, roleRecFormat, rightRecFormat;
+import webtank.security.right.iface.data_source:
+	IRightDataSource,
+	ruleRecFormat,
+	objectRecFormat,
+	roleRecFormat,
+	rightRecFormat,
+	groupObjectsRecFormat;
 import webtank.net.service.iface: IWebService;
 
 class RightRemoteSource: IRightDataSource
@@ -15,10 +21,25 @@ private:
 	IWebService _thisService;
 	string _serviceName;
 	string _methodName;
-	TypedRecordSet!(typeof(ruleRecFormat), IBaseRecordSet) _ruleRS;
-	TypedRecordSet!(typeof(objectRecFormat), IBaseRecordSet) _objectRS;
-	TypedRecordSet!(typeof(roleRecFormat), IBaseRecordSet) _roleRS;
-	TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet) _rightRS;
+	import std.meta: AliasSeq;
+	template RMeta(string field, alias rFmt)
+	{
+		enum string fieldName = field;
+		alias recFormat = rFmt;
+	}
+	alias RightObjMetas = AliasSeq!(
+		RMeta!(`rules`, ruleRecFormat),
+		RMeta!(`objects`, objectRecFormat),
+		RMeta!(`roles`, roleRecFormat),
+		RMeta!(`rights`, rightRecFormat),
+		RMeta!(`groupObjects`, groupObjectsRecFormat)
+	);
+
+	TypedRecordSet!(typeof(ruleRecFormat), IBaseRecordSet) _rules;
+	TypedRecordSet!(typeof(objectRecFormat), IBaseRecordSet) _objects;
+	TypedRecordSet!(typeof(roleRecFormat), IBaseRecordSet) _roles;
+	TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet) _rights;
+	TypedRecordSet!(typeof(groupObjectsRecFormat), IBaseRecordSet) _groupObjects;
 public:
 	this(IWebService thisService, string serviceName, string methodName)
 	{
@@ -34,7 +55,7 @@ public:
 
 	void _assureLoaded()
 	{
-		if( _ruleRS is null || _objectRS is null || _roleRS is null || _rightRS is null )
+		if( _rules is null || _objects is null || _roles is null || _rights is null || _groupObjects is null )
 			_loadRights();
 	}
 
@@ -45,41 +66,41 @@ public:
 		import std.exception: enforce;
 
 		JSONValue jRightsData = _thisService.endpoint(_serviceName).remoteCall!JSONValue(_methodName);
-		enforce(`rules` in jRightsData, `Expected rules RecordSet in rights data!!!`);
-		enforce(`objects` in jRightsData, `Expected objects RecordSet in rights data!!!`);
-		enforce(`roles` in jRightsData, `Expected roles RecordSet in rights data!!!`);
-		enforce(`rights` in jRightsData, `Expected rights RecordSet in rights data!!!`);
 
 		import webtank.common.std_json.from: fromStdJSON;
-		auto tmpRules = fromStdJSON!(TypedRecordSet!(typeof(ruleRecFormat), WriteableRecordSet))(jRightsData[`rules`]);
-		_ruleRS = TypedRecordSet!(typeof(ruleRecFormat), IBaseRecordSet)(tmpRules);
-		auto tmpObjects = fromStdJSON!(TypedRecordSet!(typeof(objectRecFormat), WriteableRecordSet))(jRightsData[`objects`]);
-		_objectRS = TypedRecordSet!(typeof(objectRecFormat), IBaseRecordSet)(tmpObjects);
-		auto tmpRoles = fromStdJSON!(TypedRecordSet!(typeof(roleRecFormat), WriteableRecordSet))(jRightsData[`roles`]);
-		_roleRS = TypedRecordSet!(typeof(roleRecFormat), IBaseRecordSet)(tmpRoles);
-		auto tmpRights = fromStdJSON!(TypedRecordSet!(typeof(rightRecFormat), WriteableRecordSet))(jRightsData[`rights`]);
-		_rightRS = TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet)(tmpRights);
+		foreach( Meta; RightObjMetas )
+		{
+			enforce(Meta.fieldName in jRightsData, `Expected ` ~ Meta.fieldName ~ ` RecordSet in rights data!!!`);
+			__traits(getMember, this, `_` ~ Meta.fieldName) = TypedRecordSet!(typeof(Meta.recFormat), IBaseRecordSet)(
+				fromStdJSON!(TypedRecordSet!(typeof(Meta.recFormat), WriteableRecordSet))(jRightsData[Meta.fieldName])
+			);
+		}
 	}
 
 	public override {
 		TypedRecordSet!(typeof(ruleRecFormat), IBaseRecordSet) getRules() {
 			_assureLoaded();
-			return _ruleRS;
+			return _rules;
 		}
 
 		TypedRecordSet!(typeof(objectRecFormat), IBaseRecordSet) getObjects() {
 			_assureLoaded();
-			return _objectRS;
+			return _objects;
 		}
 
 		TypedRecordSet!(typeof(roleRecFormat), IBaseRecordSet) getRoles() {
 			_assureLoaded();
-			return _roleRS;
+			return _roles;
 		}
 
 		TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet) getRights() {
 			_assureLoaded();
-			return _rightRS;
+			return _rights;
+		}
+
+		TypedRecordSet!(typeof(groupObjectsRecFormat), IBaseRecordSet) getGroupObjects() {
+			_assureLoaded();
+			return _groupObjects;
 		}
 	}
 }
