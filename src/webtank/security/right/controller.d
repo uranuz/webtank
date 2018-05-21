@@ -13,10 +13,10 @@ private:
 	Optional!size_t _parentNum;
 
 public:
-	this(string name, bool isGroup, AccessObject[] children = null, Optional!size_t parent = Optional!size_t())
+	this(string name, bool group, AccessObject[] children = null, Optional!size_t parent = Optional!size_t())
 	{
 		_name = name;
-		_isGroup = isGroup;
+		_isGroup = group;
 		_children = children;
 		_parentNum = parent;
 	}
@@ -382,9 +382,14 @@ public:
 			);
 
 			auto rulePtr = rightKey in _rulesByRightKey;
-			if( rulePtr is null || rulePtr.distance < distance )
-			{
+			if(
+				rulePtr is null
 				// Override rule if it is more specific than existing in set
+				|| rulePtr.distance < distance
+				// Overwrite rule if existing rule at the same level doesn't have inheritance,
+				// because inherited has more permissions and should override
+				|| rulePtr.distance == distance && !rulePtr.inheritance
+			) {
 				_rulesByRightKey[rightKey] = RuleWithFlag(
 					rule,
 					(rightRec.isNull("inheritance")? false: rightRec.get!"inheritance"),
