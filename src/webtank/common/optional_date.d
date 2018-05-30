@@ -14,7 +14,7 @@ $(LOCALE_RU_RU
 struct OptionalDate
 {
 	import std.datetime: Date;
-	import std.exception: enforceEx;
+	import std.exception: enforce;
 	import std.meta: AliasSeq;
 
 	import webtank.common.optional: Optional, OptionalException;
@@ -123,7 +123,7 @@ public:
 
 	Date get()
 	{
-		enforceEx!OptionalException(isDefined, "Attempt to get not fully defined date value of OptionalDate!!!");
+		enforce!OptionalException(isDefined, "Attempt to get not fully defined date value of OptionalDate!!!");
 		return Date(_year.value, _month.value, _day.value);
 	}
 

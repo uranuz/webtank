@@ -363,7 +363,7 @@ This function is also called for the implicit conversion to $(D T).
 	{
 		import std.conv: to;
 		import std.traits: isArray, isAssociativeArray;
-		import std.exception: enforceEx;
+		import std.exception: enforce;
 		static if( !isArray!T && !isAssociativeArray!T )
 		{
 			// For dynamic array or associative array it's is safe to work with null, so allow getting null value,
@@ -371,7 +371,7 @@ This function is also called for the implicit conversion to $(D T).
 			// But for classes, pointers, function pointers or delegates it is not.
 			// So help to not shoot into someone's foot as early as possible
 			enum message = "Attempt to get value of " ~ typeof(this).stringof ~ " that is not initialized!!! ";
-			enforceEx!OptionalException(isSet, message);
+			enforce!OptionalException(isSet, message);
 		}
 		return _value;
 	}

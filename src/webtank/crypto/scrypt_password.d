@@ -10,7 +10,7 @@ module webtank.crypto.scrypt_password;
 import webtank.crypto.scrypt;
 import std.string : indexOf;
 import std.exception : enforce;
-import std.digest.digest : toHexString;
+import std.digest: toHexString;
 import std.uuid : randomUUID;
 import std.algorithm : splitter;
 import std.array: array;

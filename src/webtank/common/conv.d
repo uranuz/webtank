@@ -177,15 +177,15 @@ $(LOCALE_RU_RU
 string toHexString(uint arrayLen)(ubyte[arrayLen] srcArray)
 {
 	import std.digest.digest;
-	return std.digest.digest.toHexString(srcArray).idup;
+	return std.digest.toHexString(srcArray).idup;
 }
 
 unittest
 {
 	import std.digest.md;
-	import std.digest.digest;
+	import std.digest;
 	ubyte[16] hash = md5Of("abc");
-	string hexStr = std.digest.digest.toHexString(hash);
+	string hexStr = std.digest.toHexString(hash);
 	ubyte[16] restoredHash = hexStringToByteArray(hexStr);
 	assert( restoredHash == hash );
 
