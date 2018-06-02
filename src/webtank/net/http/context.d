@@ -4,14 +4,16 @@ import webtank.net.http.input, webtank.net.http.output, webtank.security.access_
 
 import webtank.security.right.user_rights: UserRights;
 import webtank.net.service.iface: IWebService;
+import webtank.net.server.iface: IWebServer;
 
 class HTTPContext
 {
-	this(HTTPInput request, HTTPOutput response, IWebService service)
+	this(HTTPInput request, HTTPOutput response, IWebService service, IWebServer server)
 	{
 		_request = request;
 		_response = response;
 		_service = service;
+		_server = server;
 	}
 
 	///Запрос к серверу по протоколу HTTP
@@ -27,6 +29,11 @@ class HTTPContext
 	///Экземпляр сервиса, с общими для процесса данными
 	IWebService service() @property {
 		return _service;
+	}
+
+	///Экземпляр объекта сервера, обслуживающего запросы
+	IWebServer server() @property {
+		return _server;
 	}
 
 	///Удостоверение пользователя
@@ -72,6 +79,7 @@ protected:
 	HTTPInput _request;
 	HTTPOutput _response;
 	IWebService _service;
+	IWebServer _server;
 	IUserIdentity _userIdentity;
 
 	IHTTPHandler[] _handlerList;

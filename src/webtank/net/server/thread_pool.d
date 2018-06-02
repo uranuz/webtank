@@ -3,22 +3,25 @@ module webtank.net.server.thread_pool;
 import webtank.net.http.handler: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
 import webtank.common.loger: Loger;
-import webtank.net.server.common: ProcessRequestImpl, ensureBindSocket, makeErrorMsg;
+import webtank.net.server.common: processRequest, ensureBindSocket, makeErrorMsg;
 import webtank.net.service.iface: IWebService;
+import webtank.net.server.iface: IWebServer;
 
 import std.parallelism: TaskPool, task;
-import std.socket: Socket, TcpSocket, InternetAddress, socket_t, AddressFamily;
+import std.socket: Socket, TcpSocket, InternetAddress, socket_t, AddressFamily, SocketShutdown;
 
 // Web-сервер, использующий стандартный пул задач Phobos
-class ThreadPoolServer
+class ThreadPoolServer: IWebServer
 {
 protected:
 	ushort _port = 8082;
 	socket_t _socketHandle;
 	size_t _threadCount;
 	bool _isShared;
+	IWebService _service;
 	Socket _listener;
 	TaskPool _taskPool;
+	bool _isStopped = false;
 
 public:
 	this(ushort port, IWebService service, size_t threadCount)
@@ -41,7 +44,7 @@ public:
 
 	private void _runLoop()
 	{
-		while( true )
+		while( !_isStopped )
 		{
 			try
 			{
@@ -52,7 +55,7 @@ public:
 					continue;
 				}
 
-				_taskPool.put(task(&this._processRequest, client));
+				_taskPool.put(task(&processRequest, client, _service, this));
 			}
 			catch(Throwable exc)
 			{
@@ -62,7 +65,7 @@ public:
 		}
 	}
 
-	void start()
+	override void start()
 	{
 		if( _isShared ) {
 			_listener = new Socket(_socketHandle, AddressFamily.INET);
@@ -87,8 +90,14 @@ public:
 		}
 
 		_taskPool = new TaskPool(_threadCount);
+		scope(exit) {
+			_taskPool.stop();
+		}
+		_isStopped = false;
 		_runLoop();
 	}
 
-	mixin ProcessRequestImpl;
+	override void stop() {
+		_isStopped = true;
+	}
 }

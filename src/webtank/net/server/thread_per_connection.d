@@ -3,14 +3,15 @@ module webtank.net.server.thread_per_connection;
 import webtank.net.http.handler: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
 import webtank.common.loger: Loger;
-import webtank.net.server.common: ProcessRequestImpl, ensureBindSocket;
+import webtank.net.server.common: processRequest, ensureBindSocket;
 import webtank.net.service.iface: IWebService;
+import webtank.net.server.iface: IWebServer;
 
 import std.socket: Socket, TcpSocket, InternetAddress, SocketShutdown, SocketOSException, socket_t, AddressFamily;
 import core.thread: Thread;
 
 // Web-сервер порождающий поток на каждое входящее соединение
-class ThreadPerConnectionServer
+class ThreadPerConnectionServer: IWebServer
 {
 protected:
 	ushort _port;
@@ -18,6 +19,7 @@ protected:
 	IWebService _service;
 	Socket _listenSocket;
 	bool _isShared = false;
+	bool _isStopped = false;
 
 public:
 	this(ushort port, IWebService service)
@@ -36,7 +38,7 @@ public:
 		_isShared = true;
 	}
 
-	void start()
+	override void start()
 	{
 		Socket listener;
 		if( _isShared ) {
@@ -59,14 +61,19 @@ public:
 		} else {
 			listener.ensureBindSocket(_port);
 		}
+		_isStopped = false;
 
-		while(true) //Цикл приёма соединений через серверный сокет
+		while( !_isStopped ) //Цикл приёма соединений через серверный сокет
 		{
 			Socket currSock = listener.accept(); //Принимаем соединение
-			auto workingThread = new ServerWorkingThread(currSock, _service);
+			auto workingThread = new ServerWorkingThread(currSock, _service, this);
 			workingThread.start();
 		}
 
+	}
+
+	override void stop() {
+		_isStopped = true;
 	}
 }
 
@@ -75,20 +82,21 @@ class ServerWorkingThread: Thread
 {
 protected:
 	Socket _socket;
+	IWebService _service;
+	IWebServer _server;
 
 public:
-	this(Socket sock, IWebService service)
+	this(Socket sock, IWebService service, IWebServer server)
 	{
 		assert(sock, `Socket object expected`);
 		assert(service, `Service object expected`);
 		_socket = sock;
 		_service = service;
+		_server = server;
 		super(&_work);
 	}
 
 	private void _work() {
-		_processRequest(_socket);
+		processRequest(_socket, _service, _server);
 	}
-
-	mixin ProcessRequestImpl;
 }

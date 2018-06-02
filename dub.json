@@ -13,11 +13,21 @@
 		"name": "without_ivy",
 		"excludedSourceFiles": [
 			"src/webtank/ivy/*"
+		],
+		"buildRequirements": [
+			"allowWarnings"
 		]
 	}, {
 		"name": "with_ivy",
 		"dependencies": {
 			"ivy": ">=0.0.0"
-		}
+		},
+		"buildRequirements": [
+			"allowWarnings"
+		],
+		"excludedSourceFiles": [
+			"src/webtank/crypto/*",
+			"src/webtank/db/*"
+		]
 	}]
 }

@@ -389,6 +389,10 @@ public:
 		send(_logerTid, LogStopMsg());
 	}
 
+	~this() {
+		stop();
+	}
+
 protected:
 	shared(Loger) _baseLoger;
 	Tid _logerTid;

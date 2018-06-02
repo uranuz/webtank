@@ -1,9 +1,15 @@
 module webtank.net.server.common;
 
+import std.socket: Socket, SocketShutdown, InternetAddress, SocketOSException;
+import core.thread: Thread;
+import core.time: dur;
 import webtank.net.http.handler: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.http: HTTPReasonPhrases, HTTPException;
 import webtank.net.http.output: HTTPOutput;
+import webtank.net.http.input: HTTPInput, readHTTPInputFromSocket;
+import webtank.net.service.iface: IWebService;
+import webtank.net.server.iface: IWebServer;
 
 HTTPOutput makeErrorResponse(Throwable exc)
 {
@@ -48,65 +54,49 @@ string makeErrorMsg( Throwable exc )
 }
 
 // Реализация приема и обработки запроса из сокета
-mixin template ProcessRequestImpl()
+void processRequest(Socket sock, IWebService service, IWebServer server)
 {
-	import std.socket: Socket, SocketShutdown;
-	import core.thread: Thread;
-	import core.time: dur;
-	import webtank.net.server.common: makeErrorMsg, makeErrorResponse;
-	import webtank.net.http.input: HTTPInput, readHTTPInputFromSocket;
-	import webtank.net.http.output: HTTPOutput;
-	import webtank.net.service.iface: IWebService;
-
-private:
-	IWebService _service;
-
-	private void _processRequest(Socket sock)
+	scope(exit)
 	{
-		scope(exit)
+		sock.shutdown(SocketShutdown.BOTH);
+		Thread.sleep( dur!("msecs")(30) );
+		sock.close();
+	}
+
+	try
+	{
+		HTTPInput request = readHTTPInputFromSocket(sock);
+
+		if( request is null )
 		{
-			sock.shutdown(SocketShutdown.BOTH);
-			Thread.sleep( dur!("msecs")(30) );
-			sock.close();
+			service.loger.crit( `request is null` );
+			return;
 		}
+		
+		auto context = new HTTPContext(request, new HTTPOutput(), service, server);
 
-		try
-		{
-			HTTPInput request = readHTTPInputFromSocket(sock);
+		//Запуск обработки HTTP-запроса
+		service.rootRouter.processRequest(context);
 
-			if( request is null )
-			{
-				_service.loger.crit( `request is null` );
-				return;
-			}
+		//Наш сервер не поддерживает соединение
+		context.response.headers["connection"] = "close";
+		sock.send( context.response.getResponseString() ); //Главное - отправка результата клиенту
+	}
+	catch(Exception exc)
+	{
+		service.loger.crit( makeErrorMsg(exc) ); //Хотим знать, что случилось
+		sock.send( makeErrorResponse(exc).getResponseString() );
 
-			auto context = new HTTPContext(request, new HTTPOutput(), _service);
+		return; // На эксепшоне не падаем - а тихо-мирно завершаемся
+	}
+	catch(Throwable exc)
+	{
+		service.loger.fatal( makeErrorMsg(exc) ); //Хотим знать, что случилось
+		sock.send( makeErrorResponse(exc).getResponseString() );
 
-			//Запуск обработки HTTP-запроса
-			_service.rootRouter.processRequest(context);
-
-			//Наш сервер не поддерживает соединение
-			context.response.headers["connection"] = "close";
-			sock.send( context.response.getResponseString() ); //Главное - отправка результата клиенту
-		}
-		catch(Exception exc)
-		{
-			_service.loger.crit( makeErrorMsg(exc) ); //Хотим знать, что случилось
-			sock.send( makeErrorResponse(exc).getResponseString() );
-
-			return; // На эксепшоне не падаем - а тихо-мирно завершаемся
-		}
-		catch(Throwable exc)
-		{
-			_service.loger.fatal( makeErrorMsg(exc) ); //Хотим знать, что случилось
-			sock.send( makeErrorResponse(exc).getResponseString() );
-
-			throw exc; // С Throwable не связываемся - и просто роняем Thread
-		}
+		throw exc; // С Throwable не связываемся - и просто роняем Thread
 	}
 }
-
-import std.socket: Socket, InternetAddress, SocketOSException;
 
 void ensureBindSocket(Socket listener, ushort port)
 {
