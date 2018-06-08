@@ -166,9 +166,6 @@ public:
 			case LogInfoType.internalError: wtLogEvent.type = LogEventType.crit; break;
 		}
 
-		if( logInfo.type == LogInfoType.error || logInfo.type == LogInfoType.internalError ) {
-			wtLogEvent.text = `Ivy error at: ` ~ logInfo.processedFile ~ `:` ~ logInfo.processedLine.text ~ "\n";
-		}
 		wtLogEvent.text ~= logInfo.msg;
 		wtLogEvent.prettyFuncName = logInfo.sourceFuncName;
 		wtLogEvent.file = logInfo.sourceFileName;
