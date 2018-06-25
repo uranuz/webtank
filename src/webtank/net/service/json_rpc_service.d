@@ -139,4 +139,15 @@ public:
 		assert( _rights, `Main service rights controller is not initialized!` );
 		return _rights;
 	}
+
+	override void stop()
+	{
+		if( _loger ) {
+			_loger.stop();
+		}
+
+		if( _databaseLoger ) {
+			_databaseLoger.stop();
+		}
+	}
 }

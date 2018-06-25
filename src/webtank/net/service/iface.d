@@ -15,4 +15,5 @@ interface IWebService
 	ICompositeHTTPHandler rootRouter() @property;
 	IAccessController accessController() @property;
 	IRightController rightController() @property;
+	void stop();
 }

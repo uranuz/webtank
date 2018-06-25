@@ -254,8 +254,7 @@ public:
 		string mod = __MODULE__ )
 	{	write( LogEventType.trace, text, title, file, line, funcName, prettyFuncName, mod ); }
 
-protected:
-
+	abstract void stop();
 }
 
 /++
@@ -334,10 +333,14 @@ public:
 		}
 	}
 
-	~this()
+	override void stop()
 	{
 		_getLogFile().flush();
 		_getLogFile().close();
+	}
+
+	~this() {
+		stop();
 	}
 
 protected:
@@ -385,8 +388,25 @@ public:
 		нить исполнения. Логер переходит в нерабочее состояние после этого
 	)
 	+/
-	void stop() {
-		send(_logerTid, LogStopMsg());
+	override void stop()
+	{
+		if( _logerTid != Tid.init )
+		{
+			synchronized {
+				if( _logerTid != Tid.init ) {
+					send(_logerTid, LogStopMsg());
+					_logerTid = Tid.init;
+				}
+			}
+		}
+		if( _baseLoger )
+		{
+			synchronized {
+				if( _baseLoger ) {
+					(cast(Loger)_baseLoger).stop();
+				}
+			}
+		}
 	}
 
 	~this() {
@@ -414,7 +434,7 @@ protected:
 					cont = false;
 				},
 				(OwnerTerminated e) {
-					loger.write(LogEventType.fatal, "Нить, породившая процесс логера, завершилась!!!");
+					//loger.write(LogEventType.fatal, "Нить, породившая процесс логера, завершилась!!!");
 					throw e;
 				}
 			);

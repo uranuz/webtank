@@ -11,7 +11,7 @@ struct WorkerOpts
 	ushort port = 8082;
 	size_t threadCount = 5;
 	IWebService service;
-	string kind;
+	string serverType;
 }
 
 void parseWorkerOptsFromCmd(string[] progAgs, ref WorkerOpts opts)
@@ -20,11 +20,14 @@ void parseWorkerOptsFromCmd(string[] progAgs, ref WorkerOpts opts)
 	getopt(progAgs,
 		"port", &opts.port,
 		"threadCount", &opts.threadCount,
-		"workerSockAddr", &opts.workerSockAddr);
+		"workerSockAddr", &opts.workerSockAddr,
+		"serverType", &opts.serverType);
 }
 
+import webtank.net.server.iface: IWebServer;
 import webtank.net.server.thread_pool: ThreadPoolServer;
 import webtank.net.server.thread_per_connection: ThreadPerConnectionServer;
+import webtank.net.server.plain: PlainServer;
 import webtank.net.http.handler: IHTTPHandler;
 import webtank.common.loger: Loger;
 
@@ -36,22 +39,34 @@ void runServer(ref WorkerOpts opts)
 	enforce(opts.service.rootRouter !is null, `Server main handler is null`);
 	enforce(opts.service.loger !is null, `Server main loger is null`);
 	
+	bool isSharedSocket = opts.workerSockAddr.length > 0;
 	socket_t serverSock;
-	if(opts.workerSockAddr.length > 0) {
+	if(isSharedSocket) {
 		serverSock = getSocketHandle(opts.workerSockAddr);
 	}
-	
-	if( opts.kind == `thread_per_connection` ) {
-		auto server = (opts.workerSockAddr.length > 0?
-			new ThreadPerConnectionServer(serverSock, opts.service):
-			new ThreadPerConnectionServer(opts.port, opts.service));
-		server.start();
-	} else {
-		auto server = (opts.workerSockAddr.length > 0?
-			new ThreadPoolServer(serverSock, opts.service, opts.threadCount):
-			new ThreadPoolServer(opts.port, opts.service, opts.threadCount));
-		server.start();
+
+	IWebServer server;
+	switch( opts.serverType )
+	{
+		case `thread_per_connection`: {
+			server = (isSharedSocket?
+				new ThreadPerConnectionServer(serverSock, opts.service):
+				new ThreadPerConnectionServer(opts.port, opts.service));
+			break;
+		}
+		case `plain`: {
+			server = (isSharedSocket?
+				new PlainServer(serverSock, opts.service):
+				new PlainServer(opts.port, opts.service));
+			break;
+		}
+		default: {
+			server = (isSharedSocket?
+				new ThreadPoolServer(serverSock, opts.service, opts.threadCount):
+				new ThreadPoolServer(opts.port, opts.service, opts.threadCount));
+		}
 	}
+	server.start(); // Запускаем раз уж создали
 }
 
 socket_t getSocketHandle(string workerSockAddr)

@@ -184,4 +184,15 @@ public:
 		assert( _rights, `View service rights controller is not initialized!` );
 		return _rights;
 	}
+
+	override void stop()
+	{
+		if( _loger ) {
+			_loger.stop();
+		}
+
+		if( _ivyLoger ) {
+			_ivyLoger.stop();
+		}
+	}
 }
