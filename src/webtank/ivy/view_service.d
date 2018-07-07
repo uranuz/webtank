@@ -68,6 +68,10 @@ public:
 		return _loger;
 	}
 
+	ExecutableProgramme getIvyModule(string moduleName) {
+		return _templateCache.getByModuleName(moduleName);
+	}
+
 	TDataNode runIvyModule(string moduleName, HTTPContext ctx = null, TDataNode dataDict = TDataNode.init)
 	{
 		import std.exception: enforce;
