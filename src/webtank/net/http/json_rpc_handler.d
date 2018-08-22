@@ -207,9 +207,6 @@ template callJSON_RPC_Method(alias Method)
 			}
 		}
 
-		writeln(`argTuple.length: `, argTuple.length);
-		writeln(`argTuple: `, argTuple);
-
 		static if( is( ResultType == void ) ) {
 			Method(argTuple.expand);
 		} else {
