@@ -148,9 +148,10 @@ protected:
 template callJSON_RPC_Method(alias Method)
 {
 	import std.traits, std.json, std.conv, std.typecons;
-	alias ParameterTypeTuple!(Method) ParamTypes;
-	alias ReturnType!(Method) ResultType;
-	alias ParameterIdentifierTuple!(Method) ParamNames;
+	alias ParamTypes = Parameters!(Method);
+	alias ResultType = ReturnType!(Method);
+	alias ParamNames = ParameterIdentifierTuple!(Method);
+	alias MethDefaults = ParameterDefaults!(Method);
 
 	JSONValue callJSON_RPC_Method(ref const(JSONValue) jParams, HTTPContext context)
 	{
@@ -193,12 +194,21 @@ template callJSON_RPC_Method(alias Method)
 				}
 				else
 				{
-					throw new JSON_RPC_Exception(
-						`Expected JSON-RPC parameter ` ~ ParamNames[i] ~ ` is not found in params object!!!`
-					);
+					static if( is( MethDefaults[i] == void ) ) {
+						// Значения по умолчанию нет - значит отсутствие значения - ошибка
+						throw new JSON_RPC_Exception(
+							`Expected JSON-RPC parameter ` ~ ParamNames[i] ~ ` is not found in params object!!!`
+						);
+					} else {
+						// Если метод имеет значение по умолчанию, то учитываем его
+						argTuple[i] = MethDefaults[i];
+					}
 				}
 			}
 		}
+
+		writeln(`argTuple.length: `, argTuple.length);
+		writeln(`argTuple: `, argTuple);
 
 		static if( is( ResultType == void ) ) {
 			Method(argTuple.expand);
