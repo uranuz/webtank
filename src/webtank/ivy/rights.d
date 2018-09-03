@@ -1,7 +1,7 @@
 module webtank.ivy.rights;
 
 import webtank.security.right.user_rights: UserRights;
-import ivy.interpreter.data_node: IClassNode, DataNodeType, IDataNodeRange, DataNode;
+import ivy.interpreter.data_node: IClassNode, IvyDataType, IvyNodeRange, IvyData;
 
 class IvyUserRights: IClassNode
 {
@@ -10,7 +10,6 @@ private:
 	string _accessObject;
 	string _accessKind;
 	string[string] _data;
-	alias TDataNode = DataNode!string;
 
 public:
 	import std.exception: enforce;
@@ -20,7 +19,7 @@ public:
 	}
 
 	override {
-		IDataNodeRange opSlice() {
+		IvyNodeRange opSlice() {
 			assert(false, "Method opSlice not implemented");
 		}
 
@@ -28,29 +27,29 @@ public:
 			assert(false, "Method opSlice not implemented");
 		}
 
-		TDataNode opIndex(string) {
+		IvyData opIndex(string) {
 			assert(false, "Method opIndex not implemented");
 		}
 
-		TDataNode opIndex(size_t) {
+		IvyData opIndex(size_t) {
 			assert(false, "Method opIndex not implemented");
 		}
 
-		TDataNode __getAttr__(string attrName)
+		IvyData __getAttr__(string attrName)
 		{
 			switch(attrName)
 			{
-				case `object`: return TDataNode(_accessObject);
-				case `kind`: return TDataNode(_accessKind);
-				case `data`: return TDataNode(_data);
-				case `hasRight`: return TDataNode(
+				case `object`: return IvyData(_accessObject);
+				case `kind`: return IvyData(_accessKind);
+				case `data`: return IvyData(_data);
+				case `hasRight`: return IvyData(
 					_rights.hasRight(_accessObject, _accessKind, _data));
 				default: break;
 			}
 			throw new Exception(`Unexpected IvyUserRights attribute: ` ~ attrName);
 		}
 
-		void __setAttr__(TDataNode val, string attrName)
+		void __setAttr__(IvyData val, string attrName)
 		{
 			import std.algorithm: canFind;
 			switch(attrName)
@@ -58,16 +57,16 @@ public:
 				case `object`:
 				{
 					// Access object is essential
-					enforce(val.type == DataNodeType.String, `Expected string as access object name!!!`);
+					enforce(val.type == IvyDataType.String, `Expected string as access object name!!!`);
 					_accessObject = val.str;
 					break;
 				}
 				case `kind`:
 				{
 					// Access kind is optional
-					enforce([DataNodeType.Undef, DataNodeType.Null, DataNodeType.String].canFind(val.type),
+					enforce([IvyDataType.Undef, IvyDataType.Null, IvyDataType.String].canFind(val.type),
 						`Expected string, null or undef as access kind name!!!`);
-					if( val.type == DataNodeType.String ) {
+					if( val.type == IvyDataType.String ) {
 						_accessKind = val.str;
 					} else {
 						_accessKind = null; // Need to clear it
@@ -76,14 +75,14 @@ public:
 				}
 				case `data`:
 				{
-					enforce([DataNodeType.Undef, DataNodeType.Null, DataNodeType.AssocArray].canFind(val.type),
+					enforce([IvyDataType.Undef, IvyDataType.Null, IvyDataType.AssocArray].canFind(val.type),
 						`Expected assoc array, null or undef as access kind name!!!`);
 					_data.clear(); // Clear data at the start of set
-					if( val.type == DataNodeType.AssocArray )
+					if( val.type == IvyDataType.AssocArray )
 					{
-						foreach( string name, TDataNode node; val.assocArray )
+						foreach( string name, IvyData node; val.assocArray )
 						{
-							enforce(node.type == DataNodeType.String, `Data item expected to be a string!!!`);
+							enforce(node.type == IvyDataType.String, `Data item expected to be a string!!!`);
 							_data[name] = node.str; // Fill data
 						}
 					}
@@ -94,7 +93,7 @@ public:
 			}
 		}
 		
-		TDataNode __serialize__() {
+		IvyData __serialize__() {
 			assert(false, "Method __serialize__ not implemented");
 		}
 		

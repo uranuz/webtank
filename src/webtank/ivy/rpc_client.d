@@ -48,34 +48,34 @@ class OverridenTraceInfo: object.Throwable.TraceInfo
 
 // Код проверки результата запроса по протоколу JSON-RPC
 // По сути этот код дублирует webtank.net.http.client.std_json_rpc, но с другим типом данных
-private void _checkIvyJSON_RPCErrors(ref TDataNode response)
+private void _checkIvyJSON_RPCErrors(ref IvyData response)
 {
 	import std.algorithm: map;
 	import std.array: array;
-	if( response.type != DataNodeType.AssocArray )
+	if( response.type != IvyDataType.AssocArray )
 		throw new Exception(`Expected assoc array as JSON-RPC response`);
 
 	if( "error" in response )
 	{
-		if( response["error"].type != DataNodeType.AssocArray ) {
+		if( response["error"].type != IvyDataType.AssocArray ) {
 			throw new Exception(`"error" field in JSON-RPC response must be an object`);
 		}
 		string errorMsg;
 		if( "message" in response["error"] ) {
-			errorMsg = response["error"]["message"].type == DataNodeType.String? response["error"]["message"].str: null;
+			errorMsg = response["error"]["message"].type == IvyDataType.String? response["error"]["message"].str: null;
 		}
 
 		if( "data" in response["error"] )
 		{
-			TDataNode errorData = response["error"]["data"];
+			IvyData errorData = response["error"]["data"];
 			if(
 				"file" in errorData &&
 				"line" in errorData &&
-				errorData["file"].type == DataNodeType.String &&
-				errorData["line"].type == DataNodeType.Integer
+				errorData["file"].type == IvyDataType.String &&
+				errorData["line"].type == IvyDataType.Integer
 			) {
 				Exception ex = new Exception(errorMsg, errorData["file"].str, errorData["line"].integer);
-				if( "backtrace" in errorData && errorData["backtrace"].type == DataNodeType.Array ) {
+				if( "backtrace" in errorData && errorData["backtrace"].type == IvyDataType.Array ) {
 					ex.info = new OverridenTraceInfo(errorData["backtrace"].array.map!( (it) => it.str.dup ).array );
 				}
 				throw ex;
@@ -93,12 +93,12 @@ import std.json: JSONValue;
 
 /// Выполняет вызов метода rpcMethod по протоколу JSON-RPC с узла requestURI и параметрами jsonParams в формате JSON
 /// Возвращает результат выполнения метода, разобранный в формате данных шаблонизатора Ivy
-TDataNode remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
-	if( is(Result == TDataNode) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
+IvyData remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
+	if( is(Result == IvyData) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
 {
 	auto response = remoteCallA!HTTPInput(address, rpcMethod, paramsObj);
 
-	TDataNode ivyJSON = parseIvyJSON(response.messageBody);
+	IvyData ivyJSON = parseIvyJSON(response.messageBody);
 	_checkIvyJSON_RPCErrors(ivyJSON);
 
 	return ivyJSON["result"].tryExtractLvlContainers();

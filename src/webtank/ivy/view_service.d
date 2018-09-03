@@ -16,22 +16,20 @@ import webtank.ivy.user: IvyUserIdentity;
 
 import ivy;
 import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
+import webtank.ivy.service_mixin: IvyServiceMixin, IIvyServiceMixin;
 
 
-class IvyViewService: IWebService
+class IvyViewService: IWebService, IIvyServiceMixin
 {
 	mixin ServiceConfigImpl;
+	mixin IvyServiceMixin;
 protected:
 	import std.json: JSONValue;
-	debug enum bool useTemplatesCache = false;
-	else enum bool useTemplatesCache = true;
 
 	string _serviceName;
 	HTTPRouter _rootRouter;
 	URIPageRouter _pageRouter;
 	Loger _loger;
-	Loger _ivyLoger;
-	ProgrammeCache!(useTemplatesCache) _templateCache;
 
 	IAccessController _accessController;
 	IRightController _rights;
@@ -68,33 +66,12 @@ public:
 		return _loger;
 	}
 
-	ExecutableProgramme getIvyModule(string moduleName) {
-		return _templateCache.getByModuleName(moduleName);
-	}
-
-	TDataNode runIvyModule(string moduleName, HTTPContext ctx = null, TDataNode dataDict = TDataNode.init)
-	{
-		import std.exception: enforce;
-		enforce(_templateCache !is null, `ViewService template cache is null!!!`);
-		TDataNode[string] extraGlobals;
-		extraGlobals[`userRights`] = new IvyUserRights(ctx.rights);
-		extraGlobals[`userIdentity`] = new IvyUserIdentity(ctx.user);
-		extraGlobals[`vpaths`] = ctx.service.virtualPaths;
-		return _templateCache.getByModuleName(moduleName).run(dataDict, extraGlobals);
-	}
-
-	TDataNode runIvyModule(string moduleName, TDataNode dataDict)
-	{
-		import std.exception: enforce;
-		enforce(_templateCache !is null, `ViewService template cache is null!!!`);
-		return _templateCache.getByModuleName(moduleName).run(dataDict);
-	}
-
 	private void _startLoging()
 	{
 		import std.path: buildNormalizedPath;
+		import std.exception: enforce;
 
-		assert( "siteLogs" in _fileSystemPaths, `Failed to get logs directory!` );
+		enforce("siteLogs" in _fileSystemPaths, `Failed to get logs directory!`);
 		if( !_loger ) {
 			_loger = new ThreadedLoger(
 				cast(shared) new FileLoger(
@@ -104,30 +81,8 @@ public:
 			);
 		}
 
-		if( !_ivyLoger ) {
-			_ivyLoger = new ThreadedLoger(
-				cast(shared) new FileLoger(
-					buildNormalizedPath( _fileSystemPaths["siteLogs"], "ivy.log" ),
-					LogLevel.dbg
-				)
-			);
-		}
+		_startIvyLogging();
 	}
-
-	void renderResult(TDataNode content, HTTPContext context)
-	{
-		static struct OutRange
-		{
-			private HTTPOutput _resp;
-			void put(T)(T data) {
-				import std.conv: text;
-				_resp.write(data.text);
-			}
-		}
-
-		renderDataNode!(DataRenderType.HTML)(content, OutRange(context.response));
-	}
-
 
 	private void _subscribeRoutingEvents()
 	{
@@ -135,48 +90,11 @@ public:
 		{
 			auto messages = makeErrorMsg(ex);
 			loger.error(messages.details);
-			renderResult(TDataNode(messages.userError), context);
+			renderResult(IvyData(messages.userError), context);
 			context.response.headers[`status-code`] = `500`;
 			context.response.headers[`reason-phrase`] = `Internal Server Error`;
 			return true;
 		});
-	}
-
-	private void _initTemplateCache()
-	{
-		assert( "siteIvyTemplates" in _fileSystemPaths, `Failed to get path to site Ivy templates!` );
-		IvyConfig ivyConfig;
-		ivyConfig.importPaths = [ _fileSystemPaths["siteIvyTemplates"] ];
-		ivyConfig.fileExtension = ".ivy";
-
-		// Направляем логирование шаблонизатора в файл
-		ivyConfig.parserLoger = &_ivyLogerMethod;
-		ivyConfig.compilerLoger = &_ivyLogerMethod;
-		ivyConfig.interpreterLoger = &_ivyLogerMethod;
-
-		_templateCache = new ProgrammeCache!(useTemplatesCache)(ivyConfig);
-	}
-
-	// Метод перенаправляющий логи шаблонизатора в файл
-	private void _ivyLogerMethod(LogInfo logInfo)
-	{
-		import std.datetime;
-		import std.conv: text;
-		LogEvent wtLogEvent;
-		final switch(logInfo.type) {
-			case LogInfoType.info: wtLogEvent.type = LogEventType.dbg; break;
-			case LogInfoType.warn: wtLogEvent.type = LogEventType.warn; break;
-			case LogInfoType.error: wtLogEvent.type = LogEventType.error; break;
-			case LogInfoType.internalError: wtLogEvent.type = LogEventType.crit; break;
-		}
-
-		wtLogEvent.text ~= logInfo.msg;
-		wtLogEvent.prettyFuncName = logInfo.sourceFuncName;
-		wtLogEvent.file = logInfo.sourceFileName;
-		wtLogEvent.line = logInfo.sourceLine;
-		wtLogEvent.timestamp = std.datetime.Clock.currTime();
-
-		_ivyLoger.writeEvent(wtLogEvent);
 	}
 
 	IAccessController accessController() @property {
@@ -195,8 +113,6 @@ public:
 			_loger.stop();
 		}
 
-		if( _ivyLoger ) {
-			_ivyLoger.stop();
-		}
+		_stopIvyLogging();
 	}
 }

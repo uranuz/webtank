@@ -16,6 +16,17 @@ enum WriteMode {
 	ReadOnly, ReadWrite
 }
 
+IDBTransaction makeTransaction(IDatabase db, WriteMode mode = WriteMode.ReadWrite, IsolationLevel level=IsolationLevel.ReadCommitted)
+{
+	switch( db.type )
+	{
+		case DBMSType.PostgreSQL:
+			return new PostgreSQLTransaction(db, mode, level);
+		default: break;
+	}
+	assert(false, `Unsupported database type for transaction`);
+}
+
 
 class PostgreSQLTransaction: IDBTransaction
 {

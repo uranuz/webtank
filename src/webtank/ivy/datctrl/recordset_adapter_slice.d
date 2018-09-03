@@ -7,7 +7,6 @@ import webtank.ivy.datctrl.deserialize;
 
 class RecordSetAdapterSlice: IClassNode
 {
-	alias TDataNode = DataNode!string;
 private:
 	RecordSetAdapter _rs;
 	size_t _begin;
@@ -34,7 +33,7 @@ public:
 		}
 	}
 
-	static class Range: IDataNodeRange
+	static class Range: IvyNodeRange
 	{
 	private:
 		RecordSetAdapterSlice _rs;
@@ -50,7 +49,7 @@ public:
 				return i >= _rs.length;
 			}
 
-			TDataNode front() {
+			IvyData front() {
 				return _rs[i];
 			}
 
@@ -66,7 +65,7 @@ public:
 			throw new Exception(`RecordSetAdapterSlice index is out of range`);
 	}
 
-	override IDataNodeRange opSlice() {
+	override IvyNodeRange opSlice() {
 		return new Range(this);
 	}
 
@@ -74,24 +73,24 @@ public:
 		assert(false, `Getting slice for RecordSetAdapterSlice is not supported yet`);
 	}
 
-	override TDataNode opIndex(size_t index) {
+	override IvyData opIndex(size_t index) {
 		_testIndex(index);
 		return _rs[index + _begin];
 	}
 
-	override TDataNode opIndex(string key) {
+	override IvyData opIndex(string key) {
 		assert(false, `Indexing by string key is not supported for RecordSetAdapterSlice`);
 	}
 
-	override TDataNode __getAttr__(string attrName) {
+	override IvyData __getAttr__(string attrName) {
 		return _rs.__getAttr__(attrName);
 	}
 
-	override void __setAttr__(TDataNode node, string attrName) {
+	override void __setAttr__(IvyData node, string attrName) {
 		assert(false, `Not attributes setting is yet supported by RecordSetAdapterSlice`);
 	}
 
-	override TDataNode __serialize__() {
+	override IvyData __serialize__() {
 		return _rs.serializeSlice(_begin, _end);
 	}
 

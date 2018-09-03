@@ -1,13 +1,12 @@
 module webtank.ivy.user;
 
 import webtank.security.access_control: IUserIdentity;
-import ivy.interpreter.data_node: IClassNode, DataNodeType, IDataNodeRange, DataNode;
+import ivy.interpreter.data_node: IClassNode, IvyDataType, IvyNodeRange, IvyData;
 
 class IvyUserIdentity: IClassNode
 {
 private:
 	IUserIdentity _identity;
-	alias TDataNode = DataNode!string;
 
 public:
 	import std.exception: enforce;
@@ -18,7 +17,7 @@ public:
 	}
 
 	override {
-		IDataNodeRange opSlice() {
+		IvyNodeRange opSlice() {
 			assert(false, "Method opSlice not implemented");
 		}
 
@@ -26,35 +25,35 @@ public:
 			assert(false, "Method opSlice not implemented");
 		}
 
-		TDataNode opIndex(string) {
+		IvyData opIndex(string) {
 			assert(false, "Method opIndex not implemented");
 		}
 
-		TDataNode opIndex(size_t) {
+		IvyData opIndex(size_t) {
 			assert(false, "Method opIndex not implemented");
 		}
 
-		TDataNode __getAttr__(string attrName)
+		IvyData __getAttr__(string attrName)
 		{
 			import std.array: split;
 			switch(attrName)
 			{
-				case `id`: return TDataNode(_identity.id);
-				case `name`: return TDataNode(_identity.name);
-				case `data`: return TDataNode(_identity.data);
-				case `isAuthenticated`: return TDataNode(_identity.isAuthenticated);
-				case `accessRoles`: return TDataNode(_identity.data.get(`accessRoles`, null).split(`;`));
+				case `id`: return IvyData(_identity.id);
+				case `name`: return IvyData(_identity.name);
+				case `data`: return IvyData(_identity.data);
+				case `isAuthenticated`: return IvyData(_identity.isAuthenticated);
+				case `accessRoles`: return IvyData(_identity.data.get(`accessRoles`, null).split(`;`));
 				default: break;
 			}
 			throw new Exception(`Unexpected IvyUserIdentity attribute: ` ~ attrName);
 		}
 
-		void __setAttr__(TDataNode val, string attrName)
+		void __setAttr__(IvyData val, string attrName)
 		{
 			assert(false, "Method __setAttr__ not implemented");
 		}
 		
-		TDataNode __serialize__() {
+		IvyData __serialize__() {
 			assert(false, "Method __serialize__ not implemented");
 		}
 		

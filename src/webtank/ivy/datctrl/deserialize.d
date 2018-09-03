@@ -4,38 +4,38 @@ import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.
 import webtank.ivy.datctrl.record_adapter;
 import webtank.ivy.datctrl.recordset_adapter;
 
-void _deserializeFieldInplace(ref TDataNode fieldData, TDataNode format)
+void _deserializeFieldInplace(ref IvyData fieldData, IvyData format)
 {
 	import std.datetime: SysTime, Date;
-	if( fieldData.type == DataNodeType.Undef || fieldData.type == DataNodeType.Null ) {
+	if( fieldData.type == IvyDataType.Undef || fieldData.type == IvyDataType.Null ) {
 		return; // Dont try to deserialize Null or Undef and return as is
 	}
 
 	switch(format["t"].str)
 	{
 		case "date", "dateTime":
-			if( fieldData.type == DataNodeType.String ) {
-				fieldData = TDataNode(
+			if( fieldData.type == IvyDataType.String ) {
+				fieldData = IvyData(
 					format["t"].str == "date"?
 					SysTime(Date.fromISOExtString(fieldData.str)):
 					SysTime.fromISOExtString(fieldData.str)
 				);
 			} else {
-				assert(fieldData.type == DataNodeType.DateTime, `Node is node convertible to dateTime`);
+				assert(fieldData.type == IvyDataType.DateTime, `Node is node convertible to dateTime`);
 			}
 		default:
 			break;
 	}
 }
 
-bool _isContainerRawData(ref TDataNode srcNode) {
+bool _isContainerRawData(ref IvyData srcNode) {
 	return
-		srcNode.type == DataNodeType.AssocArray
+		srcNode.type == IvyDataType.AssocArray
 		&& "t" in srcNode 
-		&& srcNode["t"].type == DataNodeType.String;
+		&& srcNode["t"].type == IvyDataType.String;
 }
 
-auto tryExtractRecordSet(ref TDataNode srcNode)
+auto tryExtractRecordSet(ref IvyData srcNode)
 {
 	if( !_isContainerRawData(srcNode) && srcNode["t"].str != "recordset" ) {
 		return null;
@@ -43,7 +43,7 @@ auto tryExtractRecordSet(ref TDataNode srcNode)
 	return new RecordSetAdapter(srcNode);
 }
 
-auto tryExtractRecord(ref TDataNode srcNode)
+auto tryExtractRecord(ref IvyData srcNode)
 {
 	if( !_isContainerRawData(srcNode) && srcNode["t"].str != "record" ) {
 		return null;
@@ -51,7 +51,7 @@ auto tryExtractRecord(ref TDataNode srcNode)
 	return new RecordAdapter(srcNode);
 }
 
-TDataNode tryExtractContainer(ref TDataNode srcNode)
+IvyData tryExtractContainer(ref IvyData srcNode)
 {
 	if( !_isContainerRawData(srcNode) ) {
 		return srcNode;
@@ -60,18 +60,18 @@ TDataNode tryExtractContainer(ref TDataNode srcNode)
 	switch( srcNode["t"].str )
 	{
 		case "recordset":
-			return TDataNode(new RecordSetAdapter(srcNode));
+			return IvyData(new RecordSetAdapter(srcNode));
 		case "record":
-			return TDataNode(new RecordAdapter(srcNode));
+			return IvyData(new RecordAdapter(srcNode));
 		default: break;
 	}
 	return srcNode;
 }
 
-TDataNode tryExtractLvlContainers(TDataNode srcNode)
+IvyData tryExtractLvlContainers(IvyData srcNode)
 {
 	srcNode = srcNode.tryExtractContainer();
-	if( srcNode.type != DataNodeType.AssocArray )
+	if( srcNode.type != IvyDataType.AssocArray )
 		return srcNode;
 
 	foreach( key, item; srcNode.assocArray ) {

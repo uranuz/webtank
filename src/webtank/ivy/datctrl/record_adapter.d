@@ -5,13 +5,12 @@ import webtank.ivy.datctrl.deserialize;
 
 class RecordAdapter: IClassNode
 {
-	alias TDataNode = DataNode!string;
 private:
-	TDataNode _rawRec;
+	IvyData _rawRec;
 	size_t[string] _namesMapping;
 
 public:
-	this(TDataNode rawRec, size_t[string] namesMapping)
+	this(IvyData rawRec, size_t[string] namesMapping)
 	{
 		_rawRec = rawRec;
 		_ensureRecord();
@@ -19,7 +18,7 @@ public:
 		_deserializeInplace();
 	}
 
-	this(TDataNode rawRec)
+	this(IvyData rawRec)
 	{
 		_rawRec = rawRec;
 		_ensureRecord();
@@ -37,7 +36,7 @@ public:
 		assert( "t" in _rawRec, `Expected type field "t" in record raw data!` );
 		assert( "d" in _rawRec, `Expected data field "d" in record raw data!` );
 		assert( "f" in _rawRec, `Expected format field "f" in record raw data!` );
-		assert( _rawRec["t"].type == DataNodeType.String && _rawRec["t"].str == "record", `Expected "record" value in "t" field` );
+		assert( _rawRec["t"].type == IvyDataType.String && _rawRec["t"].str == "record", `Expected "record" value in "t" field` );
 	}
 
 	void _deserializeInplace()
@@ -47,15 +46,15 @@ public:
 		}
 	}
 
-	TDataNode _rawData() @property {
+	IvyData _rawData() @property {
 		return _rawRec["d"];
 	}
 
-	TDataNode _rawFormat() @property {
+	IvyData _rawFormat() @property {
 		return _rawRec["f"];
 	}
 
-	static class Range: IDataNodeRange
+	static class Range: IvyNodeRange
 	{
 	private:
 		RecordAdapter _rec;
@@ -73,7 +72,7 @@ public:
 				return i >= _rec._rawData.array.length;
 			}
 
-			TDataNode front() {
+			IvyData front() {
 				return _rec._rawData[i];
 			}
 
@@ -83,7 +82,7 @@ public:
 		}
 	}
 
-	override IDataNodeRange opSlice() {
+	override IvyNodeRange opSlice() {
 		return new Range(this);
 	}
 
@@ -91,35 +90,35 @@ public:
 		assert(false, `opSlice for RecordAdapter is not implemented yet`);
 	}
 
-	override TDataNode opIndex(size_t index)
+	override IvyData opIndex(size_t index)
 	{
 		import std.conv: text;
 		assert(index < _rawData.array.length, `Record column with index ` ~ index.text ~ ` is not found!`);
 		return _rawData[index];
 	}
 
-	override TDataNode opIndex(string key)
+	override IvyData opIndex(string key)
 	{
 		assert(key in _namesMapping, `Record column with name "` ~ key ~ `" is not found!`);
 		return _rawData[ _namesMapping[key] ];
 	}
 
-	override TDataNode __getAttr__(string attrName)
+	override IvyData __getAttr__(string attrName)
 	{
 		switch(attrName)
 		{
 			case "format": return _rawFormat;
-			case "namesMapping": return TDataNode(_namesMapping);
+			case "namesMapping": return IvyData(_namesMapping);
 			default: break;
 		}
-		return TDataNode();
+		return IvyData();
 	}
 
-	override void __setAttr__(TDataNode value, string attrName) {
+	override void __setAttr__(IvyData value, string attrName) {
 		assert(false, `Not attributes setting is yet supported by RecordAdapter`);
 	}
 
-	override TDataNode __serialize__() {
+	override IvyData __serialize__() {
 		// Maybe we should make deep copy of it there, but because of productivity
 		// we shall not do it now. Just say for now that nobody should modifiy serialized data
 		return _rawRec;

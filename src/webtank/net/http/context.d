@@ -45,6 +45,13 @@ class HTTPContext
 		return _userIdentity;
 	}
 
+	void user(IUserIdentity userIdentity) @property
+	{
+		import std.exception: enforce;
+		enforce(userIdentity !is null, `User identity must not be null`);
+		_userIdentity = userIdentity;
+	}
+
 	UserRights rights() @property {
 		return UserRights(this);
 	}

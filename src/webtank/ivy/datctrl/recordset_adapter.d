@@ -7,13 +7,12 @@ import webtank.ivy.datctrl.deserialize;
 
 class RecordSetAdapter: IClassNode
 {
-	alias TDataNode = DataNode!string;
 private:
-	TDataNode _rawRS;
+	IvyData _rawRS;
 	size_t[string] _namesMapping;
 
 public:
-	this(TDataNode rawRS)
+	this(IvyData rawRS)
 	{
 		_rawRS = rawRS;
 		_ensureRecordSet();
@@ -37,18 +36,18 @@ public:
 		assert( "t" in _rawRS, `Expected type field "t" in recordset raw data!` );
 		assert( "d" in _rawRS, `Expected data field "d" in recordset raw data!` );
 		assert( "f" in _rawRS, `Expected format field "f" in recordset raw data!` );
-		assert( _rawRS["t"].type == DataNodeType.String && _rawRS["t"].str == "recordset", `Expected "recordset" value in "t" field` );
+		assert( _rawRS["t"].type == IvyDataType.String && _rawRS["t"].str == "recordset", `Expected "recordset" value in "t" field` );
 	}
 
-	TDataNode _rawData() @property {
+	IvyData _rawData() @property {
 		return _rawRS["d"];
 	}
 
-	TDataNode _rawFormat() @property {
+	IvyData _rawFormat() @property {
 		return _rawRS["f"];
 	}
 
-	static class Range: IDataNodeRange
+	static class Range: IvyNodeRange
 	{
 	private:
 		RecordSetAdapter _rs;
@@ -66,7 +65,7 @@ public:
 				return i >= _rs._rawData.array.length;
 			}
 
-			TDataNode front() {
+			IvyData front() {
 				return _rs._makeRecord(i);
 			}
 
@@ -76,21 +75,21 @@ public:
 		}
 	}
 
-	private TDataNode _makeRecord(size_t index)
+	private IvyData _makeRecord(size_t index)
 	{
 		import std.conv: text;
 		assert( index < _rawData.array.length, `No record with index ` ~ index.text ~ ` in record set!` );
-		return TDataNode(new RecordAdapter(
-			TDataNode([
+		return IvyData(new RecordAdapter(
+			IvyData([
 				"d": _rawData.array[index],
 				"f": _rawFormat,
-				"t": TDataNode("record")
+				"t": IvyData("record")
 			]),
 			_namesMapping
 		));
 	}
 
-	override IDataNodeRange opSlice() {
+	override IvyNodeRange opSlice() {
 		return new Range(this);
 	}
 
@@ -98,31 +97,31 @@ public:
 		return new RecordSetAdapterSlice(this, begin, end);
 	}
 
-	override TDataNode opIndex(size_t index) {
+	override IvyData opIndex(size_t index) {
 		return _makeRecord(index);
 	}
 
-	override TDataNode opIndex(string key) {
+	override IvyData opIndex(string key) {
 		assert(false, `Indexing by string key is not supported for RecordSetAdapter`);
 	}
 
-	override TDataNode __getAttr__(string attrName)
+	override IvyData __getAttr__(string attrName)
 	{
 		switch(attrName)
 		{
 			case "format": return _rawFormat;
-			case "namesMapping": return TDataNode(_namesMapping);
+			case "namesMapping": return IvyData(_namesMapping);
 
 			default: break;
 		}
-		return TDataNode();
+		return IvyData();
 	}
 
-	override void __setAttr__(TDataNode node, string attrName) {
+	override void __setAttr__(IvyData node, string attrName) {
 		assert(false, `Not attributes setting is yet supported by RecordSetAdapter`);
 	}
 
-	override TDataNode __serialize__() {
+	override IvyData __serialize__() {
 		// Maybe we should make deep copy of it there, but because of productivity
 		// we shall not do it now. Just say for now that nobody should modifiy serialized data
 		return _rawRS;
@@ -132,16 +131,16 @@ public:
 		return _rawData.array.length;
 	}
 
-	TDataNode serializeSlice(size_t begin, size_t end)
+	IvyData serializeSlice(size_t begin, size_t end)
 	{
-		TDataNode result;
+		IvyData result;
 		
-		if( _rawRS.type == DataNodeType.AssocArray )
-		foreach( string key, TDataNode val; _rawRS.assocArray )
+		if( _rawRS.type == IvyDataType.AssocArray )
+		foreach( string key, IvyData val; _rawRS.assocArray )
 		{
 			if( key != "d" ) {
 				result[key] = val;
-			} else if( val.type == DataNodeType.Array ) {
+			} else if( val.type == IvyDataType.Array ) {
 				result[key] = val.array[begin..end];
 			}
 		}
