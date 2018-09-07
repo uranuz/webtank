@@ -9,7 +9,7 @@ private:
 	UserRights _rights;
 	string _accessObject;
 	string _accessKind;
-	string[string] _data;
+	IvyData _data;
 
 public:
 	import std.exception: enforce;
@@ -75,17 +75,7 @@ public:
 				}
 				case `data`:
 				{
-					enforce([IvyDataType.Undef, IvyDataType.Null, IvyDataType.AssocArray].canFind(val.type),
-						`Expected assoc array, null or undef as access kind name!!!`);
-					_data.clear(); // Clear data at the start of set
-					if( val.type == IvyDataType.AssocArray )
-					{
-						foreach( string name, IvyData node; val.assocArray )
-						{
-							enforce(node.type == IvyDataType.String, `Data item expected to be a string!!!`);
-							_data[name] = node.str; // Fill data
-						}
-					}
+					_data = val;
 					break;
 				}
 				default:

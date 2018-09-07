@@ -120,7 +120,7 @@ public:
 	override public bool hasRight(IUserIdentity user, string accessObject, string accessKind, string[string] data)
 	{
 		if( !user.isAuthenticated() ) {
-			return false; // Not permission if user is not authenticated
+			return false; // No permission if user is not authenticated
 		}
 
 		_assureLoaded(); // Will load rights lazily
