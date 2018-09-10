@@ -7,7 +7,13 @@ import webtank.net.server.common: processRequest, ensureBindSocket;
 import webtank.net.service.iface: IWebService;
 import webtank.net.server.iface: IWebServer;
 
-import std.socket: Socket, TcpSocket, InternetAddress, SocketShutdown, SocketOSException, socket_t, AddressFamily;
+import std.socket: Socket, TcpSocket, InternetAddress, SocketShutdown, SocketOSException, AddressFamily;
+version(Posix)
+	import std.socket: socket_t;
+else
+{
+	alias socket_t = size_t; // Workaround to compile on Windows
+}
 import core.thread: Thread;
 
 // Web-сервер порождающий поток на каждое входящее соединение

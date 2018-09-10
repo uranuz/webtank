@@ -1,6 +1,7 @@
 module webtank.net.server.dispatcher;
 
-import std.socket: Socket, AddressFamily, SocketType, SocketShutdown, TcpSocket, UnixAddress;
+import std.socket: Socket, AddressFamily, SocketType, SocketShutdown, TcpSocket;
+version(Posix) import std.socket: UnixAddress;
 import core.thread: Thread;
 import core.time: dur;
 import std.process: spawnProcess, wait;
@@ -33,7 +34,10 @@ void startDispatchProcess(ushort port, string workerPath, string workerSockAddr 
 		Thread.sleep( dur!("seconds")(1) );
 		Socket workerSock = new Socket(AddressFamily.UNIX, SocketType.STREAM);
 		workerSock.blocking = true;
-		workerSock.connect(new UnixAddress(workerSockAddr));
+
+		version(Posix)
+			workerSock.connect(new UnixAddress(workerSockAddr));
+		else enforce(false, `Connecting by UnixAddress is only supported for Posix OS now`);
 		scope(exit)
 		{
 			workerSock.shutdown(SocketShutdown.BOTH);
@@ -42,12 +46,16 @@ void startDispatchProcess(ushort port, string workerPath, string workerSockAddr 
 			Thread.sleep( dur!("seconds")(1) ); // Do not spam things
 		}
 
-		workerSock.sendSocketHandle(listener.handle);
+		version(Posix)
+			workerSock.sendSocketHandle(listener.handle);
+		else enforce(false, `Sending socket handle is only supported for Posix OS now`);
 	}
 }
 
+version(Posix)
 import std.socket: CMSG_SPACE, CMSG_FIRSTHDR, CMSG_LEN, SOL_SOCKET, SCM_RIGHTS, CMSG_DATA, socket_t, cmsghdr, msghdr, iovec, ssize_t, sendmsg;
 
+version(Posix)
 void sendSocketHandle(Socket workerSock, socket_t handle)
 {
 	/* Allocate a char array of suitable size to hold the ancillary data.

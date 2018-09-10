@@ -12,8 +12,7 @@
 	"configurations": [{
 		"name": "with_ivy_and_db",
 		"dependencies": {
-			"ivy": ">=0.0.0",
-			"openssl": ">=0.0.0"
+			"ivy": ">=0.0.0"
 		},
 		"buildRequirements": [
 			"allowWarnings"
@@ -21,8 +20,7 @@
 	}, {
 		"name": "with_ivy",
 		"dependencies": {
-			"ivy": ">=0.0.0",
-			"openssl": ">=0.0.0"
+			"ivy": ">=0.0.0"
 		},
 		"buildRequirements": [
 			"allowWarnings"

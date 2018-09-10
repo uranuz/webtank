@@ -2,6 +2,7 @@ module webtank.security.right.controller;
 
 import webtank.security.right.iface.access_rule: IAccessRule;
 import webtank.security.right.iface.data_source: IRightDataSource;
+import webtank.security.right.common: RightDataTypes, RightDataVariant;
 
 class AccessObject
 {
@@ -117,7 +118,7 @@ public:
 			reloadRightsData();
 	}
 
-	override public bool hasRight(IUserIdentity user, string accessObject, string accessKind, string[string] data)
+	override public bool hasRight(IUserIdentity user, string accessObject, RightDataVariant data)
 	{
 		if( !user.isAuthenticated() ) {
 			return false; // No permission if user is not authenticated
@@ -187,6 +188,13 @@ public:
 			}
 		}
 		return false;
+	}
+
+	static foreach( alias RightType; RightDataTypes )
+	{
+		override public bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightDataVariant data) {
+			return hasRight(user, accessObject, accessKind, RightDataVariant(data));
+		}
 	}
 
 	/++ Load all access rules from database into _allRules +/

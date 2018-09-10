@@ -2,6 +2,7 @@ module webtank.security.right.composite_rule;
 
 import webtank.security.right.iface.access_rule: IAccessRule;
 import webtank.security.access_control: IUserIdentity;
+import webtank.security.right.common: RightDataTypes, RightDataVariant;
 
 enum RulesRelation: ubyte
 {
@@ -31,7 +32,7 @@ public:
 			return _name;
 		}
 
-		bool hasRight(IUserIdentity identity, string[string] data)
+		bool hasRight(IUserIdentity identity, RightDataVariant data)
 		{
 			if( _children.length == 0 ) {
 				return false; // If there is no rules then access is denied
@@ -59,6 +60,12 @@ public:
 			}
 
 			return false; // Default is to deny access
+		}
+
+		static foreach( alias RightType; RightDataTypes ) {
+			bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightType data) {
+				return hasRight(user, accessObject, accessKind, data);
+			}
 		}
 	}
 

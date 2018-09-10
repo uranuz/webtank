@@ -30,3 +30,18 @@ string GetSymbolAccessObject(alias Struc, string field)()
 	}
 	return result;
 }
+
+import std.meta: AliasSeq;
+import std.json: JSONValue;
+import std.variant: Algebraic;
+import webtank.datctrl.iface.record: IBaseRecord;
+
+version(Have_ivy)
+{
+	import ivy.interpreter.data_node: IvyData;
+	alias RightDataTypes = AliasSeq!(string[string], JSONValue, IBaseRecord, IvyData);
+} else {
+	alias RightDataTypes = AliasSeq!(string[string], JSONValue, IBaseRecord);
+}
+
+alias RightDataVariant = Algebraic!(RightDataTypes);

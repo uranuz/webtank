@@ -2,14 +2,18 @@ module webtank.security.right.iface.controller;
 
 import webtank.security.access_control: IUserIdentity;
 import std.variant: Algebraic;
+import std.json: JSONValue;
+import webtank.security.right.common: RightDataTypes, RightDataVariant;
+
 interface IRightController
 {
-	alias AllowedTypesVariant = Algebraic!(string[string], IvyData, JSONValue, IBaseRecord);
-	
-	bool hasRight(IUserIdentity user, string accessObject, string accessKind);
-	bool hasRight(IUserIdentity user, string accessObject, string accessKind, string[string] data);
-	bool hasRight(IUserIdentity user, string accessObject, string accessKind, IvyData data);
-	bool hasRight(IUserIdentity user, string accessObject, string accessKind, JSONValue data);
-	bool hasRight(IUserIdentity user, string accessObject, string accessKind, IBaseRecord data);
-	bool hasRight(IUserIdentity user, string accessObject, string accessKind, AllowedTypesVariant data);
+	// This is main hasRight method...s
+	bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightDataVariant data = RightDataVariant());
+
+	// ...generate extra hasRight overloads for convenience
+	static foreach( alias RightType; RightDataTypes ) {
+		bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightType data);	
+	}
 }
+
+

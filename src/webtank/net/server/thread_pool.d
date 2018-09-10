@@ -8,7 +8,13 @@ import webtank.net.service.iface: IWebService;
 import webtank.net.server.iface: IWebServer;
 
 import std.parallelism: TaskPool, task;
-import std.socket: Socket, TcpSocket, InternetAddress, socket_t, AddressFamily, SocketShutdown;
+import std.socket: Socket, TcpSocket, InternetAddress, AddressFamily, SocketShutdown;
+version(Posix)
+	import std.socket: socket_t;
+else
+{
+	alias socket_t = size_t; // Workaround to compile on Windows
+}
 
 // Web-сервер, использующий стандартный пул задач Phobos
 class ThreadPoolServer: IWebServer

@@ -1,7 +1,13 @@
 module webtank.net.server.worker;
 
-import std.socket: Socket, SocketShutdown, AddressFamily, SocketType, UnixAddress;
-import std.socket: CMSG_SPACE, CMSG_FIRSTHDR, CMSG_LEN, SOL_SOCKET, SCM_RIGHTS, CMSG_DATA, socket_t, cmsghdr, msghdr, iovec, ssize_t, recvmsg;
+import std.socket: Socket, SocketShutdown, AddressFamily, SocketType;
+
+version(Posix)
+	import std.socket: UnixAddress, CMSG_SPACE, CMSG_FIRSTHDR, CMSG_LEN, SOL_SOCKET, SCM_RIGHTS, CMSG_DATA, socket_t, cmsghdr, msghdr, iovec, ssize_t, recvmsg;
+else
+{
+	alias socket_t = size_t; // Temporary workaround to compile on Windows
+}
 
 import webtank.net.service.iface: IWebService;
 
@@ -42,7 +48,9 @@ void runServer(ref WorkerOpts opts)
 	bool isSharedSocket = opts.workerSockAddr.length > 0;
 	socket_t serverSock;
 	if(isSharedSocket) {
-		serverSock = getSocketHandle(opts.workerSockAddr);
+		version(Posix) {
+			serverSock = getSocketHandle(opts.workerSockAddr);
+		} else enforce(false, `Shared socket in only supported for Posix OS now!`);
 	}
 
 	IWebServer server;
@@ -69,6 +77,7 @@ void runServer(ref WorkerOpts opts)
 	server.start(); // Запускаем раз уж создали
 }
 
+version(Posix)
 socket_t getSocketHandle(string workerSockAddr)
 {
 	import std.string: toStringz;
@@ -93,6 +102,7 @@ socket_t getSocketHandle(string workerSockAddr)
 	return receiveSocketHandle(acceptedSock);
 }
 
+version(Posix)
 socket_t receiveSocketHandle(Socket acceptedSock)
 {
 	/* Allocate a char array of suitable size to hold the ancillary data.

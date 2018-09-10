@@ -2,6 +2,7 @@ module webtank.security.right.plain_rule;
 
 import webtank.security.right.iface.access_rule: IAccessRule;
 import webtank.security.access_control: IUserIdentity;
+import webtank.security.right.common: RightDataTypes, RightDataVariant;
 
 alias AccessRuleDelType = bool delegate(IUserIdentity identity, string[string] data);
 
@@ -30,6 +31,8 @@ public:
 			}
 			return _del(identity, data);
 		}
+
+		bool 
 	}
 
 	override string toString() {
