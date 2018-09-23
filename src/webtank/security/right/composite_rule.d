@@ -63,8 +63,8 @@ public:
 		}
 
 		static foreach( alias RightType; RightDataTypes ) {
-			bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightType data) {
-				return hasRight(user, accessObject, accessKind, data);
+			bool hasRight(IUserIdentity user, RightType data) {
+				return hasRight(user, data);
 			}
 		}
 	}

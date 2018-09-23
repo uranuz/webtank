@@ -4,19 +4,42 @@ import webtank.security.right.iface.access_rule: IAccessRule;
 import webtank.security.access_control: IUserIdentity;
 import webtank.security.right.common: RightDataTypes, RightDataVariant;
 
-alias AccessRuleDelType = bool delegate(IUserIdentity identity, string[string] data);
+import webtank.datctrl.iface.record: IBaseRecord;
+
+version(Have_ivy) import ivy.interpreter.data_node: IvyData, IvyDataType;
+
+import ivy.json: toIvyJSON, toStdJSON;
+
+import std.meta: staticMap;
+import std.variant: Algebraic, visit;
+import std.exception: enforce;
+import std.json: JSONValue, JSON_TYPE;
+
+alias AddAccessRuleDelType(RightType) = bool delegate(IUserIdentity identity, RightType data);
+alias AccessRuleDelTypes = staticMap!(AddAccessRuleDelType, RightDataTypes);
+alias AccessRuleDelVariant = Algebraic!AccessRuleDelTypes;
+
 
 class PlainAccessRule: IAccessRule
 {
 private:
 	string _name;
-	AccessRuleDelType _del;
+	AccessRuleDelVariant _del;
 
 public:
-	this(string name, AccessRuleDelType deleg)
+	this(string name, AccessRuleDelVariant deleg)
 	{
 		_name = name;
 		_del = deleg;
+	}
+
+	static foreach( DelType; AccessRuleDelTypes )
+	{
+		this(string name, DelType deleg)
+		{
+			_name = name;
+			_del = deleg;
+		}
 	}
 
 	public override {
@@ -24,22 +47,100 @@ public:
 			return _name;
 		}
 
-		bool hasRight(IUserIdentity identity, string[string] data = null)
+		bool hasRight(IUserIdentity identity, RightDataVariant data)
 		{
-			if( _del is null ) {
-				return false;
-			}
-			return _del(identity, data);
+			auto result = data.visit!(
+				(JSONValue dat) => hasRight(identity, dat),
+				(IBaseRecord dat) => hasRight(identity, dat),
+				(IvyData dat) => hasRight(identity, dat),
+				() {
+					return _del.visit!(
+						(AddAccessRuleDelType!(JSONValue) del) {
+							return del(identity, JSONValue());
+						},
+						(AddAccessRuleDelType!(IBaseRecord) del) {
+							return del(identity, IBaseRecord.init);
+						},
+						(AddAccessRuleDelType!(IvyData) del) {
+							return del(identity, IvyData());
+						},
+						() {
+							enforce(false, `Unexpected handler type!`);
+							return false;
+						}
+					)();
+				}
+			)();
+
+			return result;
 		}
 
-		bool 
+		bool hasRight(IUserIdentity identity, JSONValue data)
+		{
+			return _del.visit!(
+				(AddAccessRuleDelType!(JSONValue) del) {
+					return del(identity, data);
+				},
+				(AddAccessRuleDelType!(IBaseRecord) del) {
+					enforce(false, `Conversion is not implemented yet!`);
+					return false;
+				},
+				(AddAccessRuleDelType!(IvyData) del) {
+					return del(identity, data.toIvyJSON());
+				},
+				() {
+					enforce(false, `Unexpected handler type!`);
+					return false;
+				}
+			)();
+		}
+
+		bool hasRight(IUserIdentity identity, IBaseRecord data)
+		{
+			return _del.visit!(
+				(AddAccessRuleDelType!(JSONValue) del) {
+					return del(identity, data.toStdJSON());
+				},
+				(AddAccessRuleDelType!(IBaseRecord) del) {
+					return del(identity, data);
+				},
+				(AddAccessRuleDelType!(IvyData) del) {
+					enforce(false, `Conversion is not implemented yet!`);
+					return false;
+				},
+				() {
+					enforce(false, `Unexpected handler type!`);
+					return false;
+				}
+			)();
+		}
+
+		version(Have_ivy)
+		bool hasRight(IUserIdentity identity, IvyData data)
+		{
+			return _del.visit!(
+				(AddAccessRuleDelType!(JSONValue) del) {
+					return del(identity, data.toStdJSON());
+				},
+				(AddAccessRuleDelType!(IBaseRecord) del) {
+					enforce(false, `Conversion is not implemented yet!`);
+					return false;
+				},
+				(AddAccessRuleDelType!(IvyData) del) {
+					return del(identity, data);
+				},
+				() {
+					enforce(false, `Unexpected handler type!`);
+					return false;
+				}
+			)();
+		}
 	}
 
 	override string toString() {
 		return `PlainAccessRule: ` ~ _name;
 	}
 
-	import std.json: JSONValue;
 	override JSONValue toStdJSON()
 	{
 		return JSONValue([

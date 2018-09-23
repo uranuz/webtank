@@ -15,5 +15,3 @@ interface IRightController
 		bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightType data);	
 	}
 }
-
-

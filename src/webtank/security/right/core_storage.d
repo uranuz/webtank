@@ -1,8 +1,9 @@
 module webtank.security.right.core_storage;
 
+import webtank.security.right.iface.access_rule_factory: IAccessRuleFactory;
 import webtank.security.right.iface.access_rule: IAccessRule;
 
-class CoreAccessRuleStorage
+class CoreAccessRuleStorage: IAccessRuleFactory
 {
 private:
 	IAccessRule[string] _rules;
@@ -16,13 +17,9 @@ public:
 		_rules[rule.name] = rule;
 	}
 
-	IAccessRule opIndex(string name)
+	override IAccessRule get(string name)
 	{
 		enforce(name in _rules, `No access rule name found with name: ` ~ name);
 		return _rules[name];
-	}
-
-	IAccessRule* opBinaryRight(string op: "in")(string name) {
-		return name in _rules;
 	}
 }

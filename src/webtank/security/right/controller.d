@@ -61,7 +61,7 @@ class AccessRightController: IRightController
 {
 	
 private:
-	import webtank.security.right.core_storage: CoreAccessRuleStorage;
+	import webtank.security.right.iface.access_rule_factory: IAccessRuleFactory;
 	import webtank.security.access_control: IUserIdentity;
 	import webtank.security.right.composite_rule: CompositeAccessRule, RulesRelation;
 	import std.typecons: Tuple;
@@ -72,7 +72,7 @@ private:
 		size_t, "distance"
 	);
 
-	CoreAccessRuleStorage _coreStorage;
+	IAccessRuleFactory _ruleFactory;
 	IRightDataSource _dataSource;
 	IAccessRule[size_t] _allRules;
 	AccessObject[size_t] _allObjects;
@@ -84,21 +84,13 @@ private:
 	size_t[][size_t] _groupObjKeys;
 
 public:
-	this(CoreAccessRuleStorage coreStorage, IRightDataSource dataSource)
+	this(IAccessRuleFactory ruleFactory, IRightDataSource dataSource)
 	{
 		import std.exception: enforce;
-		enforce(coreStorage !is null, `Expected core rules storage!`);
+		enforce(ruleFactory !is null, `Expected core rules storage!`);
 		enforce(dataSource !is null, `Expected rights data source!`);
-		_coreStorage = coreStorage;
+		_ruleFactory = ruleFactory;
 		_dataSource = dataSource;
-	}
-
-	this(IRightDataSource dataSource)
-	{
-		this(
-			new CoreAccessRuleStorage(),
-			dataSource
-		);
 	}
 
 	void reloadRightsData()
@@ -118,7 +110,7 @@ public:
 			reloadRightsData();
 	}
 
-	override public bool hasRight(IUserIdentity user, string accessObject, RightDataVariant data)
+	override public bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightDataVariant data)
 	{
 		if( !user.isAuthenticated() ) {
 			return false; // No permission if user is not authenticated
@@ -192,7 +184,7 @@ public:
 
 	static foreach( alias RightType; RightDataTypes )
 	{
-		override public bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightDataVariant data) {
+		override public bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightType data) {
 			return hasRight(user, accessObject, accessKind, RightDataVariant(data));
 		}
 	}
@@ -215,8 +207,8 @@ public:
 		
 		string ruleName = ruleRec.get!"name";
 		IAccessRule newRule;
-		if( auto coreRule = ruleName in _coreStorage ) {
-			newRule = *coreRule;
+		if( auto coreRule = _ruleFactory.get(ruleName) ) {
+			newRule = coreRule;
 		} else {
 			newRule = new CompositeAccessRule(
 				ruleName,
@@ -425,13 +417,13 @@ public:
 		}
 	}
 
-	CoreAccessRuleStorage ruleStorage() @property {
-		assert(_coreStorage, `Core access rule storage is not initialized!!!`);
-		return _coreStorage;
+	IAccessRuleFactory ruleStorage() @property {
+		assert(_ruleFactory, `Core access rule storage is not initialized!!!`);
+		return _ruleFactory;
 	}
 
 	IRightDataSource rightSource() @property {
-		assert(_coreStorage, `Right source is not initialized!!!`);
+		assert(_dataSource, `Right source is not initialized!!!`);
 		return _dataSource;
 	}
 }

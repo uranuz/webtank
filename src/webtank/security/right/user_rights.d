@@ -1,6 +1,6 @@
 module webtank.security.right.user_rights;
 
-import webtank.security.rights.common: RightDataTypes, RightDataVariant;
+import webtank.security.right.common: RightDataTypes, RightDataVariant;
 
 import webtank.net.http.context: HTTPContext;
 struct UserRights

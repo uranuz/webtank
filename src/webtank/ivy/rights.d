@@ -9,7 +9,7 @@ private:
 	UserRights _rights;
 	string _accessObject;
 	string _accessKind;
-	IvyData _data;
+	IvyData _data = null; // Workaround for data not being undef and ivy node searhc not crash
 
 public:
 	import std.exception: enforce;
@@ -41,7 +41,7 @@ public:
 			{
 				case `object`: return IvyData(_accessObject);
 				case `kind`: return IvyData(_accessKind);
-				case `data`: return IvyData(_data);
+				case `data`: return _data;
 				case `hasRight`: return IvyData(
 					_rights.hasRight(_accessObject, _accessKind, _data));
 				default: break;
