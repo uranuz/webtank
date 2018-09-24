@@ -286,6 +286,7 @@ public:
 			result ~= `; ` ~ attrName ~ `=` ~ attrValue;
 		}
 
+		// Following parts should be empty for request headers
 		if( !expires.empty )
 			result ~= `; Expires=` ~ expires;
 		if( !maxAge.empty )
@@ -410,6 +411,15 @@ public:
 		string result;
 		foreach( ref cookie; _cookies )
 			result ~= ( result.empty ? "" : "\r\n" ) ~ "Cookie: " ~ cookie.toString();
+		return result;
+	}
+
+	string toOneLineString()
+	{
+		import std.range: empty;
+		string result;
+		foreach( ref cookie; _cookies )
+			result ~= ( result.empty ? null : "; " ) ~ cookie.toString();
 		return result;
 	}
 
