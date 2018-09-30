@@ -1,59 +1,64 @@
 module webtank.net.uri_pattern;
 
-import std.stdio, std.conv;
+import std.conv;
 
-import std.utf, std.algorithm, std.regex;
+import std.algorithm, std.regex;
 
 struct URIMatchingData
-{	dstring[dstring] params;
+{
+	string[string] params;
 	bool isMatched = false;
 }
 
 class URIPattern
 {	
 	this( string URIPatternStr, string[string] regExprs, string[string] defaults )
-	{	_lexemes = parseURIPattern( toUTF32(URIPatternStr) );
+	{
+		_lexemes = parseURIPattern(URIPatternStr);
 		
 		foreach( paramName, expr; regExprs )
-			_regExprs[ toUTF32(paramName) ] = toUTF32(expr);
+			_regExprs[paramName] = expr;
 		
 		foreach( paramName, value; defaults )
-			_defaults[ toUTF32(paramName) ] = toUTF32(value);
+			_defaults[paramName] = value;
 	}
 	
 	this( string URIPatternStr, string[string] defaults = null )
-	{	_lexemes = parseURIPattern( toUTF32(URIPatternStr) );
+	{
+		_lexemes = parseURIPattern(URIPatternStr);
 		
 		foreach( paramName, value; defaults )
-			_defaults[ toUTF32(paramName) ] = toUTF32(value);
+			_defaults[paramName] = value;
 	}
 	
-	URIMatchingData match(string URIStr)
-	{	return matchURI( std.utf.toUTF32(URIStr), _lexemes, _regExprs, _defaults );
+	URIMatchingData match(string URIStr) {
+		return matchURI(URIStr, _lexemes, _regExprs, _defaults);
 	}
 	
 protected:
-	dstring[] _lexemes;
-	dstring[dstring] _regExprs;
-	dstring[dstring] _defaults;
+	string[] _lexemes;
+	string[string] _regExprs;
+	string[string] _defaults;
 
 }
 
 
-dstring[] parseURIPattern(dstring URIPatternStr)
+string[] parseURIPattern(string URIPatternStr)
 {
-	dstring[] result;
+	string[] result;
 	size_t i = 0;
 
 	size_t lexemePos = 0;
 	bool isNameStarted = false;
 	
 	for( ; i < URIPatternStr.length; i++ )
-	{	if( URIPatternStr[i..$].startsWith("}{") )
+	{
+		if( URIPatternStr[i..$].startsWith("}{") )
 			throw new Exception("Two parameters cannot follow consecutive in URI pattern!!!");
 			
 		if( URIPatternStr[i] == '{' )
-		{	if( isNameStarted )
+		{
+			if( isNameStarted )
 				throw new Exception("Bracket balance violation at: " ~ i.to!string );
 			
 			auto literal = URIPatternStr[lexemePos .. i];
@@ -91,19 +96,22 @@ dstring[] parseURIPattern(dstring URIPatternStr)
 	return result;
 }
 
-bool pollLexemeSet(dstring[] lexemes, ref size_t literalCount, ref size_t paramCount)
-{	literalCount = 0; paramCount = 0;
+bool pollLexemeSet(string[] lexemes, ref size_t literalCount, ref size_t paramCount)
+{
+	literalCount = 0; paramCount = 0;
 	byte prevLexType = -1; //Показывает тип пред. лексемы: 1=литерал, 0=парам, -1=неизвестно
 	foreach( lexeme; lexemes )
 	{	
 		if( lexeme.startsWith("l_") )
-		{	if( prevLexType == 1 )  //Если идут два литерала подряд
+		{
+			if( prevLexType == 1 )  //Если идут два литерала подряд
 				return false; //=> ошибка
 			literalCount++;
 			prevLexType = 1;
 		}
 		else if( lexeme.startsWith("p_") )
-		{	if( prevLexType == 0 ) //Если идут два параметра подряд
+		{
+			if( prevLexType == 0 ) //Если идут два параметра подряд
 				return false; //=> ошибка
 			paramCount++;
 			prevLexType = 0;
@@ -116,7 +124,7 @@ bool pollLexemeSet(dstring[] lexemes, ref size_t literalCount, ref size_t paramC
 
 ///Функция пытается разобрать адрес по шаблону, представленному массивом lexemes
 ///Возвращает структуру с результатами разбора
-URIMatchingData parseURIByPattern( dstring URIStr, dstring[] lexemes )  //nothrow
+URIMatchingData parseURIByPattern( string URIStr, string[] lexemes )  //nothrow
 {	
 	//Количества литералов и параметров, которые нужно найти
 	size_t unfoundLiteralCount = 0; 
@@ -126,7 +134,7 @@ URIMatchingData parseURIByPattern( dstring URIStr, dstring[] lexemes )  //nothro
 	if( !pollLexemeSet(lexemes, unfoundLiteralCount, unfoundParamCount) )
 		return URIMatchingData(null, false); //Некорректный набор литералов
 
-	dstring[dstring] params; //Результирующий массив параметров
+	string[string] params; //Результирующий массив параметров
 	
 	size_t lexemeIndex = 0; //Номер текущей лексемы
 	
@@ -139,15 +147,17 @@ URIMatchingData parseURIByPattern( dstring URIStr, dstring[] lexemes )  //nothro
 	//lexNum - номер лексемы, которая должна быть параметром
 	//Возвращает true при успешном добавлении, иначе - false
 	bool appendParam(size_t i, size_t lexNum)
-	{	if( 
+	{
+		if( 
 			lexNum < lexemes.length && 
 			lexemes[lexNum].startsWith("p_") 
-		)
-		{	auto paramName = lexemes[lexNum][2..$];
+		) {
+			auto paramName = lexemes[lexNum][2..$];
 			auto paramValue = URIStr[paramValuePos..i];
 		
 			if( paramName in params )
-			{	if( paramValue != params[paramName] )
+			{
+				if( paramValue != params[paramName] )
 					return false;
 			}
 			else
@@ -163,12 +173,15 @@ URIMatchingData parseURIByPattern( dstring URIStr, dstring[] lexemes )  //nothro
 	
 	//Цикл просмотра строки и поиска литералов
 	for( ; i < URIStr.length; i++ )
-	{	if( lexemeIndex < lexemes.length )
-		{	auto currLexeme = lexemes[lexemeIndex];
+	{
+		if( lexemeIndex < lexemes.length )
+		{
+			auto currLexeme = lexemes[lexemeIndex];
 			if( currLexeme.startsWith("l_") && URIStr[i..$].startsWith( currLexeme[2..$] ) )
-			{	
+			{
 				if( lexemeIndex > 0 )
-				{	if( !appendParam(i, lexemeIndex-1 ) )
+				{
+					if( !appendParam(i, lexemeIndex-1 ) )
 						return URIMatchingData(null, false); //Ошибка при добавлении параметра
 				}
 				
@@ -191,12 +204,15 @@ URIMatchingData parseURIByPattern( dstring URIStr, dstring[] lexemes )  //nothro
 	}
 	
 	if( lexemes.length > 0 )
-	{	if( lexemes[$-1].startsWith("l_") )
-		{	if( URIStr[i..$] != lexemes[$-1][2..$] )
+	{
+		if( lexemes[$-1].startsWith("l_") )
+		{
+			if( URIStr[i..$] != lexemes[$-1][2..$] )
 				return URIMatchingData(null, false); //"Задняя часть" строки не соотв. последнему литералу
 		}
 		else if( lexemes[$-1].startsWith("p_") )
-		{	if( !appendParam(URIStr.length, lexemes.length-1) )
+		{
+			if( !appendParam(URIStr.length, lexemes.length-1) )
 				return URIMatchingData(null, false); //Ошибка при добавлении параметра
 		}
 	}
@@ -209,12 +225,12 @@ URIMatchingData parseURIByPattern( dstring URIStr, dstring[] lexemes )  //nothro
 }
 
 URIMatchingData matchURI( 
-	dstring URIStr, 
-	dstring[] lexemes, 
-	dstring[dstring] regExprs, 
-	dstring[dstring] defaults 
-)
-{	auto parsingResult = parseURIByPattern(URIStr, lexemes);
+	string URIStr, 
+	string[] lexemes, 
+	string[string] regExprs, 
+	string[string] defaults 
+) {
+	auto parsingResult = parseURIByPattern(URIStr, lexemes);
 	if( !parsingResult.isMatched )
 		return parsingResult;
 	
@@ -222,30 +238,32 @@ URIMatchingData matchURI(
 	
 	//Задаём значения по-умолчанию для параметров
 	foreach( paramName, value; defaults )
-	{	if( params.get(paramName, null).length == 0 )
-		{	params[paramName] = value;
+	{
+		if( params.get(paramName, null).length == 0 ) {
+			params[paramName] = value;
 		}
 	}
 	
 	size_t matchedRegExprsCount = 0;
 	//Проверка соответствия регулярным выражениям
 	foreach( paramName, cond; regExprs )
-	{	auto r = regex("^" ~ cond ~ "$", "g");
+	{
+		auto r = regex("^" ~ cond ~ "$", "g");
 		if( paramName in params )
 		{
 			auto matchResult = matchFirst(params[paramName], r);
-			if( !matchResult.empty )
-			{	//Совпадение с шаблоном
+			if( !matchResult.empty ) {
+				//Совпадение с шаблоном
 				matchedRegExprsCount ++;
-			}
-			else
-			{	//Несовпадение с шаблоном
+			} else {
+				//Несовпадение с шаблоном
 				return URIMatchingData(null, false);
 			}
 			
 		}
 		else
-		{	//Параметр с заданным именем не найден
+		{
+			//Параметр с заданным именем не найден
 			return URIMatchingData(null, false); 
 		}
 	}
@@ -256,23 +274,36 @@ URIMatchingData matchURI(
 		return URIMatchingData(null, false);
 }
 
+unittest
+{
+	//import std.stdio;
+	// Для начала самые простые тесты
+	string uri = `/dyn/user/reg/confirm`;
+	auto pattern1 = parseURIPattern(`/dyn/user/reg/confirm`);
+	//writeln(`pattern1`, pattern1);
+	auto pattern2 = parseURIPattern(`/dyn/user/reg`);
+	//writeln(`pattern2`, pattern2);
+	assert( matchURI(uri, pattern1, null, null).isMatched, `Check number one` );
+	assert( !matchURI(uri, pattern2, null, null).isMatched, `Check number two` );
+}
+
 // void main()
 // {	
 // 	//На будущее
-// // 	dstring URIPatternStr = `/dyn/pohod/by_date/(  {start_year}( |/{start_month} )(|/to/{end_year}(|/{end_month})))`;
+// // 	string URIPatternStr = `/dyn/pohod/by_date/(  {start_year}( |/{start_month} )(|/to/{end_year}(|/{end_month})))`;
 // 	
 // 	
-// 	dstring plainURIPatternStr1 = `{fig}/dyn/pohod/by_date/{start_year}/{start_month}/to/{end_year}/{end_month}`;
-// 	dstring URIExampleStr1 = `/dyn/pohod/by_date/2013/08/to/2014/06`;
+// 	string plainURIPatternStr1 = `{fig}/dyn/pohod/by_date/{start_year}/{start_month}/to/{end_year}/{end_month}`;
+// 	string URIExampleStr1 = `/dyn/pohod/by_date/2013/08/to/2014/06`;
 // 	
-// 	dstring plainURIPatternStr2 = `/dyn/pohod/by_date/{animal}/ololo_{name}/`;
-// 	dstring URIExampleStr2 = `/dyn/pohod/by_date//ololo_vasya/`;
+// 	string plainURIPatternStr2 = `/dyn/pohod/by_date/{animal}/ololo_{name}/`;
+// 	string URIExampleStr2 = `/dyn/pohod/by_date//ololo_vasya/`;
 // 	
-// 	dstring plainURIPatternStr3 = `/jsonrpc/{remainder}`;
-// 	dstring URIExampleStr3 = `/dyn/edit_tourist`;
+// 	string plainURIPatternStr3 = `/jsonrpc/{remainder}`;
+// 	string URIExampleStr3 = `/dyn/edit_tourist`;
 // 	
-// 	dstring plainURIPatternStr4 = `{param}`;
-// 	dstring URIExampleStr4 = `trololo`;
+// 	string plainURIPatternStr4 = `{param}`;
+// 	string URIExampleStr4 = `trololo`;
 // 	
 // 	auto pattern = parseURIPattern(plainURIPatternStr3);
 // 	

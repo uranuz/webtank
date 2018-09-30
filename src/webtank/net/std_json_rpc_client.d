@@ -100,7 +100,13 @@ JSONValue remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto
 
 import webtank.net.http.context: HTTPContext;
 private static immutable _allowedHeaders = [
-	`user-agent`, `x-real-ip`, `x-forwarded-for`, `x-forwarded-proto`, `x-forwarded-host`, `x-forwarded-port`
+	`user-agent`,
+	`x-real-ip`,
+	`x-forwarded-for`,
+	`x-forwarded-proto`,
+	`x-forwarded-host`,
+	`x-forwarded-port`,
+	// `x-webtank-db-snapshot`
 ];
 /// Извлекает разрешенные HTTP заголовки из запроса
 string[string] _getAllowedRequestHeaders(HTTPContext ctx)

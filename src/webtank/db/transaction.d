@@ -6,6 +6,7 @@ interface IDBTransaction
 {
 	void commit();
 	void rollback();
+	string exportSnapshot();
 }
 
 enum IsolationLevel {
@@ -64,5 +65,11 @@ class PostgreSQLTransaction: IDBTransaction
 	override void rollback()
 	{
 		_db.query(`rollback`);
+	}
+
+	override string exportSnapshot()
+	{
+		auto res = _db.query(`select pg_export_snapshot()`);
+		return res.get(0, 0);
 	}
 }
