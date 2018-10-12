@@ -5,46 +5,44 @@ import webtank.ivy.datctrl.record_adapter;
 import webtank.ivy.datctrl.recordset_adapter_slice;
 import webtank.ivy.datctrl.deserialize;
 
+import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
+
+import std.exception: enforce;
+
 class RecordSetAdapter: IClassNode
 {
 private:
 	IvyData _rawRS;
-	size_t[string] _namesMapping;
+	RecordFormatAdapter _fmt;
 
 public:
 	this(IvyData rawRS)
 	{
 		_rawRS = rawRS;
 		_ensureRecordSet();
-
-		foreach( i, fmt; _rawFormat.array )
-		{
-			assert( "n" in fmt, `Expected name field "n" in record raw format` );
-			_namesMapping[ fmt["n"].str ] = i;
-		}
+		_fmt = new RecordFormatAdapter(rawRS);
 
 		foreach( i, ref recData; _rawData.array )
 		{
 			foreach( j, ref fieldData; recData.array ) {
-				_deserializeFieldInplace(fieldData, _rawFormat[j]);
+				_deserializeFieldInplace(fieldData, _fmt[j]);
 			}
 		}
 	}
 
 	void _ensureRecordSet()
 	{
-		assert( "t" in _rawRS, `Expected type field "t" in recordset raw data!` );
-		assert( "d" in _rawRS, `Expected data field "d" in recordset raw data!` );
-		assert( "f" in _rawRS, `Expected format field "f" in recordset raw data!` );
-		assert( _rawRS["t"].type == IvyDataType.String && _rawRS["t"].str == "recordset", `Expected "recordset" value in "t" field` );
+		enforce("t" in _rawRS, `Expected type field "t" in recordset raw data!`);
+		enforce("d" in _rawRS, `Expected data field "d" in recordset raw data!`);
+		enforce("f" in _rawRS, `Expected format field "f" in recordset raw data!`);
+		enforce(
+			_rawRS["t"].type == IvyDataType.String && _rawRS["t"].str == "recordset",
+			`Expected "recordset" value in "t" field`
+		);
 	}
 
 	IvyData _rawData() @property {
 		return _rawRS["d"];
-	}
-
-	IvyData _rawFormat() @property {
-		return _rawRS["f"];
 	}
 
 	static class Range: IvyNodeRange
@@ -82,53 +80,53 @@ public:
 		return IvyData(new RecordAdapter(
 			IvyData([
 				"d": _rawData.array[index],
-				"f": _rawFormat,
+				"f": _rawRS["f"],
 				"t": IvyData("record")
 			]),
-			_namesMapping
+			_fmt
 		));
 	}
 
-	override IvyNodeRange opSlice() {
-		return new Range(this);
-	}
-
-	override RecordSetAdapterSlice opSlice(size_t begin, size_t end) {
-		return new RecordSetAdapterSlice(this, begin, end);
-	}
-
-	override IvyData opIndex(size_t index) {
-		return _makeRecord(index);
-	}
-
-	override IvyData opIndex(string key) {
-		assert(false, `Indexing by string key is not supported for RecordSetAdapter`);
-	}
-
-	override IvyData __getAttr__(string attrName)
-	{
-		switch(attrName)
-		{
-			case "format": return _rawFormat;
-			case "namesMapping": return IvyData(_namesMapping);
-
-			default: break;
+	override {
+		IvyNodeRange opSlice() {
+			return new Range(this);
 		}
-		return IvyData();
-	}
 
-	override void __setAttr__(IvyData node, string attrName) {
-		assert(false, `Not attributes setting is yet supported by RecordSetAdapter`);
-	}
+		RecordSetAdapterSlice opSlice(size_t begin, size_t end) {
+			return new RecordSetAdapterSlice(this, begin, end);
+		}
 
-	override IvyData __serialize__() {
-		// Maybe we should make deep copy of it there, but because of productivity
-		// we shall not do it now. Just say for now that nobody should modifiy serialized data
-		return _rawRS;
-	}
+		IvyData opIndex(size_t index) {
+			return _makeRecord(index);
+		}
 
-	override size_t length() @property {
-		return _rawData.array.length;
+		IvyData opIndex(string key) {
+			assert(false, `Indexing by string key is not supported for RecordSetAdapter`);
+		}
+
+		IvyData __getAttr__(string attrName)
+		{
+			switch(attrName)
+			{
+				case "format": return IvyData(_fmt);
+				default: break;
+			}
+			return IvyData();
+		}
+
+		void __setAttr__(IvyData node, string attrName) {
+			assert(false, `Not attributes setting is yet supported by RecordSetAdapter`);
+		}
+
+		IvyData __serialize__() {
+			// Maybe we should make deep copy of it there, but because of productivity
+			// we shall not do it now. Just say for now that nobody should modifiy serialized data
+			return _rawRS;
+		}
+
+		size_t length() @property {
+			return _rawData.length;
+		}
 	}
 
 	IvyData serializeSlice(size_t begin, size_t end)

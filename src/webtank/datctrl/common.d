@@ -63,14 +63,14 @@ mixin template GetStdJSONFieldFormatImpl()
 	/// Сериализации формата поля в std.json
 	JSONValue getStdJSONFormat()
 	{
-		import std.traits: isIntegral;
+		import std.traits: isIntegral, isFloatingPoint;
 		JSONValue[string] jArray;
 
 		jArray["n"] = _name; // Вывод имени поля
 		jArray["t"] = getFieldTypeString!ValueType; // Вывод типа поля
 		jArray["dt"] = ValueType.stringof; // D-шный тип поля
 
-		static if( isIntegral!(ValueType) ) {
+		static if( isIntegral!(ValueType) || isFloatingPoint!(ValueType) ) {
 			jArray["sz"] = ValueType.sizeof; // Размер чисел в байтах
 		}
 
@@ -107,6 +107,8 @@ string getFieldTypeString(T)()
 		return "bool";
 	} else static if( isIntegral!(T) ) {
 		return "int";
+	} else static if( isFloatingPoint!(T) ) {
+		return "float";
 	} else static if( isSomeString!(T) ) {
 		return "str";
 	} else static if( isArray!(T) ) {
