@@ -9,7 +9,7 @@ private:
 	UserRights _rights;
 	string _accessObject;
 	string _accessKind;
-	IvyData _data = null; // Workaround for data not being undef and ivy node searhc not crash
+	IvyData _data = null; // Workaround for data not being undef and ivy node search not crash
 
 public:
 	import std.exception: enforce;
@@ -84,7 +84,11 @@ public:
 		}
 		
 		IvyData __serialize__() {
-			assert(false, "Method __serialize__ not implemented");
+			IvyData res;
+			foreach( field; [`object`, `kind`, `data`, `hasRight`] ) {
+				res[field] = this.__getAttr__(field);
+			}
+			return res;
 		}
 		
 		size_t length() @property {

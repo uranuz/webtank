@@ -54,7 +54,11 @@ public:
 		}
 		
 		IvyData __serialize__() {
-			assert(false, "Method __serialize__ not implemented");
+			IvyData res;
+			foreach( field; [`id`, `name`, `data`, `isAuthenticated`, `accessRoles`] ) {
+				res[field] = this.__getAttr__(field);
+			}
+			return res;
 		}
 		
 		size_t length() @property {
