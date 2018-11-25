@@ -23,21 +23,20 @@ mixin template IvyServiceMixin()
 	import webtank.ivy.user: IvyUserIdentity;
 	import webtank.ivy.rights: IvyUserRights;
 
-	import ivy.programme: ExecutableProgramme, ProgrammeCache, IvyConfig;
+	import ivy.engine: IvyEngine;
+	import ivy.engine_config: IvyConfig;
+	import ivy.programme: ExecutableProgramme;
 	import ivy.interpreter.interpreter: Interpreter;
 	import ivy.interpreter.data_node: IvyData;
 	import ivy.common: LogInfo, LogInfoType;
 	import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
 
-	debug enum bool useTemplatesCache = false;
-	else enum bool useTemplatesCache = true;
-
 public:
 	override ExecutableProgramme getIvyModule(string moduleName)
 	{
 		import std.exception: enforce;
-		enforce(_templateCache !is null, `ViewService template cache is null!!!`);
-		return _templateCache.getByModuleName(moduleName);
+		enforce(_ivyEngine !is null, `ViewService template cache is null!!!`);
+		return _ivyEngine.getByModuleName(moduleName);
 	}
 
 	private IvyData[string] _prepareExtraGlobals(HTTPContext ctx)
@@ -84,7 +83,7 @@ public:
 
 private:
 	Loger _ivyLoger;
-	ProgrammeCache!(useTemplatesCache) _templateCache;
+	IvyEngine _ivyEngine;
 
 	void _initTemplateCache()
 	{
@@ -98,7 +97,9 @@ private:
 		ivyConfig.compilerLoger = &_ivyLogerMethod;
 		ivyConfig.interpreterLoger = &_ivyLogerMethod;
 
-		_templateCache = new ProgrammeCache!(useTemplatesCache)(ivyConfig);
+		debug ivyConfig.clearCache = true;
+
+		_ivyEngine = new IvyEngine(ivyConfig);
 	}
 
 	void _startIvyLogging()
