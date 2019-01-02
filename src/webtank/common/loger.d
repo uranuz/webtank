@@ -122,6 +122,13 @@ struct LogEvent
  	string funcName;      ///Имя функции или метода
  	string prettyFuncName;
 	SysTime timestamp;     ///Время записи
+
+	// Workaround for being able to send this struct via concurrency send
+	void opAssign(LogEvent rhs) shared
+	{
+		cast() this = rhs;
+		//this = cast(shared) rhs; // Gives SEGFAULT - don't know why
+	}
 }
 
 /++
@@ -368,7 +375,8 @@ public:
 		if( _logerTid == Tid.init ) {
 			_initLogingThread();
 		}
-		send(_logerTid, event);
+		shared(LogEvent) evShared = cast(shared) event;
+		send(_logerTid, evShared);
 	}
 
 	void _initLogingThread()() {
