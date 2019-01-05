@@ -164,6 +164,34 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 	return result;
 }
 
+import std.typecons: Tuple;
+alias RoutingConfigEntry = Tuple!(string, "pageURI", string, "ivyModule", string, "ivyMethod");
+
+RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
+{
+	import std.exception: enforce;
+	RoutingConfigEntry[] entries;
+	if( pageRouting.type != JSON_TYPE.ARRAY ) {
+		return entries;
+	}
+	foreach( JSONValue jEntry; pageRouting.array )
+	{
+		enforce(jEntry.type == JSON_TYPE.OBJECT, `Expected JSON object as page routing entry`);
+		RoutingConfigEntry entry;
+
+		foreach( field; RoutingConfigEntry.fieldNames )
+		{
+			if( auto fieldValPtr = field in jEntry ) {
+				if( fieldValPtr.type == JSON_TYPE.STRING ) {
+					__traits(getMember, entry, field) = fieldValPtr.str;
+				}
+			}
+		}
+		entries ~= entry;
+	}
+	return entries;
+}
+
 JSONValue getServiceConfig(JSONValue jsonConfig, string serviceName)
 {
 	assert( jsonConfig.type == JSON_TYPE.OBJECT, `Config root JSON value must be object!!!` );
@@ -243,6 +271,15 @@ string[string] getServiceDatabases(JSONValue jsonCurrService)
 	return resolveConfigDatabases(jsonDatabases);
 }
 
+RoutingConfigEntry[] getPageRoutingConfig(JSONValue jsonCurrService)
+{
+	JSONValue pageRouting;
+	if( "pageRouting" in jsonCurrService ) {
+		pageRouting = jsonCurrService["pageRouting"];
+	}
+	return resolvePageRoutingConfig(pageRouting);
+}
+
 
 mixin template ServiceConfigImpl()
 {
@@ -251,6 +288,7 @@ protected:
 	string[string] _fileSystemPaths;
 	string[string] _virtualPaths;
 	string[string] _dbConnStrings;
+	RoutingConfigEntry[] _pageRouting;
 
 public:
 	override string[string] virtualPaths() @property {
@@ -280,6 +318,7 @@ public:
 		_fileSystemPaths = getServiceFileSystemPaths(service);
 		_virtualPaths = getServiceVirtualPaths(service);
 		_dbConnStrings = getServiceDatabases(service);
+		_pageRouting = getPageRoutingConfig(service);
 	}
 
 	override string endpoint(string serviceName, string endpointName)

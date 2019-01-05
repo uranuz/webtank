@@ -19,7 +19,7 @@ HTTPInput sendBlocking(HTTPOutput request)
 	return readHTTPInputFromSocket(sock);
 }
 
-/// Более простая для понимания перегрузка метода sendRequestAndWait - "для тех, кто в танке" :)
+/// Более простая для понимания перегрузка метода sendBlocking - "для тех, кто в танке" :)
 HTTPInput sendBlocking( string requestURI, string method, string messageBody = null )
 {
 	HTTPOutput request = new HTTPOutput();

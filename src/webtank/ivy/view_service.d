@@ -16,7 +16,7 @@ import webtank.ivy.user: IvyUserIdentity;
 
 import ivy;
 import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
-import webtank.ivy.service_mixin: IvyServiceMixin, IIvyServiceMixin;
+import webtank.ivy.service_mixin: IvyServiceMixin, IIvyServiceMixin, ViewServiceURIPageRoute;
 
 
 class IvyViewService: IWebService, IIvyServiceMixin
@@ -47,11 +47,20 @@ public:
 		// Организуем маршрутизацию на сервисе
 		_rootRouter = new HTTPRouter;
 		_pageRouter = new URIPageRouter(pageURIPatternStr);
+		_addPageRoutes();
 		_rootRouter.addHandler(_pageRouter);
 
 		_accessController = accessController;
 		_rights = rights;
 		_subscribeRoutingEvents();
+	}
+
+	void _addPageRoutes()
+	{
+		// Добавляем маршруты для страниц из конфигурационного файла
+		foreach( entry; _pageRouting ) {
+			_pageRouter.addHandler(new ViewServiceURIPageRoute(entry));
+		}
 	}
 
 	override HTTPRouter rootRouter() @property {

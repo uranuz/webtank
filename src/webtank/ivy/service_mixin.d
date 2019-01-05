@@ -4,15 +4,43 @@ interface IIvyServiceMixin
 {
 	import webtank.net.http.context: HTTPContext;
 	import ivy.interpreter.data_node: IvyData;
-	import ivy.programme: ExecutableProgramme;
+	import ivy.programme: ExecutableProgramme, SaveStateResult;
 	import ivy.interpreter.interpreter: Interpreter;
+	import ivy.interpreter.async_result: AsyncResult;
 
 	ExecutableProgramme getIvyModule(string moduleName);
-	IvyData runIvyModule(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init);
-	IvyData runIvyModule(string moduleName, IvyData dataDict = IvyData.init);
-	Interpreter runIvySaveState(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init);
-	Interpreter runIvySaveState(string moduleName, IvyData dataDict = IvyData.init);
 
+	AsyncResult runIvyModule(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init);
+	AsyncResult runIvyModule(string moduleName, IvyData dataDict);
+
+	IvyData runIvyModuleSync(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init);
+	IvyData runIvyModuleSync(string moduleName, IvyData dataDict);
+
+	AsyncResult runIvyMethod(
+		string moduleName,
+		string methodName,
+		HTTPContext ctx,
+		IvyData dataDict = IvyData.init
+	);
+	AsyncResult runIvyMethod(
+		string moduleName,
+		string methodName,
+		IvyData dataDict = IvyData.init
+	);
+
+	IvyData runIvyMethodSync(
+		string moduleName,
+		string methodName,
+		HTTPContext ctx,
+		IvyData dataDict = IvyData.init
+	);
+	IvyData runIvyMethodSync(
+		string moduleName,
+		string methodName,
+		IvyData dataDict = IvyData.init
+	);
+
+	void renderResult(IvyData content, HTTPContext context);
 }
 
 mixin template IvyServiceMixin()
@@ -22,14 +50,18 @@ mixin template IvyServiceMixin()
 	import webtank.common.loger: Loger, LogEvent, LogEventType, ThreadedLoger, FileLoger, LogLevel;
 	import webtank.ivy.user: IvyUserIdentity;
 	import webtank.ivy.rights: IvyUserRights;
+	import webtank.net.std_json_rpc_client: getAllowedRequestHeaders;
+	import webtank.ivy.remote_call: RemoteCallInterpreter;
 
 	import ivy.engine: IvyEngine;
 	import ivy.engine_config: IvyConfig;
-	import ivy.programme: ExecutableProgramme;
+	import ivy.programme: ExecutableProgramme, SaveStateResult;
 	import ivy.interpreter.interpreter: Interpreter;
 	import ivy.interpreter.data_node: IvyData;
 	import ivy.common: LogInfo, LogInfoType;
 	import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
+	import ivy.interpreter.directive.standard_factory: makeStandardInterpreterDirFactory;
+	import ivy.interpreter.async_result: AsyncResult;
 
 public:
 	override ExecutableProgramme getIvyModule(string moduleName)
@@ -47,26 +79,61 @@ public:
 		extraGlobals[`userRights`] = new IvyUserRights(ctx.rights);
 		extraGlobals[`userIdentity`] = new IvyUserIdentity(ctx.user);
 		extraGlobals[`vpaths`] = ctx.service.virtualPaths;
+		extraGlobals[`forwardHTTPHeaders`] = ctx.getAllowedRequestHeaders();
 		return extraGlobals;
 	}
 
-	override IvyData runIvyModule(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init){
+	override AsyncResult runIvyModule(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init) {
 		return getIvyModule(moduleName).run(dataDict, _prepareExtraGlobals(ctx));
 	}
 
-	override IvyData runIvyModule(string moduleName, IvyData dataDict) {
+	override AsyncResult runIvyModule(string moduleName, IvyData dataDict) {
 		return getIvyModule(moduleName).run(dataDict);
 	}
 
-	override Interpreter runIvySaveState(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init) {
-		return getIvyModule(moduleName).runSaveState(dataDict, _prepareExtraGlobals(ctx));
+	override IvyData runIvyModuleSync(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init) {
+		return getIvyModule(moduleName).runSync(dataDict, _prepareExtraGlobals(ctx));
 	}
 
-	override Interpreter runIvySaveState(string moduleName, IvyData dataDict = IvyData.init) {
-		return getIvyModule(moduleName).runSaveState(dataDict);
+	override IvyData runIvyModuleSync(string moduleName, IvyData dataDict) {
+		return getIvyModule(moduleName).runSync(dataDict);
 	}
 
-	void renderResult(IvyData content, HTTPContext context)
+	override AsyncResult runIvyMethod(
+		string moduleName,
+		string methodName,
+		HTTPContext ctx,
+		IvyData dataDict = IvyData.init
+	) {
+		return getIvyModule(moduleName).runMethod(methodName, dataDict, _prepareExtraGlobals(ctx));
+	}
+
+	override AsyncResult runIvyMethod(
+		string moduleName,
+		string methodName,
+		IvyData dataDict = IvyData.init
+	) {
+		return getIvyModule(moduleName).runMethod(methodName, dataDict);
+	}
+
+	override IvyData runIvyMethodSync(
+		string moduleName,
+		string methodName,
+		HTTPContext ctx,
+		IvyData dataDict = IvyData.init
+	) {
+		return getIvyModule(moduleName).runMethodSync(methodName, dataDict, _prepareExtraGlobals(ctx));
+	}
+
+	override IvyData runIvyMethodSync(
+		string moduleName,
+		string methodName,
+		IvyData dataDict = IvyData.init
+	) {
+		return getIvyModule(moduleName).runMethodSync(methodName, dataDict);
+	}
+
+	override void renderResult(IvyData content, HTTPContext context)
 	{
 		static struct OutRange
 		{
@@ -96,6 +163,9 @@ private:
 		ivyConfig.parserLoger = &_ivyLogerMethod;
 		ivyConfig.compilerLoger = &_ivyLogerMethod;
 		ivyConfig.interpreterLoger = &_ivyLogerMethod;
+
+		ivyConfig.directiveFactory = makeStandardInterpreterDirFactory();
+		ivyConfig.directiveFactory.add(new RemoteCallInterpreter);
 
 		debug ivyConfig.clearCache = true;
 
@@ -149,4 +219,66 @@ private:
 
 		_ivyLoger.writeEvent(wtLogEvent);
 	}
+}
+
+import webtank.net.http.handler: IHTTPHandler, HTTPHandlingResult;
+class ViewServiceURIPageRoute: IHTTPHandler
+{
+	import webtank.net.service.config: RoutingConfigEntry;
+	import webtank.net.uri_pattern;
+	import webtank.net.http.context: HTTPContext;
+
+	import ivy.interpreter.data_node: IvyData;
+protected:
+	RoutingConfigEntry _entry;
+	URIPattern _uriPattern;
+
+
+public:
+	this(RoutingConfigEntry entry) {
+		_entry = entry;
+		_uriPattern = new URIPattern(entry.pageURI);
+	}
+
+
+	override HTTPHandlingResult processRequest(HTTPContext context)
+	{
+		import std.exception: enforce;
+		auto pageURIData = _uriPattern.match(context.request.uri.path);
+		if( !pageURIData.isMatched )
+			return HTTPHandlingResult.mismatched;
+
+		IIvyServiceMixin ivyService = cast(IIvyServiceMixin) context.service;
+		enforce(ivyService, `ViewServiceURIPageRoute can only work with IIvyServiceMixin instances`);
+		context.request.requestURIMatch = pageURIData;
+		
+		if( _entry.ivyMethod.length > 0 )
+		{
+			ivyService.runIvyMethod(
+				_entry.ivyModule, _entry.ivyMethod, context
+			).then(
+				(IvyData res) {
+					ivyService.renderResult(res, context);
+				},
+				(IvyData res) {
+					ivyService.renderResult(res, context);
+				},
+			);
+		}
+		else
+		{
+			ivyService.runIvyModule(
+				_entry.ivyModule, context
+			).then(
+				(IvyData res) {
+					ivyService.renderResult(res, context);
+				},
+				(IvyData res) {
+					ivyService.renderResult(res, context);
+				},
+			);
+		}
+		return HTTPHandlingResult.handled; // Запрос обработан
+	}
+
 }

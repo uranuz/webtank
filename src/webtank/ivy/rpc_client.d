@@ -3,7 +3,7 @@ module webtank.ivy.rpc_client;
 import webtank.ivy.datctrl;
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
 
-import webtank.net.std_json_rpc_client: remoteCallA = remoteCall, _getRequestURI, RemoteCallInfo;
+import webtank.net.std_json_rpc_client: remoteCallA = remoteCall, remoteCallWebFormA = remoteCallWebForm, RemoteCallInfo;
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
 public import webtank.net.std_json_rpc_client: endpoint;
@@ -89,8 +89,6 @@ private void _checkIvyJSON_RPCErrors(ref IvyData response)
 		throw new Exception(`Expected "result" field in JSON-RPC response`);
 }
 
-import std.json: JSONValue;
-
 /// Выполняет вызов метода rpcMethod по протоколу JSON-RPC с узла requestURI и параметрами jsonParams в формате JSON
 /// Возвращает результат выполнения метода, разобранный в формате данных шаблонизатора Ivy
 IvyData remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
@@ -104,3 +102,13 @@ IvyData remoteCall(Result, Address, T...)(Address address, string rpcMethod, aut
 	return ivyJSON["result"].tryExtractLvlContainers();
 }
 
+IvyData remoteCallWebForm(Result, Address, T...)(Address address, string HTTPMethod = `GET`, string params = null)
+	if( is(Result == IvyData) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
+{
+	auto response = remoteCallWebFormA!HTTPInput(address, HTTPMethod, params);
+
+	IvyData ivyJSON = parseIvyJSON(response.messageBody);
+	_checkIvyJSON_RPCErrors(ivyJSON);
+
+	return ivyJSON["result"].tryExtractLvlContainers();
+}

@@ -67,12 +67,10 @@ public override {
 			dirName = splitted[2];
 		}
 
-		IvyData res = _ivyService
-			.runIvySaveState(moduleName)
-			.runModuleDirective(dirName, IvyData([
-				`identity`: IvyData(new IvyUserIdentity(identity)),
-				`data`: IvyData(data)
-			]));
+		IvyData res = _ivyService.runIvyMethodSync(moduleName, dirName, IvyData([
+			`identity`: IvyData(new IvyUserIdentity(identity)),
+			`data`: IvyData(data)
+		]));
 		enforce([
 			IvyDataType.Undef,
 			IvyDataType.Null,

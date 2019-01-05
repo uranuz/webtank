@@ -10,16 +10,6 @@ struct RemoteCallInfo
 	string[string] headers;
 }
 
-string _getRequestURI(Address)(ref Address addr)
-	if( is(Address: string) || is(Address: RemoteCallInfo) )
-{
-	static if( is( Address: string ) ) {
-		return addr;
-	} else {
-		return addr.URI;
-	}
-}
-
 /// Вспомогательный метод для запросов по протоколу JSON-RPC
 /// Нужно задать адрес узла addr, название RPC-метода (не HTTP-метода)
 /// params - JSON-объект с параметрами, которые будут отправлены HTTP-методом "POST"
@@ -40,9 +30,9 @@ HTTPInput remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto
 
 	string payloadStr = payload.toJSON(false, JSONOptions.specialFloatLiterals);
 	static if( is(Address: RemoteCallInfo) ) {
-		return sendBlocking(_getRequestURI(addr), "POST", addr.headers, payloadStr);
+		return sendBlocking(addr.URI, "POST", addr.headers, payloadStr);
 	} else {
-		return sendBlocking(_getRequestURI(addr), "POST", payloadStr);
+		return sendBlocking(addr, "POST", payloadStr);
 	}
 }
 
@@ -109,7 +99,7 @@ private static immutable _allowedHeaders = [
 	// `x-webtank-db-snapshot`
 ];
 /// Извлекает разрешенные HTTP заголовки из запроса
-string[string] _getAllowedRequestHeaders(HTTPContext ctx)
+string[string] getAllowedRequestHeaders(HTTPContext ctx)
 {
 	auto headers = ctx.request.headers;
 
@@ -140,9 +130,16 @@ RemoteCallInfo endpoint(HTTPContext ctx, string serviceName, string endpointName
 {
 	return RemoteCallInfo(
 		ctx.service.endpoint(serviceName, endpointName),
-		_getAllowedRequestHeaders(ctx)
+		getAllowedRequestHeaders(ctx)
 	);
 }
 
-
-
+HTTPInput remoteCallWebForm(Result, Address)(Address addr, string HTTPMethod = `GET`, string payloadStr = null)
+	if( is(Result: HTTPInput) && (is(Address: string) || is(Address: RemoteCallInfo)) )
+{
+	static if( is(Address: RemoteCallInfo) ) {
+		return sendBlocking(addr.URI, HTTPMethod, addr.headers, payloadStr);
+	} else {
+		return sendBlocking(addr, HTTPMethod, payloadStr);
+	}
+}

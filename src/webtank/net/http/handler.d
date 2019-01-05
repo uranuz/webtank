@@ -10,7 +10,7 @@ enum HTTPHandlingResult {
 	unhandled,  //Обработчик не смог обработать данный запрос
 	handled     //Обработчик успешно обработал запрос
 	/*, redirected*/  //Зарезервировано: обработчик перенаправил запрос на другой узел
-};
+}
 
 /// Интерфейс обработчика HTTP-запросов приложения
 interface IHTTPHandler
@@ -257,4 +257,127 @@ template join(alias Method)
 		);
 		return parentHdl;
 	}
+}
+
+/// Обработчик метода, принимающий данные в формате веб-формы,
+/// и возвращающий в виде как JSON-RPC (ответ - поле result, ошибка - поле error)
+class WebFormAPIPageRoute: IHTTPHandler
+{
+	import std.json: JSONValue;
+protected:
+	URIPattern _uriPattern;
+	PageHandler _handler;
+
+public:
+	alias PageHandler = JSONValue delegate(HTTPContext);
+
+	this(PageHandler handler, string uriPatternStr) {
+		_handler = handler;
+		_uriPattern = new URIPattern(uriPatternStr);
+	}
+	
+	this(PageHandler handler, URIPattern uriPattern) {
+		_handler = handler;
+		_uriPattern = uriPattern;
+	}
+
+	override HTTPHandlingResult processRequest(HTTPContext context)
+	{
+		import std.json: toJSON, JSONOptions;
+		auto pageURIData = _uriPattern.match(context.request.uri.path);
+		if( pageURIData.isMatched )
+		{
+			context.request.requestURIMatch = pageURIData;
+			JSONValue jResponse = [
+				"jsonrpc": JSONValue("2.0"),
+				"id": JSONValue()
+			];
+			try
+			{
+				jResponse["result"] = _handler(context);
+			}
+			catch(Exception ex)
+			{
+				jResponse["error"] = [
+					"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
+					"message": JSONValue(ex.msg),
+					"data": JSONValue([
+						"file": JSONValue(ex.file),
+						"line": JSONValue(ex.line)
+					])
+				];
+				debug {
+					import std.array: appender;
+					auto backTrace = appender!(string[])();
+					foreach( inf; ex.info ) backTrace ~= inf.idup;
+					jResponse["error"]["data"]["backtrace"] = JSONValue(backTrace.data);
+				}
+				//onError.fire(ex, context); // Just notify error handler about error for now
+			}
+			context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
+
+			return HTTPHandlingResult.handled; // Запрос обработан
+		}
+		return HTTPHandlingResult.mismatched;
+	}
+}
+
+import std.traits: isSomeFunction;
+template joinWebFormAPI(alias Method)
+	if( isSomeFunction!(Method) )
+{
+	auto joinWebFormAPI(ICompositeHTTPHandler parentHdl, string uriPatternStr)
+	{
+		parentHdl.addHandler(
+			new WebFormAPIPageRoute(toDelegate(&callWebFormAPIMethod!Method), uriPatternStr)
+		);
+		return parentHdl;
+	}
+
+	auto joinWebFormAPI(ICompositeHTTPHandler parentHdl, URIPattern uriPattern)
+	{
+		parentHdl.addHandler(
+			new WebFormAPIPageRoute(toDelegate(&callWebFormAPIMethod!Method), uriPattern)
+		);
+		return parentHdl;
+	}
+}
+
+import std.json: JSONValue;
+JSONValue callWebFormAPIMethod(alias Method)(HTTPContext ctx)
+{
+	import std.traits: Parameters, ParameterIdentifierTuple, ParameterDefaults;
+	import std.typecons: Tuple;
+	import std.exception: enforce;
+	alias ParamTypes = Parameters!(Method);
+	alias ParamNames = ParameterIdentifierTuple!(Method);
+	alias MethDefaults = ParameterDefaults!(Method);
+	import webtank.net.deserialize_web_form: formDataToStruct;
+	import webtank.common.std_json.to: toStdJSON;
+
+	Tuple!(ParamTypes) argTuple;
+	foreach( i, paramName; ParamNames )
+	{
+		alias ParamType = ParamTypes[i];
+		static if( is(ParamType : HTTPContext) )
+		{
+			auto typedContext = cast(ParamType) ctx;
+			enforce(
+				typedContext,
+				`Error in attempt to convert parameter "` ~ ParamNames[i] ~ `" to type "` ~ ParamType.stringof ~ `". Context reference is null!`
+			);
+			argTuple[i] = typedContext; //Передаём контекст при необходимости
+		}
+		else static if( is( ParamType == struct ) ) {
+			formDataToStruct(ctx.request.form, argTuple[i], paramName);
+		}
+	}
+
+	JSONValue result;
+	static if( is( ResultType == void ) ) {
+		Method(argTuple.expand);
+	} else {
+		result = toStdJSON( Method(argTuple.expand) );
+	}
+	return result;
 }
