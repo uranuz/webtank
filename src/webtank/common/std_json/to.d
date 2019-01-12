@@ -92,14 +92,24 @@ JSONValue toStdJSON(T)(T dValue)
 		}
 		else static if( isTuple!T )
 		{
-			JSONValue[] jArray;
-			jArray.length = dValue.length;
+			static if( T.Types.length == T.fieldNames.length ) {
+				// Если все элементы кортежа именованные, то выводим его как объект
+				JSONValue[string] jArray;
+				foreach( i, elem; dValue ) {
+					jArray[T.fieldNames[i]] = toStdJSON(elem);
+				}
+				return JSONValue(jArray);
+			} else {
+				// Если хотя бы один элемент кортежа неименованный, то выводим как массив
+				JSONValue[] jArray;
+				jArray.length = dValue.length; // Резервируем память
 
-			foreach( i, elem; dValue ) {
-				jArray[i] = toStdJSON(elem);
+				foreach( i, elem; dValue ) {
+					jArray[i] = toStdJSON(elem);
+				}
+
+				return JSONValue(jArray);
 			}
-
-			return JSONValue(jArray);
 		} else static if( isOptional!T ) {
 			// Здесь нам не удастся различить состояние isUndef и isNull для Undefable
 			return dValue.isSet? toStdJSON(dValue.value): JSONValue(null);

@@ -117,7 +117,24 @@ T fromStdJSON(T)(JSONValue jValue)
 					element = fromStdJSON!(typeof(element))(jValue.array[i]);
 				}
 				return result;
-			} else {
+			}
+			else if( jValue.type == JSON_TYPE.OBJECT )
+			{
+				import std.exception: enforce;
+				enforce!SerializationException(
+					T.fieldNames.length == T.Types.length,
+					`Imposible to deserialize tuple from object when not all of its items are named`
+				);
+				T result;
+				foreach( i, name; T.fieldNames)
+				{
+					if( auto valPtr = name in jValue.object ) {
+						result[i] = fromStdJSON!(T.Types[i])(*valPtr);
+					}
+				}
+				return result;
+			}
+			else {
 				throw new SerializationException("JSON value doesn't match tuple type!!!");
 			}
 		}
