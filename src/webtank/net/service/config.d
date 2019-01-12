@@ -165,7 +165,13 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 }
 
 import std.typecons: Tuple;
-alias RoutingConfigEntry = Tuple!(string, "pageURI", string, "ivyModule", string, "ivyMethod");
+alias RoutingConfigEntry = Tuple!(
+	string, "pageURI",
+	string, "ivyModule",
+	string, "ivyMethod",
+	string, "apiURI",
+	string, "HTTPMethod"
+);
 
 RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
 {
@@ -254,7 +260,8 @@ string[string] getServiceVirtualPaths(JSONValue jsonCurrService)
 		"siteRoot": "/",
 		"sitePublic": "pub/",
 		"siteDynamic": "dyn/",
-		"siteJSON_RPC": "jsonrpc/"
+		"siteJSON_RPC": "jsonrpc/",
+		"siteWebFormAPI": "api/"
 	];
 
 	return resolveConfigPaths!(false)(jsonVirtualPaths, defaultVirtualPaths, "siteRoot");

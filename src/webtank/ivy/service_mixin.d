@@ -227,6 +227,9 @@ class ViewServiceURIPageRoute: IHTTPHandler
 	import webtank.net.service.config: RoutingConfigEntry;
 	import webtank.net.uri_pattern;
 	import webtank.net.http.context: HTTPContext;
+	import webtank.ivy.rpc_client: remoteCallWebForm;
+	import webtank.net.std_json_rpc_client: RemoteCallInfo, getAllowedRequestHeaders;
+	import webtank.net.uri: URI;
 
 	import ivy.interpreter.data_node: IvyData;
 protected:
@@ -252,10 +255,36 @@ public:
 		enforce(ivyService, `ViewServiceURIPageRoute can only work with IIvyServiceMixin instances`);
 		context.request.requestURIMatch = pageURIData;
 		
+		IvyData methodParams;
+		if( _entry.apiURI.length > 0 )
+		{
+			URI apiURI = URI(_entry.apiURI);
+			if( apiURI.scheme.length == 0 )
+			{
+				apiURI.scheme = `http`;
+			}
+
+			if( apiURI.host.length == 0 )
+			{
+				apiURI.host = `localhost`;
+			}
+
+			if( apiURI.rawQuery.length == 0 )
+			{
+				apiURI.rawQuery = context.request.requestURI.rawQuery;
+			}
+
+			methodParams = remoteCallWebForm!IvyData(
+				RemoteCallInfo(apiURI.toRawString(), getAllowedRequestHeaders(context)),
+				(_entry.HTTPMethod.length > 0? _entry.HTTPMethod: context.request.method),
+				context.request.messageBody
+			);
+		}
+
 		if( _entry.ivyMethod.length > 0 )
 		{
 			ivyService.runIvyMethod(
-				_entry.ivyModule, _entry.ivyMethod, context
+				_entry.ivyModule, _entry.ivyMethod, context, methodParams
 			).then(
 				(IvyData res) {
 					ivyService.renderResult(res, context);
@@ -268,7 +297,13 @@ public:
 		else
 		{
 			ivyService.runIvyModule(
-				_entry.ivyModule, context
+				_entry.ivyModule, context, IvyData([
+					`request`: IvyData([
+						`queryStr`: context.request.requestURI.rawQuery,
+						`messageBody`: context.request.messageBody,
+						`method`: context.request.method
+					])
+				])
 			).then(
 				(IvyData res) {
 					ivyService.renderResult(res, context);

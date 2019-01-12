@@ -24,6 +24,7 @@ protected:
 
 	HTTPRouter _rootRouter;
 	JSON_RPC_Router _jsonRPCRouter;
+	URIPageRouter _pageRouter;
 
 	/// Основной объект для ведения журнала сайта
 	Loger _loger;
@@ -45,6 +46,10 @@ public:
 		assert( "siteJSON_RPC" in _virtualPaths, `Failed to get JSON-RPC virtual path!` );
 		_jsonRPCRouter = new JSON_RPC_Router( _virtualPaths["siteJSON_RPC"] ~ "{remainder}" );
 		_rootRouter.addHandler(_jsonRPCRouter);
+
+		assert( "siteWebFormAPI" in _virtualPaths, `Failed to get web-form API virtual path!` );
+		_pageRouter = new URIPageRouter( _virtualPaths["siteWebFormAPI"] ~ "{remainder}" );
+		_rootRouter.addHandler(_pageRouter);
 
 		_accessController = accessController;
 		_rights = rights;
@@ -106,9 +111,19 @@ public:
 			_loger.info(msg);
 		});
 
+		// Логирование приходящих web-form API запросов для отладки
+		_jsonRPCRouter.onPostPoll ~= ( (HTTPContext context, bool) {
+			import std.conv: to;
+			string msg = "Received JSON-RPC request. Headers:\r\n" ~ context.request.headers.toAA().to!string;
+			debug msg ~=  "\r\nMessage body:\r\n" ~ context.request.messageBody;
+
+			_loger.info(msg);
+		});
+
 		//Обработка ошибок в JSON-RPC вызовах
 		_rootRouter.onError.join(&this._handleError);
 		_jsonRPCRouter.onError.join(&this._handleError);
+		_pageRouter.onError.join(&this._handleError);
 	}
 
 	// Обработчик пишет информацию о возникших ошибках при выполнении в журнал
@@ -128,6 +143,11 @@ public:
 	JSON_RPC_Router JSON_RPCRouter() @property {
 		assert( _jsonRPCRouter, `Main service JSON-RPC router is not initialized!` );
 		return _jsonRPCRouter;
+	}
+
+	URIPageRouter pageRouter() @property {
+		assert( _pageRouter, `Main service page router is not initialized!` );
+		return _pageRouter;
 	}
 
 	IAccessController accessController() @property {

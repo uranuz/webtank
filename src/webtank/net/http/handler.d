@@ -350,6 +350,7 @@ JSONValue callWebFormAPIMethod(alias Method)(HTTPContext ctx)
 	import std.typecons: Tuple;
 	import std.exception: enforce;
 	alias ParamTypes = Parameters!(Method);
+	alias ResultType = ReturnType!(Method);
 	alias ParamNames = ParameterIdentifierTuple!(Method);
 	alias MethDefaults = ParameterDefaults!(Method);
 	import webtank.net.deserialize_web_form: formDataToStruct;
@@ -368,8 +369,15 @@ JSONValue callWebFormAPIMethod(alias Method)(HTTPContext ctx)
 			);
 			argTuple[i] = typedContext; //Передаём контекст при необходимости
 		}
-		else static if( is( ParamType == struct ) ) {
-			formDataToStruct(ctx.request.form, argTuple[i], paramName);
+		else static if( is( ParamType == struct ) )
+		{
+			formDataToStruct(ctx.request.form, argTuple[i]); // Ищем простые поля формы типа: "familyName"
+			formDataToStruct(ctx.request.form, argTuple[i], paramName); // Ищем вложенные поля типа: "filter.familyName"
+		}
+		else
+		{
+			import webtank.common.conv: conv;
+			argTuple[i] = ctx.request.form.get(paramName, null).conv!(ParamType);
 		}
 	}
 
