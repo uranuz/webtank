@@ -243,10 +243,19 @@ public:
 		_uriPattern = new URIPattern(entry.pageURI);
 	}
 
-
 	override HTTPHandlingResult processRequest(HTTPContext context)
 	{
 		import std.exception: enforce;
+		import std.uni: asLowerCase;
+		import std.algorithm: equal;
+
+		if( _entry.HTTPMethod.length > 0 )
+		{
+			// Filter by HTTP-method if it was specified
+			if( !equal(context.request.method.asLowerCase, _entry.HTTPMethod.asLowerCase) )
+				return HTTPHandlingResult.mismatched;
+		}
+
 		auto pageURIData = _uriPattern.match(context.request.uri.path);
 		if( !pageURIData.isMatched )
 			return HTTPHandlingResult.mismatched;

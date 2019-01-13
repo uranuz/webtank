@@ -186,13 +186,12 @@ public:
 	override HTTPHandlingResult processRequest(HTTPContext context)
 	{
 		auto pageURIData = _uriPattern.match(context.request.uri.path);
-		if( pageURIData.isMatched )
-		{
-			context.request.requestURIMatch = pageURIData;
-			_handler(context);
-			return HTTPHandlingResult.handled; // Запрос обработан
-		}
-		return HTTPHandlingResult.mismatched;
+		if( !pageURIData.isMatched )
+			return HTTPHandlingResult.mismatched;
+
+		context.request.requestURIMatch = pageURIData;
+		_handler(context);
+		return HTTPHandlingResult.handled; // Запрос обработан
 	}
 }
 
@@ -285,40 +284,38 @@ public:
 	{
 		import std.json: toJSON, JSONOptions;
 		auto pageURIData = _uriPattern.match(context.request.uri.path);
-		if( pageURIData.isMatched )
-		{
-			context.request.requestURIMatch = pageURIData;
-			JSONValue jResponse = [
-				"jsonrpc": JSONValue("2.0"),
-				"id": JSONValue()
-			];
-			try
-			{
-				jResponse["result"] = _handler(context);
-			}
-			catch(Exception ex)
-			{
-				jResponse["error"] = [
-					"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
-					"message": JSONValue(ex.msg),
-					"data": JSONValue([
-						"file": JSONValue(ex.file),
-						"line": JSONValue(ex.line)
-					])
-				];
-				debug {
-					import std.array: appender;
-					auto backTrace = appender!(string[])();
-					foreach( inf; ex.info ) backTrace ~= inf.idup;
-					jResponse["error"]["data"]["backtrace"] = JSONValue(backTrace.data);
-				}
-				//onError.fire(ex, context); // Just notify error handler about error for now
-			}
-			context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
+		if( !pageURIData.isMatched )
+			return HTTPHandlingResult.mismatched;
 
-			return HTTPHandlingResult.handled; // Запрос обработан
+		context.request.requestURIMatch = pageURIData;
+		JSONValue jResponse = [
+			"jsonrpc": JSONValue("2.0"),
+			"id": JSONValue()
+		];
+		try {
+			jResponse["result"] = _handler(context);
 		}
-		return HTTPHandlingResult.mismatched;
+		catch(Exception ex)
+		{
+			jResponse["error"] = [
+				"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
+				"message": JSONValue(ex.msg),
+				"data": JSONValue([
+					"file": JSONValue(ex.file),
+					"line": JSONValue(ex.line)
+				])
+			];
+			debug {
+				import std.array: appender;
+				auto backTrace = appender!(string[])();
+				foreach( inf; ex.info ) backTrace ~= inf.idup;
+				jResponse["error"]["data"]["backtrace"] = JSONValue(backTrace.data);
+			}
+			//onError.fire(ex, context); // Just notify error handler about error for now
+		}
+		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
+
+		return HTTPHandlingResult.handled; // Запрос обработан
 	}
 }
 
