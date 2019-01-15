@@ -6,8 +6,81 @@ import std.algorithm, std.regex;
 
 struct URIMatchingData
 {
-	string[string] params;
+	string[string] _data;
 	bool isMatched = false;
+
+	string opIndex(string name) const {
+		return _data[name];
+	}
+
+	string[] keys() @property const
+	{
+		string[] result;
+		foreach( name, ref _; _data )
+			result ~= name;
+		return result;
+	}
+
+	string[] values() @property const
+	{
+		string[] result;
+		foreach( ref val; _data )
+			result ~= val;
+		return result;
+	}
+
+	string[] array(string name) @property const
+	{
+		if( name in _data ) {
+			return [_data[name]];
+		}
+		return null;
+	}
+
+	string get(string name, string defValue) const
+	{
+		if( name in _data )
+			return _data[name];
+		else
+			return defValue;
+	}
+
+	int opApply(int delegate(ref string value) del) //const
+	{
+		foreach( ref val; _data ) {
+			if( auto ret = del(val) )
+				return ret;
+		}
+		return 0;
+	}
+
+	int opApply(int delegate(ref string name, ref string value) del) //const
+	{
+		foreach( name, ref val; _data ) {
+			if( auto ret = del(name, val) )
+				return ret;
+		}
+		return 0;
+	}
+
+	int opApply(int delegate(ref string name, string[] values) del) //const
+	{
+		foreach( name, ref val; _data ) {
+			if( auto ret = del(name, [val]) )
+				return ret;
+		}
+		return 0;
+	}
+
+	inout(string)* opIn_r(string name) inout {
+		return name in _data;
+	}
+
+	string toString()
+	{
+		import std.conv;
+		return _data.to!string;
+	}
 }
 
 class URIPattern
@@ -234,7 +307,7 @@ URIMatchingData matchURI(
 	if( !parsingResult.isMatched )
 		return parsingResult;
 	
-	auto params = parsingResult.params;
+	auto params = parsingResult._data;
 	
 	//Задаём значения по-умолчанию для параметров
 	foreach( paramName, value; defaults )

@@ -77,8 +77,8 @@ void setOfMaybeNull(string fieldName, StrucBase, T)(ref StrucBase result, ref T 
 }
 
 /** Автоматический перевод web-формы в структуру Struc */
-void formDataToStruct(ResultBaseType, string subFieldDelim = "__", string arrayElemDelim = ",")(
-	IFormData formData, ref ResultBaseType result, string prefix = null)
+void formDataToStruct(ResultBaseType, DictType, string subFieldDelim = "__", string arrayElemDelim = ",")(
+	DictType formData, ref ResultBaseType result, string prefix = null)
 {
 	import std.algorithm: splitter;
 	import std.json;

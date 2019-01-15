@@ -370,11 +370,21 @@ JSONValue callWebFormAPIMethod(alias Method)(HTTPContext ctx)
 		{
 			formDataToStruct(ctx.request.form, argTuple[i]); // Ищем простые поля формы типа: "familyName"
 			formDataToStruct(ctx.request.form, argTuple[i], paramName); // Ищем вложенные поля типа: "filter.familyName"
+
+			// Получаем данные из плейсхолдеров в адресной строке
+			formDataToStruct(ctx.request.requestURIMatch, argTuple[i]);
+			formDataToStruct(ctx.request.requestURIMatch, argTuple[i], paramName);
 		}
 		else
 		{
 			import webtank.common.conv: conv;
-			argTuple[i] = ctx.request.form.get(paramName, null).conv!(ParamType);
+			if( auto valPtr = paramName in ctx.request.form ) {
+				argTuple[i] = (*valPtr).conv!(ParamType);
+			}
+			
+			if( auto valPtr = paramName in ctx.request.requestURIMatch ) {
+				argTuple[i] = (*valPtr).conv!(ParamType);
+			}
 		}
 	}
 
