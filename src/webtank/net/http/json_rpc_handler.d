@@ -132,7 +132,7 @@ class JSON_RPC_Router: IHTTPHandler
 		auto nameOfMethod = ( methodName.length == 0 ? fullyQualifiedName!(Method) : methodName );
 
 		if( nameOfMethod in _methods )
-			throw new JSON_RPC_Exception(`JSON-RPC method` ~ nameOfMethod ~ ` is already registered in the system!!!`);
+			throw new JSON_RPC_Exception(`JSON-RPC method "` ~ nameOfMethod ~ `" is already registered in the system!!!`);
 
 		_methods[nameOfMethod] = toDelegate(  &callJSON_RPC_Method!(Method) );
 		return this;

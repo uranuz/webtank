@@ -52,6 +52,7 @@ mixin template IvyServiceMixin()
 	import webtank.ivy.rights: IvyUserRights;
 	import webtank.net.std_json_rpc_client: getAllowedRequestHeaders;
 	import webtank.ivy.remote_call: RemoteCallInterpreter;
+	import webtank.ivy.net.web_form: IvyWebForm;
 
 	import ivy.engine: IvyEngine;
 	import ivy.engine_config: IvyConfig;
@@ -248,6 +249,7 @@ public:
 		import std.exception: enforce;
 		import std.uni: asLowerCase;
 		import std.algorithm: equal;
+		import std.range: empty;
 
 		if( _entry.HTTPMethod.length > 0 )
 		{
@@ -263,65 +265,70 @@ public:
 		IIvyServiceMixin ivyService = cast(IIvyServiceMixin) context.service;
 		enforce(ivyService, `ViewServiceURIPageRoute can only work with IIvyServiceMixin instances`);
 		context.request.requestURIMatch = pageURIData;
-		
+
 		IvyData methodParams;
-		if( _entry.apiURI.length > 0 )
+		bool isError = false;
+		if( !_entry.apiURI.empty )
 		{
 			URI apiURI = URI(_entry.apiURI);
-			if( apiURI.scheme.length == 0 )
+			if( apiURI.scheme.empty )
 			{
 				apiURI.scheme = `http`;
 			}
 
-			if( apiURI.host.length == 0 )
+			if( apiURI.host.empty )
 			{
 				apiURI.host = `localhost`;
 			}
 
-			if( apiURI.rawQuery.length == 0 )
+			if( apiURI.rawQuery.empty )
 			{
 				apiURI.rawQuery = context.request.requestURI.rawQuery;
 			}
 
-			methodParams = remoteCallWebForm!IvyData(
-				RemoteCallInfo(apiURI.toRawString(), getAllowedRequestHeaders(context)),
-				(_entry.HTTPMethod.length > 0? _entry.HTTPMethod: context.request.method),
-				context.request.messageBody
-			);
+			RemoteCallInfo callInfo = RemoteCallInfo(apiURI.toRawString(), getAllowedRequestHeaders(context));
+			string HTTPMethod = (!_entry.HTTPMethod.empty? _entry.HTTPMethod: context.request.method);
+
+			try {
+				methodParams = remoteCallWebForm!IvyData(callInfo, HTTPMethod, context.request.messageBody);
+			} catch( Exception ex ) {
+				// Нужно передать ошибку в шаблон
+				isError = true;
+				methodParams = IvyData([
+					`errorMsg`: ex.msg
+				]);
+			}
+			
 		}
 
-		if( _entry.ivyMethod.length > 0 )
-		{
-			ivyService.runIvyMethod(
-				_entry.ivyModule, _entry.ivyMethod, context, methodParams
-			).then(
-				(IvyData res) {
-					ivyService.renderResult(res, context);
-				},
-				(IvyData res) {
-					ivyService.renderResult(res, context);
-				},
-			);
+		void renderResult(IvyData res) {
+			ivyService.renderResult(res, context);
 		}
-		else
+
+		// Если ошибка и есть спец. Ivy модуль/ метод для обработки в конфигурации, то используем его
+		// Если же нет спец. модуля/ метода, то передаем в общий модуль/ метод
+		string ivyModule = (isError && !_entry.ivyModuleError.empty)? _entry.ivyModuleError: _entry.ivyModule;
+		string ivyMethod = (isError && !_entry.ivyMethodError.empty)? _entry.ivyMethodError: _entry.ivyMethod;
+
+		if( !ivyModule.empty )
 		{
-			ivyService.runIvyModule(
-				_entry.ivyModule, context, IvyData([
-					`request`: IvyData([
-						`queryStr`: context.request.requestURI.rawQuery,
-						`messageBody`: context.request.messageBody,
-						`method`: context.request.method
-					])
-				])
-			).then(
-				(IvyData res) {
-					ivyService.renderResult(res, context);
-				},
-				(IvyData res) {
-					ivyService.renderResult(res, context);
-				},
-			);
+			if( !ivyMethod.empty )
+			{
+				ivyService.runIvyMethod(
+					ivyModule, ivyMethod, context, methodParams
+				).then(&renderResult, &renderResult);
+			}
+			else
+			{
+				ivyService.runIvyModule(
+					ivyModule, context
+				).then(&renderResult, &renderResult);
+			}
+		} else {
+			// Шаблон не указан - просто выводим сам результат вызова
+			ivyService.renderResult(methodParams, context);
 		}
+
 		return HTTPHandlingResult.handled; // Запрос обработан
 	}
 

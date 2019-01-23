@@ -170,7 +170,9 @@ alias RoutingConfigEntry = Tuple!(
 	string, "ivyModule",
 	string, "ivyMethod",
 	string, "apiURI",
-	string, "HTTPMethod"
+	string, "HTTPMethod",
+	string, "ivyModuleError",
+	string, "ivyMethodError"
 );
 
 RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)

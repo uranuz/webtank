@@ -110,7 +110,7 @@ public:
 				case "format": return IvyData(_fmt);
 				default: break;
 			}
-			return IvyData();
+			return this[attrName];
 		}
 
 		void __setAttr__(IvyData value, string attrName) {
