@@ -52,7 +52,6 @@ mixin template IvyServiceMixin()
 	import webtank.ivy.rights: IvyUserRights;
 	import webtank.net.std_json_rpc_client: getAllowedRequestHeaders;
 	import webtank.ivy.remote_call: RemoteCallInterpreter;
-	import webtank.ivy.net.web_form: IvyWebForm;
 
 	import ivy.engine: IvyEngine;
 	import ivy.engine_config: IvyConfig;
@@ -309,6 +308,22 @@ public:
 		// Если же нет спец. модуля/ метода, то передаем в общий модуль/ метод
 		string ivyModule = (isError && !_entry.ivyModuleError.empty)? _entry.ivyModuleError: _entry.ivyModule;
 		string ivyMethod = (isError && !_entry.ivyMethodError.empty)? _entry.ivyMethodError: _entry.ivyMethod;
+
+		// Добавляем некотрые параметры по умолчанию
+		import std.algorithm: canFind;
+		if( !_entry.ivyParams.canFind(`instanceName`) ) {
+			_entry.ivyParams ~= `instanceName`;
+		}
+		
+		// Пробрасываем разрешенные параметры из web-формы в интерфейс
+		foreach( parName; _entry.ivyParams )
+		{
+			if( auto parValPtr = parName in context.request.form ) {
+				if( parName in methodParams )
+					continue; // Не перезаписываем поля переданные нам backend-сервером
+				methodParams[parName] = *parValPtr;
+			}
+		}
 
 		if( !ivyModule.empty )
 		{

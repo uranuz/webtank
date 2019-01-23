@@ -166,18 +166,22 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 
 import std.typecons: Tuple;
 alias RoutingConfigEntry = Tuple!(
-	string, "pageURI",
-	string, "ivyModule",
-	string, "ivyMethod",
-	string, "apiURI",
-	string, "HTTPMethod",
-	string, "ivyModuleError",
-	string, "ivyMethodError"
+	string, "pageURI", // Адрес расположения страницы, который обрабатывается сервисом отображения
+	string, "apiURI", // Адрес для получения данных страницы в виде JSON
+	string, "HTTPMethod", // Ограничение на HTTP-метод. Например, можно ограничить запросы на запись методом POST для защиты от случайных GET-запросов
+	string, "ivyModule", // Имя модуля на языке Ivy для отображения результатов
+	string, "ivyMethod", // Имя метода для вызова, который находится на верхнем уровне внутри модуля ivyModule
+	string, "ivyModuleError", // То же что и ivyModule, но для обработки ошибок. Если не задан, то используется ivyModule
+	string, "ivyMethodError", // Как и ivyMethod, но для обработки ошибок. Если не задано, то используется имя ivyMethod
+	string[], "ivyParams" // Список полей web-формы, которые разрешено напрямую передавать в параметры ivyMethod (в виде строки)
 );
 
 RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
 {
 	import std.exception: enforce;
+	import std.algorithm: canFind;
+	import std.traits: isDynamicArray;
+	import std.range: ElementType;
 	RoutingConfigEntry[] entries;
 	if( pageRouting.type != JSON_TYPE.ARRAY ) {
 		return entries;
@@ -189,10 +193,35 @@ RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
 
 		foreach( field; RoutingConfigEntry.fieldNames )
 		{
+			alias FieldType = typeof(__traits(getMember, entry, field));
 			if( auto fieldValPtr = field in jEntry ) {
-				if( fieldValPtr.type == JSON_TYPE.STRING ) {
-					__traits(getMember, entry, field) = fieldValPtr.str;
+				static if( is( FieldType == string ) )
+				{
+					enforce(
+						[JSON_TYPE.STRING, JSON_TYPE.NULL].canFind(fieldValPtr.type),
+						`Expected string or null for field "` ~ field ~ `" in routing config entry`);
+					if( fieldValPtr.type == JSON_TYPE.STRING ) {
+						__traits(getMember, entry, field) = fieldValPtr.str;
+					}
+					// If null then just do nothing
 				}
+				else static if( isDynamicArray!FieldType && is( ElementType!FieldType == string ) )
+				{
+					enforce(
+						[JSON_TYPE.ARRAY, JSON_TYPE.NULL].canFind(fieldValPtr.type),
+						`Expected string array or null for field "` ~ field ~ `" in routing config entry`);
+					if( fieldValPtr.type == JSON_TYPE.ARRAY )
+					{
+						foreach( val; fieldValPtr.array )
+						{
+							enforce(val.type == JSON_TYPE.STRING, `Expected string as item of field "` ~ field ~ `"`);
+							__traits(getMember, entry, field) ~= val.str;
+						}
+					}
+					// If null then just do nothing
+				}
+				else
+					static assert(false, `Unhandled type of RoutingConfigEntry field`);
 			}
 		}
 		entries ~= entry;
