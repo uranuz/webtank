@@ -10,6 +10,16 @@ struct RemoteCallInfo
 	string[string] headers;
 }
 
+string getRemoteCallInfoURI(Address)(Address addr)
+	if( is(Address: string) || is(Address: RemoteCallInfo) )
+{
+	static if( is(Address: RemoteCallInfo) ) {
+		return addr.URI;
+	} else {
+		return addr;
+	}
+}
+
 /// Вспомогательный метод для запросов по протоколу JSON-RPC
 /// Нужно задать адрес узла addr, название RPC-метода (не HTTP-метода)
 /// params - JSON-объект с параметрами, которые будут отправлены HTTP-методом "POST"
@@ -78,14 +88,20 @@ JSONValue remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto
 {
 	auto response = remoteCall!HTTPInput(addr, rpcMethod, paramsObj);
 
+	JSONValue bodyJSON;
 	try {
-		JSONValue bodyJSON = response.messageBody.parseJSON();
-		_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
-
-		return bodyJSON["result"];
-	} catch (JSONException ex) {
-		throw new JSONException("Unable to parse json response:\"" ~ response.messageBody);
+		bodyJSON = response.messageBody.parseJSON();
 	}
+	catch (JSONException ex)
+	{
+		throw new JSONException(
+			"Unable to parse JSON response of remote method \"" ~ rpcMethod 
+			~ "\" from service " ~ addr.getRemoteCallInfoURI() ~ ":\n" ~ response.messageBody);
+	}
+
+	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
+
+	return bodyJSON["result"];
 }
 
 import webtank.net.http.context: HTTPContext;
