@@ -126,9 +126,9 @@ string[string] getAllowedRequestHeaders(HTTPContext ctx)
 	string[string] result;
 	foreach( name; _allowedHeaders )
 	{
-		//if( name in headers ) {
+		if( name in headers ) {
 			result[name] = headers[name];
-		//}
+		}
 	}
 	
 	// Если мы руками записали что-то в Cookie, то новое значение отличается от заголовков.
