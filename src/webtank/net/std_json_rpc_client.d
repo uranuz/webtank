@@ -106,13 +106,17 @@ JSONValue remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto
 
 import webtank.net.http.context: HTTPContext;
 private static immutable _allowedHeaders = [
+	`host`,
 	`user-agent`,
+	`accept`,
+	`accept-language`,
+	`connection`,
+	`forwarded`,
 	`x-real-ip`,
 	`x-forwarded-for`,
 	`x-forwarded-proto`,
 	`x-forwarded-host`,
-	`x-forwarded-port`,
-	// `x-webtank-db-snapshot`
+	`x-forwarded-port`
 ];
 /// Извлекает разрешенные HTTP заголовки из запроса
 string[string] getAllowedRequestHeaders(HTTPContext ctx)
@@ -122,9 +126,9 @@ string[string] getAllowedRequestHeaders(HTTPContext ctx)
 	string[string] result;
 	foreach( name; _allowedHeaders )
 	{
-		if( name in headers ) {
+		//if( name in headers ) {
 			result[name] = headers[name];
-		}
+		//}
 	}
 	
 	// Если мы руками записали что-то в Cookie, то новое значение отличается от заголовков.
