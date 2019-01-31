@@ -149,8 +149,7 @@ class HTTPRouter: ICompositeHTTPHandler
 	{
 		// TODO: Проверить, что имеем достаточно корректный HTTP-запрос
 		onPostPoll.fire(context, true);
-		import std.stdio;
-		writeln(`TRACE HTTPRouter headers: `, context.request.headers.toAA());
+
 		foreach( hdl; _handlers )
 		{
 			if( hdl.processRequest(context) == HTTPHandlingResult.handled ) {

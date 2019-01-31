@@ -107,8 +107,6 @@ public:
 			import std.conv: to;
 			string msg = "Received JSON-RPC request. Headers:\r\n" ~ context.request.headers.toAA().to!string;
 			debug msg ~=  "\r\nMessage body:\r\n" ~ context.request.messageBody;
-			import std.stdio;
-			writeln(`TRACE _jsonRPCRouter headers: `, context.request.headers.toAA());
 
 			_loger.info(msg);
 		});
@@ -118,8 +116,6 @@ public:
 			import std.conv: to;
 			string msg = "Received JSON-RPC request. Headers:\r\n" ~ context.request.headers.toAA().to!string;
 			debug msg ~=  "\r\nMessage body:\r\n" ~ context.request.messageBody;
-			import std.stdio;
-			writeln(`TRACE _pageRouter headers: `, context.request.headers.toAA());
 
 			_loger.info(msg);
 		});
