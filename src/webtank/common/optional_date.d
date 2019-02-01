@@ -158,6 +158,7 @@ public:
 	{
 		import std.algorithm: splitter;
 		import std.conv: to;
+		import std.exception: enforce;
 		OptionalDate result;
 		if( !value.length || value == "null" ) {
 			return result;
@@ -166,7 +167,7 @@ public:
 		auto spl = value.splitter("-");
 		foreach( i; 0..3 )
 		{
-			assert(!spl.empty);
+			enforce(!spl.empty, `Optional date parse error. spl is empty`);
 			if( !spl.front.length || spl.front == "null" )
 			{
 				switch( i )
@@ -187,7 +188,7 @@ public:
 			}
 			spl.popFront();
 		}
-		assert(spl.empty);
+		enforce(spl.empty, `Optional date parse error. spl is not empty`);
 		return result;
 	}
 }

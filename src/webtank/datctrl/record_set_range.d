@@ -7,7 +7,10 @@ mixin template RecordSetRangeImpl()
 		private RecordSetIface _rs;
 		private size_t _index = 0;
 
-		this(RecordSetIface rs) {
+		this(RecordSetIface rs)
+		{
+			import std.exception: enforce;
+			enforce(rs !is null, `Expected record set, but got null!`);
 			_rs = rs;
 		}
 

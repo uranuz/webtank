@@ -46,6 +46,8 @@ protected:
 public:
 	this(RecordSetIface recordSet, string recordKey)
 	{
+		import std.exception: enforce;
+		enforce(recordSet !is null, `Expected record set, but got null!`);
 		_recordSet = recordSet;
 		_recordKey = recordKey;
 	}

@@ -36,6 +36,9 @@ protected:
 public:
 	this(IBaseRecordSet rs, size_t begin, size_t end)
 	{
+		import std.exception: enforce;
+		enforce(rs !is null, `Expected record set, but got null`);
+		enforce(begin <= end, `Range begin index must be not greater than end index`);
 		_sourceRS = rs;
 		_begin = begin;
 		_end = end;

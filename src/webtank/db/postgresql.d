@@ -395,10 +395,12 @@ struct PostgreSQLQuery
 	}
 
 	ref PostgreSQLQuery setParam(T)( uint index, TL param )
-	{	if( index >= _params.length  )
+	{
+		import std.exception: enforce;
+		if( index >= _params.length  )
 			_params.length = index;
 
-		assert(index > 0, "Index of parameter must be greather than 0!!!" );
+		enforce(index > 0, "Index of parameter must be greather than 0!!!" );
 		_params[index-1] = param.toPGString();
 	}
 

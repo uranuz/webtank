@@ -14,7 +14,10 @@ struct TypedRecordSet(FormatType, RecordSetType)
 
 	private RecordSetType _recordSet;
 
-	this(RecordSetType recordSet) {
+	this(RecordSetType recordSet)
+	{
+		import std.exception: enforce;
+		enforce(recordSet !is null, `Expected record set, but got null`);
 		_recordSet = recordSet;
 	}
 

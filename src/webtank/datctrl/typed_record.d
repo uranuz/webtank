@@ -11,7 +11,10 @@ struct TypedRecord(RecordFormatT, RecordType)
 	alias FormatType = RecordFormatT;
 	private RecordType _record;
 
-	this(RecordType record) {
+	this(RecordType record)
+	{
+		import std.exception: enforce;
+		enforce(record !is null, `Expected record, but got null`);
 		_record = record;
 	}
 

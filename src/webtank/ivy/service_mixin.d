@@ -304,6 +304,11 @@ public:
 			ivyService.renderResult(res, context);
 		}
 
+		void renderError(Throwable error) {
+			import ivy.interpreter.data_node: errorToIvyData;
+			ivyService.renderResult(errorToIvyData(error), context);
+		}
+
 		// Если ошибка и есть спец. Ivy модуль/ метод для обработки в конфигурации, то используем его
 		// Если же нет спец. модуля/ метода, то передаем в общий модуль/ метод
 		string ivyModule = (isError && !_entry.ivyModuleError.empty)? _entry.ivyModuleError: _entry.ivyModule;
@@ -331,13 +336,13 @@ public:
 			{
 				ivyService.runIvyMethod(
 					ivyModule, ivyMethod, context, methodParams
-				).then(&renderResult, &renderResult);
+				).then(&renderResult, &renderError);
 			}
 			else
 			{
 				ivyService.runIvyModule(
 					ivyModule, context
-				).then(&renderResult, &renderResult);
+				).then(&renderResult, &renderError);
 			}
 		} else {
 			// Шаблон не указан - просто выводим сам результат вызова

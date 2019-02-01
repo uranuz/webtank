@@ -34,6 +34,7 @@ public:
 			foreach( dataField; _dataFields ) {
 				dataField.addItems(count, index);
 			}
+			_reindexRecords(); // Reindex after adding new items
 		}
 
 		void addItems(IBaseWriteableRecord[] records, size_t index = size_t.max)
@@ -98,6 +99,7 @@ mixin template RecordSetImpl(bool isWriteableFlag)
 {
 protected:
 	import std.range.interfaces: InputRange;
+	import std.exception: enforce;
 	static if( isWriteableFlag )
 	{
 		import webtank.datctrl.cursor_record: WriteableCursorRecord;
@@ -127,7 +129,7 @@ protected:
 		_fieldIndexes.clear();
 		foreach( i, dataField; _dataFields )
 		{
-			assert(dataField.name !in _fieldIndexes, `Data field name must be unique!`);
+			enforce(dataField.name !in _fieldIndexes, `Data field name must be unique!`);
 			_fieldIndexes[dataField.name] = i;
 		}
 	}
@@ -139,7 +141,7 @@ protected:
 		foreach( i; 0 .. keyField.length )
 		{
 			auto keyValue = keyField.getStr(i);
-			assert(keyValue !in _recordIndexes, `Record key must be unique!`);
+			enforce(keyValue !in _recordIndexes, `Record key "` ~ keyValue ~ `" is not unique!`);
 			_recordIndexes[keyValue] = i;
 		}
 	}
@@ -147,6 +149,7 @@ protected:
 public:
 	this(DataFieldIface[] dataFields, size_t keyFieldIndex = 0)
 	{
+		enforce(keyFieldIndex < dataFields.length, `Key field index is out of bounds of data field list`);
 		_dataFields = dataFields;
 		_keyFieldIndex = keyFieldIndex;
 		_reindexFields();
@@ -156,7 +159,7 @@ public:
 	override {
 		DataFieldIface getField(string fieldName)
 		{
-			assert(fieldName in _fieldIndexes, `Field doesn't exist in recordset!`);
+			enforce(fieldName in _fieldIndexes, `Field doesn't exist in recordset!`);
 			return _dataFields[ _fieldIndexes[fieldName] ];
 		}
 
@@ -217,7 +220,7 @@ public:
 
 		size_t getIndexByStringKey(string recordKey)
 		{
-			assert(recordKey in _recordIndexes, `Cannot find record with specified key!`);
+			enforce(recordKey in _recordIndexes, `Cannot find record with specified key!`);
 			return _recordIndexes[recordKey];
 		}
 	} // override

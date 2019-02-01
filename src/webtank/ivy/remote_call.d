@@ -50,10 +50,8 @@ class RemoteCallInterpreter: INativeDirectiveInterpreter
 				(dataNode.type == IvyDataType.String? dataNode.str: null)
 			);
 			fResult.resolve(methodRes);
-		}
-		catch(Exception ex)
-		{
-			fResult.reject(IvyData(ex.msg));
+		} catch(Exception ex) {
+			fResult.reject(ex);
 		}
 		interp._stack ~= IvyData(fResult);
 	}
