@@ -7,17 +7,17 @@ static if( isDatCtrlEnabled ) {
 import webtank.datctrl.iface.data_field;
 
 /++
-$(LOCALE_EN_US Base interface for data record)
-$(LOCALE_RU_RU Базовый интерфейс для записи данных)
+$(LANG_EN Base interface for data record)
+$(LANG_RU Базовый интерфейс для записи данных)
 +/
 interface IBaseRecord
 {
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
 		Returns data field with name $(D_PARAM fieldName) of this record.
 		Mostly intended for internal use in implementation
 	)
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Возвращает поле данных с именем $(D_PARAM fieldName) для этой записи.
 		Предназначено в основном для внутреннего использования в реализации
 	)
@@ -25,11 +25,11 @@ interface IBaseRecord
 	IBaseDataField getField(string fieldName);
 
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
 		Returns index of record in data source where record comes from (if source exists) or 0.
 		Mostly intended for internal use in implementation
 	)
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Возвращает номер записи в исходном источнике данных, откуда пришла запись (если есть источник) или 0.
 		Предназначено в основном для внутреннего использования в реализации
 	)
@@ -37,17 +37,17 @@ interface IBaseRecord
 	size_t recordIndex() @property;
 
 	/++
-	$(LOCALE_EN_US Returns string representation of value for field with name $(D_PARAM fieldName))
-	$(LOCALE_RU_RU Функция возвращает строковое представление значения для поля с именем $(D_PARAM fieldName))
+	$(LANG_EN Returns string representation of value for field with name $(D_PARAM fieldName))
+	$(LANG_RU Функция возвращает строковое представление значения для поля с именем $(D_PARAM fieldName))
 	+/
 	string getStr(string fieldName);
 
 	/++
-	$(LOCALE_EN_US Returns string representation of value for field
+	$(LANG_EN Returns string representation of value for field
 		with name $(D_PARAM fieldName). Parameter $(D_PARAM defaultValue) determines
 		returned value if value by $(D_PARAM index) is null
 	)
-	$(LOCALE_RU_RU Возвращает строковое представление значения для поля
+	$(LANG_RU Возвращает строковое представление значения для поля
 		с именем $(D_PARAM fieldName). Параметр $(D_PARAM defaultValue) определяет
 		возвращаемое значение, если возвращаемое значение пусто (null)
 	)
@@ -55,20 +55,20 @@ interface IBaseRecord
 	string getStr(string fieldName, string defaultValue);
 
 	/++
-	$(LOCALE_EN_US Returns true if value for field with name $(D_PARAM fieldName)
+	$(LANG_EN Returns true if value for field with name $(D_PARAM fieldName)
 		is null or returns false otherwise if it's not empty. 
 	)
-	$(LOCALE_RU_RU Возвращает true, если значения для поля с именем $(D_PARAM fieldName)
+	$(LANG_RU Возвращает true, если значения для поля с именем $(D_PARAM fieldName)
 		является пустым (null) или false, если значение не пустое
 	)
 	+/
 	bool isNull(string fieldName);
 
 	/++
-	$(LOCALE_EN_US Returns true if value for field with name $(D_PARAM fieldName)
+	$(LANG_EN Returns true if value for field with name $(D_PARAM fieldName)
 		could be null or returns false if it can't be null
 	)
-	$(LOCALE_RU_RU Возвращает true, если значения для поля с именем $(D_PARAM fieldName)
+	$(LANG_RU Возвращает true, если значения для поля с именем $(D_PARAM fieldName)
 		может быть пустым (null) или false, если пустые значения не разрешены
 	)
 	+/
@@ -77,22 +77,22 @@ interface IBaseRecord
 	bool isWriteable(string fieldName);
 
 	/++
-	$(LOCALE_EN_US Returns number of fields in record)
-	$(LOCALE_RU_RU Возвращает количество полей в записи)
+	$(LANG_EN Returns number of fields in record)
+	$(LANG_RU Возвращает количество полей в записи)
 	+/
 	size_t length() @property;
 
 	import std.json: JSONValue;
 
 	/++
-	$(LOCALE_EN_US Returns number of fields in record)
-	$(LOCALE_RU_RU Возвращает количество полей в записи)
+	$(LANG_EN Returns number of fields in record)
+	$(LANG_RU Возвращает количество полей в записи)
 	+/
 	JSONValue toStdJSON();
 
 	/++
-		$(LOCALE_EN_US Returns index of field considered as primary key field)
-		$(LOCALE_RU_RU Возвращает номер поля рассматриваемого как первичный ключ)
+		$(LANG_EN Returns index of field considered as primary key field)
+		$(LANG_RU Возвращает номер поля рассматриваемого как первичный ключ)
 	+/
 	size_t keyFieldIndex() @property;
 }

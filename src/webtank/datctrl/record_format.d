@@ -19,8 +19,8 @@ import
 public import webtank.datctrl.iface.data_field: PrimaryKey;
 
 /++
-$(LOCALE_EN_US Struct representing format of record or record set)
-$(LOCALE_RU_RU Структура представляющая формат записи или набора записей)
+$(LANG_EN Struct representing format of record or record set)
+$(LANG_RU Структура представляющая формат записи или набора записей)
 +/
 struct RecordFormat(Args...)
 {
@@ -54,8 +54,8 @@ struct RecordFormat(Args...)
 
 	/++
 	/++
-	$(LOCALE_EN_US Property returns array of semantic types of fields)
-	$(LOCALE_RU_RU Свойство возвращает массив семантических типов полей)
+	$(LANG_EN Property returns array of semantic types of fields)
+	$(LANG_RU Свойство возвращает массив семантических типов полей)
 	+/
 	static pure FieldType[] types() @property
 	{
@@ -74,8 +74,8 @@ struct RecordFormat(Args...)
 	})();
 
 	/++
-	$(LOCALE_EN_US Property returns array of field names for record format)
-	$(LOCALE_RU_RU Свойство возвращает массив имен полей для формата записи)
+	$(LANG_EN Property returns array of field names for record format)
+	$(LANG_RU Свойство возвращает массив имен полей для формата записи)
 	+/
 	static pure immutable(string[]) names() @property {
 		return _names;
@@ -90,8 +90,8 @@ struct RecordFormat(Args...)
 	}
 
 	/++
-	$(LOCALE_EN_US Property returns AA of indexes of fields, indexed by their names)
-	$(LOCALE_RU_RU Свойство возвращает словарь номеров полей данных, индексируемых их именами)
+	$(LANG_EN Property returns AA of indexes of fields, indexed by their names)
+	$(LANG_RU Свойство возвращает словарь номеров полей данных, индексируемых их именами)
 	+/
 	static pure immutable(size_t[string]) indexes() @property {
 		return _indexes;
@@ -105,12 +105,12 @@ struct RecordFormat(Args...)
 
 
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
 		Template returns tuple of names for fields having semantic types from
 		$(D_PARAM FilterFieldTypes) parameter. All elements from $(D_PARAM FilterFieldTypes)
 		tuple must be of FieldType type
 	)
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Шаблон возвращает кортеж имен для полей, имеющих семантический тип из
 		кортежа $(D_PARAM FilterFieldTypes). Все элементы в кортеже $(D_PARAM FilterFieldTypes)
 		должны иметь тип FieldType
@@ -128,8 +128,8 @@ struct RecordFormat(Args...)
 
 
 	/++
-	$(LOCALE_EN_US Template returns tuple of all field names for record format)
-	$(LOCALE_RU_RU Шаблон возвращает кортеж всех имен полей для формата записи)
+	$(LANG_EN Template returns tuple of all field names for record format)
+	$(LANG_RU Шаблон возвращает кортеж всех имен полей для формата записи)
 	+/
 	template tupleOfNames() {
 		alias tupleOfNames = _getFieldNameTuple!(_fieldSpecs);
@@ -140,48 +140,48 @@ struct RecordFormat(Args...)
 	}
 
 	/++
-	$(LOCALE_EN_US Template returns semantic field type $(D FieldType) for field with name $(D_PARAM fieldName))
-	$(LOCALE_RU_RU Шаблон возвращает семантический тип поля $(D FieldType) для поля с именем $(D_PARAM fieldName))
+	$(LANG_EN Template returns semantic field type $(D FieldType) for field with name $(D_PARAM fieldName))
+	$(LANG_RU Шаблон возвращает семантический тип поля $(D FieldType) для поля с именем $(D_PARAM fieldName))
 	+/
 	template getFieldFormatDecl(string fieldName) {
 		alias getFieldFormatDecl = _getFieldSpec!(fieldName, _fieldSpecs).FormatDecl;
 	}
 
 	/++
-	$(LOCALE_EN_US Template returns semantic field type $(D FieldType) for field with index $(D_PARAM fieldIndex))
-	$(LOCALE_RU_RU Шаблон возвращает семантический тип поля $(D FieldType) для поля с номером $(D_PARAM fieldIndex))
+	$(LANG_EN Template returns semantic field type $(D FieldType) for field with index $(D_PARAM fieldIndex))
+	$(LANG_RU Шаблон возвращает семантический тип поля $(D FieldType) для поля с номером $(D_PARAM fieldIndex))
 	+/
 	template getFieldFormatDecl(size_t fieldIndex) {
 		alias getFieldFormatDecl = _getFieldSpec!(fieldIndex, _fieldSpecs).FormatDecl;
 	}
 
 	/++
-	$(LOCALE_EN_US Template returns D value type for field with name $(D_PARAM fieldName))
-	$(LOCALE_RU_RU Шаблон возвращает тип языка D для поля с именем $(D_PARAM fieldName))
+	$(LANG_EN Template returns D value type for field with name $(D_PARAM fieldName))
+	$(LANG_RU Шаблон возвращает тип языка D для поля с именем $(D_PARAM fieldName))
 	+/
 	template getValueType(string fieldName) {
 		alias getValueType = _getFieldSpec!(fieldName, _fieldSpecs).ValueType;
 	}
 
 	/++
-	$(LOCALE_EN_US Template returns D value type for field with index $(D_PARAM fieldIndex))
-	$(LOCALE_RU_RU Шаблон возвращает тип языка D для поля с номером $(D_PARAM fieldIndex))
+	$(LANG_EN Template returns D value type for field with index $(D_PARAM fieldIndex))
+	$(LANG_RU Шаблон возвращает тип языка D для поля с номером $(D_PARAM fieldIndex))
 	+/
 	template getValueType(size_t fieldIndex) {
 		alias getValueType = _getFieldSpec!(fieldIndex, _fieldSpecs).ValueType;
 	}
 
 	/++
-	$(LOCALE_EN_US Template returns name for field with index $(D_PARAM fieldIndex))
-	$(LOCALE_RU_RU Шаблон возвращает имя для поля с номером $(D_PARAM fieldIndex))
+	$(LANG_EN Template returns name for field with index $(D_PARAM fieldIndex))
+	$(LANG_RU Шаблон возвращает имя для поля с номером $(D_PARAM fieldIndex))
 	+/
 	template getFieldName(size_t fieldIndex) {
 		alias getFieldName = _getFieldSpec!(fieldIndex, _fieldSpecs).name;
 	}
 
 	/++
-	$(LOCALE_EN_US Template returns index for field with name $(D_PARAM fieldName))
-	$(LOCALE_RU_RU Шаблон возвращает номер для поля с именем $(D_PARAM fieldName))
+	$(LANG_EN Template returns index for field with name $(D_PARAM fieldName))
+	$(LANG_RU Шаблон возвращает номер для поля с именем $(D_PARAM fieldName))
 	+/
 	template getFieldIndex(string fieldName) {
 		alias getFieldIndex = _getFieldIndex!(fieldName, 0, _fieldSpecs);

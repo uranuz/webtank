@@ -7,8 +7,8 @@ import webtank.datctrl.record_set_slice;
 
 
 /++
-$(LOCALE_EN_US Class implements work with record set)
-$(LOCALE_RU_RU Класс реализует работу с набором записей)
+$(LANG_EN Class implements work with record set)
+$(LANG_RU Класс реализует работу с набором записей)
 +/
 class RecordSet: IBaseRecordSet
 {

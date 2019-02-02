@@ -7,11 +7,10 @@ import webtank.common.optional_date;
 import webtank.common.std_json.exception;
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function serializes D language value into std.json.JSONValue struct
 )
-
-$(LOCALE_RU_RU
+$(LANG_RU
 	Функция сериализует значение языка D в структуру типа std.json.JSONValue
 )
 +/

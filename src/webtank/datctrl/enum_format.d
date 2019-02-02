@@ -7,8 +7,8 @@ import std.algorithm: canFind;
 import webtank.common.conv;
 
 /++
-$(LOCALE_EN_US Struct represents format for enumerated type of field)
-$(LOCALE_RU_RU Структура представляет формат для перечислимого типа поля)
+$(LANG_EN Struct represents format for enumerated type of field)
+$(LANG_RU Структура представляет формат для перечислимого типа поля)
 +/
 struct EnumFormat( T, bool withNames )
 {
@@ -190,8 +190,8 @@ struct EnumFormat( T, bool withNames )
 	{	return hasValue(value); }
 
 	/++
-	$(LOCALE_EN_US Serializes enumerated field format into std.json)
-	$(LOCALE_RU_RU Сериализует формат перечислимого типа в std.json)
+	$(LANG_EN Serializes enumerated field format into std.json)
+	$(LANG_RU Сериализует формат перечислимого типа в std.json)
 	+/
 	JSONValue toStdJSON() const
 	{

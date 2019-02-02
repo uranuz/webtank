@@ -5,8 +5,8 @@ import webtank.datctrl.iface.record: IBaseRecord, IBaseWriteableRecord;
 import webtank.datctrl.iface.record_set: IBaseRecordSet, IBaseWriteableRecordSet;
 
 /++
-$(LOCALE_EN_US Class implements working with record)
-$(LOCALE_RU_RU Класс реализует работу с записью)
+$(LANG_EN Class implements working with record)
+$(LANG_RU Класс реализует работу с записью)
 +/
 class CursorRecord: IBaseRecord
 {

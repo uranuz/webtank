@@ -1,37 +1,36 @@
 module webtank.common.event;
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Enumerable representing set of options for configuring event object
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Перечислимый тип представляющий набор опций для настройки события
 )
 +/
 enum EventOption
 {
 	/++
-	$(LOCALE_EN_US Synchronized event object access)
-	$(LOCALE_RU_RU Синхронизированный доступ к объекту события)
+	$(LANG_EN Synchronized event object access)
+	$(LANG_RU Синхронизированный доступ к объекту события)
 	+/
 	synchronized_,
 
 	/++
-	$(LOCALE_EN_US Allow subscribe to event with the same callback multiple times)
-	$(LOCALE_RU_RU Разрешение подписываться на событие одним обработчиком несколько раз)
+	$(LANG_EN Allow subscribe to event with the same callback multiple times)
+	$(LANG_RU Разрешение подписываться на событие одним обработчиком несколько раз)
 	+/
 	allowDuplicateHandlers,
 
 	/++
-	$(LOCALE_EN_US Stop propagatating event after getting some return value from handler)
-	$(LOCALE_RU_RU Остановка запуска обработчиков после получение некоторого возвращаемого значения)
+	$(LANG_EN Stop propagatating event after getting some return value from handler)
+	$(LANG_RU Остановка запуска обработчиков после получение некоторого возвращаемого значения)
 	+/
 	stopOnValue,
 
 	/++
-	$(LOCALE_EN_US Service flag)
-	$(LOCALE_RU_RU Служебный флаг)
+	$(LANG_EN Service flag)
+	$(LANG_RU Служебный флаг)
 	+/
 	stopHandlingValue,
 };
@@ -42,12 +41,11 @@ template OptionPair(alias first, alias second)
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Option that signals whether to sunchronize access to ErrorEvent object.
 	If option parameter is true then it's synchronized
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Опция события определяющая необходимость синхронизированного доступа.
 	Если параметр опции есть true, то доступ синхронизируется
 )
@@ -57,14 +55,13 @@ template Synchronized(bool value)
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Option that signals whether duplicate handlers are allowed.
 	If option parameter is set to true then duplicates enabled.
 	If duplicates are not allowed but programme is trying to subscribe
 	to event with the same handler multiple times then exception is thrown
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Опция опция определяет разрешены ли дублирующие обработчики событий.
 	Если параметр опции установлен в true, то дупликаты разрешены.
 	Если дупликаты не разрешены, однако программа пытается подписаться
@@ -77,12 +74,11 @@ template AllowDuplicateHandlers(bool value)
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Option defines return value that signals handling interrupt.
 	Interrupting doesn't affect priorite handers
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Опция определяет возвращаемое значение, которое сигнализирует о прерывании
 	обработки события. При этом оставшиеся в списке подписки обработчики не будут выполнены.
 	Данное прерывание не распространяется на приоритетные обработчики, которые
@@ -94,11 +90,10 @@ template StopHandlingValue(alias value)
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Service template for getting value for event option
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Служебный шаблон для получения значения для опции события
 )
 +/
@@ -130,11 +125,10 @@ template GetEventOption(EventOption optType, Opts...)
 import std.traits : isCallable, isDelegate;
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Struct representing event object
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Структура, представляющая событие
 )
 +/
@@ -185,11 +179,10 @@ struct Event(Opts...)
 	}
 
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
 		Operator for subscribing to event using handler on right-hand side
 	)
-
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Оператор для подписки на событие, используя обработчик, указанный с правой
 		стороны от знака оператора
 	)
@@ -215,11 +208,10 @@ struct Event(Opts...)
 	}
 	
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
 		Operator for unsubscribing from event by handler on right-hand side
 	)
-
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Оператор для отписки от события обработчиком, указанным с правой
 		стороны от знака оператора
 	)
@@ -246,11 +238,10 @@ struct Event(Opts...)
 	}
 
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
 		Function triggers event and run all subscribed callbacks
 	)
-
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Функция запускает события, выполняя все подписанные на него обработчики
 	)
 	+/
@@ -297,12 +288,11 @@ struct Event(Opts...)
 
 import std.algorithm, std.range, std.conv, std.container, std.typecons, std.typetuple, std.traits;
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function returns true if class with TypeInfo $(D_PARAM objTypeinfo) inherits from
 	class with TypeInfo $(D_PARAM baseTypeinfo)
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Функция возвращает Истину, если класс с информацией о типе $(D_PARAM objTypeinfo)
 	является производным от класса с информацией о типе $(D_PARAM baseTypeinfo)
 )
@@ -318,11 +308,10 @@ bool isInheritsOf( TypeInfo_Class objTypeinfo, TypeInfo_Class baseTypeinfo  )
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Struct representing error handling in event-like style
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Структура предоставляет обработку ошибок в событийном стиле
 )
 +/
@@ -359,12 +348,11 @@ struct ErrorEvent( ErrorHandler, Opts... )
 	}
 
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
  		Function triggers handling error and passes $(D_PARAM params) to handlers.
  		First parameter is always Throwable object.
 	)
-
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Функция запускает обработку ошибки и передает набор параметров $(D_PARAM params)
 		обработчикам. Первый параметр - это объект ошибки
 	)
@@ -413,11 +401,10 @@ struct ErrorEvent( ErrorHandler, Opts... )
 	}
 
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
  		Service function for sorting handlers by number of base classes for error type
 	)
-
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Служебная функция сортировки обработчиков по количеству базовых классов для класса ошибки
 	)
 	+/
@@ -430,11 +417,10 @@ struct ErrorEvent( ErrorHandler, Opts... )
 	}
 	
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
  		Function for attaching $(D_PARAM handler)  for some type of error
 	)
-
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Функция запускает обработку ошибки и передает набор параметров $(D_PARAM params)
 		обработчикам. Первый параметр - это объект ошибки
 	)
@@ -477,12 +463,11 @@ protected:
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function calculates number of base classes that this class with
 	TypeInfo $(D_PARAM typeInfo) derives from
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Функция считает количество базывых классов для которых данный класс
 	с информацией о типе $(D_PARAM typeInfo) является производным
 )

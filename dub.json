@@ -9,36 +9,97 @@
 	"excludedSourceFiles": [
 		"src/webtank/crypto/example/*"
 	],
-	"configurations": [{
-		"name": "with_ivy_and_db",
-		"dependencies": {
-			"ivy": ">=0.0.0",
-			"openssl": ">=0.0.0"
-		},
-		"buildRequirements": [
-			"allowWarnings"
-		]
-	}, {
-		"name": "with_ivy",
-		"dependencies": {
-			"ivy": ">=0.0.0"
-		},
-		"buildRequirements": [
-			"allowWarnings"
-		],
-		"excludedSourceFiles": [
-			"src/webtank/crypto/*",
-			"src/webtank/db/*"
-		]
-	}, {
-		"name": "minimal_deps",
-		"excludedSourceFiles": [
-			"src/webtank/ivy/*",
-			"src/webtank/crypto/*",
-			"src/webtank/db/*"
-		],
-		"buildRequirements": [
-			"allowWarnings"
-		]
-	}]
+	"configurations": [
+		{
+			"name": "with_ivy_and_db",
+			"dependencies": {
+				"ivy": ">=0.0.0",
+				"openssl": ">=0.0.0"
+			},
+			"buildRequirements": [
+				"allowWarnings"
+			]
+		}, {
+			"name": "with_ivy",
+			"dependencies": {
+				"ivy": ">=0.0.0"
+			},
+			"buildRequirements": [
+				"allowWarnings"
+			],
+			"excludedSourceFiles": [
+				"src/webtank/crypto/*",
+				"src/webtank/db/*"
+			]
+		}, {
+			"name": "minimal_deps",
+			"excludedSourceFiles": [
+				"src/webtank/ivy/*",
+				"src/webtank/crypto/*",
+				"src/webtank/db/*"
+			],
+			"buildRequirements": [
+				"allowWarnings"
+			]
+		}
+	],
+	"subPackages": [
+		{
+			"name": "create_doc_index",
+			"buildRequirements": [
+				"allowWarnings"
+			],
+			"sourceFiles": [
+				"create_doc_index.d"
+			],
+			"excludedSourceFiles": [
+				"src/*"
+			],
+			"targetType": "executable"
+		}, {
+			"name": "doc_en",
+			"buildRequirements": [
+				"allowWarnings"
+			],
+			"dependencies": {
+				"ivy": ">=0.0.0",
+				"openssl": ">=0.0.0"
+			},
+			"sourceFiles": [
+				"src/webtank/doc_en.ddoc"
+			],
+			"dflags": ["-op"],
+			"preBuildCommands": [
+				"dub run :create_doc_index"
+			],
+			"postBuildCommands": [
+				"mkdir -p doc",
+				"rm -rf doc/en",
+				"mv docs/src/webtank doc/en",
+				"rm -rf docs"
+			]
+		}, {
+			"name": "doc_ru",
+			"buildRequirements": [
+				"allowWarnings"
+			],
+			"dependencies": {
+				"ivy": ">=0.0.0",
+				"openssl": ">=0.0.0"
+			},
+			"sourceFiles": [
+				"src/webtank/doc_ru.ddoc"
+			],
+			"dflags": ["-op"],
+			"preBuildCommands": [
+				"dub run :create_doc_index"
+			],
+			"postBuildCommands": [
+				"mkdir -p doc",
+				"rm -rf doc/ru",
+				"mv docs/src/webtank doc/ru",
+				"rm -rf docs"
+			]
+		}
+	]
 }

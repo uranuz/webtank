@@ -39,16 +39,16 @@ struct TypedRecordSet(FormatType, RecordSetType)
 	}
 
 	/++
-	$(LOCALE_EN_US Index operator for getting record by $(D_PARAM recordIndex))
-	$(LOCALE_RU_RU Оператор индексирования для получения записи по номеру $(D_PARAM recordIndex))
+	$(LANG_EN Index operator for getting record by $(D_PARAM recordIndex))
+	$(LANG_RU Оператор индексирования для получения записи по номеру $(D_PARAM recordIndex))
 	+/
 	RecordType opIndex(size_t recordIndex) {
 		return RecordType(_recordSet[recordIndex]);
 	}
 
 	/++
-	$(LOCALE_EN_US Returns record by $(D_PARAM recordIndex))
-	$(LOCALE_RU_RU Возвращает запись на позиции $(D_PARAM recordIndex))
+	$(LANG_EN Returns record by $(D_PARAM recordIndex))
+	$(LANG_RU Возвращает запись на позиции $(D_PARAM recordIndex))
 	+/
 	RecordType getRecord(size_t recordIndex) {
 		return RecordType(_recordSet.getRecord(recordIndex));
@@ -59,8 +59,8 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		alias PKValueType = FormatType.getKeyFieldSpec!().ValueType;
 
 		/++
-		$(LOCALE_EN_US Returns record by it's primary $(D_PARAM recordKey))
-		$(LOCALE_RU_RU Возвращает запись по первичному ключу $(D_PARAM recordKey))
+		$(LANG_EN Returns record by it's primary $(D_PARAM recordKey))
+		$(LANG_RU Возвращает запись по первичному ключу $(D_PARAM recordKey))
 		+/
 		RecordType getRecordByKey(PKValueType recordKey)
 		{
@@ -73,11 +73,11 @@ struct TypedRecordSet(FormatType, RecordSetType)
 			alias ValueType = FormatType.getValueType!(fieldName) ;
 
 			/++
-			$(LOCALE_EN_US
+			$(LANG_EN
 				Returns value of cell with field name $(D_PARAM fieldName) and primary key
 				value $(D_PARAM recordKey). If cell value is null then behaviour is undefined
 			)
-			$(LOCALE_RU_RU
+			$(LANG_RU
 				Возвращает значение ячейки с именем поля $(D_PARAM fieldName) и значением
 				первичного ключа $(D_PARAM recordKey). Если значение ячейки пустое (null), то
 				поведение не определено
@@ -88,12 +88,12 @@ struct TypedRecordSet(FormatType, RecordSetType)
 			}
 
 			/++
-			$(LOCALE_EN_US
+			$(LANG_EN
 				Returns value of cell with field name $(D_PARAM fieldName) and primary key
 				value $(D_PARAM recordKey). Parameter $(D_PARAM defaultValue) determines return
 				value when cell in null
 			)
-			$(LOCALE_RU_RU
+			$(LANG_RU
 				Возвращает значение ячейки с именем поля $(D_PARAM fieldName) и значением
 				первичного ключа $(D_PARAM recordKey). Параметр $(D_PARAM defaultValue)
 				определяет возвращаемое значение, когда значение ячейки пустое (null)
@@ -109,13 +109,13 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		}
 
 		/++
-		$(LOCALE_EN_US
+		$(LANG_EN
 			Returns string representation of cell with field name $(D_PARAM fieldName)
 			and record primary key $(D_PARAM recordKey). If value of cell is empty then
 			it return value specified by $(D_PARAM defaultValue) parameter, which will
 			have null value if parameter is missed.
 		)
-		$(LOCALE_RU_RU
+		$(LANG_RU
 			Возвращает строковое представление ячейки с именем поля $(D_PARAM fieldName)
 			и значением первичного ключа записи $(D_PARAM recordKey). Если значение
 			ячейки пустое (null), тогда функция вернет значение задаваемое параметром
@@ -127,11 +127,11 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		}
 
 		/++
-		$(LOCALE_EN_US
+		$(LANG_EN
 			Returns true if cell with field name $(D_PARAM fieldName) and record
 			primary key $(D_PARAM recordKey) is null or false otherwise
 		)
-		$(LOCALE_RU_RU
+		$(LANG_RU
 			Возвращает true, если ячейка с именем поля $(D_PARAM fieldName) и
 			первичным ключом записи $(D_PARAM recordKey) пуста (null). В противном
 			случае возвращает false
@@ -142,8 +142,8 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		}
 
 		/++
-		$(LOCALE_EN_US Returns record index by it's primary $(D_PARAM key))
-		$(LOCALE_RU_RU Возвращает порядковый номер записи по первичному ключу $(D_PARAM key))
+		$(LANG_EN Returns record index by it's primary $(D_PARAM key))
+		$(LANG_RU Возвращает порядковый номер записи по первичному ключу $(D_PARAM key))
 		+/
 		size_t getRecordIndex(PKValueType key)
 		{
@@ -152,8 +152,8 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		}
 
 		/++
-		$(LOCALE_EN_US Returns record primary key by it's $(D_PARAM index) in set)
-		$(LOCALE_RU_RU Возвращает первичный ключ записи по порядковому номеру $(D_PARAM index) в наборе)
+		$(LANG_EN Returns record primary key by it's $(D_PARAM index) in set)
+		$(LANG_RU Возвращает первичный ключ записи по порядковому номеру $(D_PARAM index) в наборе)
 		+/
 		/++
 		PKValueType getRecordKey(size_t index) {
@@ -174,11 +174,11 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		alias ValueType = FormatType.getValueType!(fieldName);
 
 		/++
-		$(LOCALE_EN_US
+		$(LANG_EN
 			Returns value of cell with field name $(D_PARAM fieldName) and $(D_PARAM recordIndex).
 			Parameter $(D_PARAM defaultValue) determines return value when cell in null
 		)
-		$(LOCALE_RU_RU
+		$(LANG_RU
 			Возвращает значение ячейки с именем поля $(D_PARAM fieldName) и номером записи
 			$(D_PARAM recordIndex). Параметр $(D_PARAM defaultValue) определяет возвращаемое
 			значение, когда значение ячейки пустое (null)
@@ -189,11 +189,11 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		}
 
 		/++
-		$(LOCALE_EN_US
+		$(LANG_EN
 			Returns value of cell with field name $(D_PARAM fieldName) and $(D_PARAM recordIndex).
 			Parameter $(D_PARAM defaultValue) determines return value when cell in null
 		)
-		$(LOCALE_RU_RU
+		$(LANG_RU
 			Возвращает значение ячейки с именем поля $(D_PARAM fieldName) и номером записи
 			$(D_PARAM recordIndex). Параметр $(D_PARAM defaultValue) определяет возвращаемое
 			значение, когда значение ячейки пустое (null)
@@ -205,11 +205,11 @@ struct TypedRecordSet(FormatType, RecordSetType)
 	}
 
 	/++
-	$(LOCALE_EN_US
+	$(LANG_EN
 		Returns format for enumerated field with name $(D_PARAM fieldName). If field
 		doesn't have enumerated type this will result in compile-time error
 	)
-	$(LOCALE_RU_RU
+	$(LANG_RU
 		Возвращает формат для перечислимого поля с именем $(D_PARAM fieldName). Если это
 		поле не является перечислимым, то это породит ошибку компиляции
 	)

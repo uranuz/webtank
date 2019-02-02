@@ -5,7 +5,7 @@ import std.json, std.file, std.path;
 import webtank.net.utils: buildNormalPath;
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function resolves paths that are set by $(D_PARAM jsonPaths). All paths could be realtive
 	to root path, which is path with name $(D_PARAM rootPathName). Root path can't be
 	relative but can be empty or not exist inside $(D_PARAM jsonPaths). In that case it
@@ -19,7 +19,7 @@ $(LOCALE_EN_US
 			Root path is used for resolving relative path in config
 			or inside $(D_PARAM defaultPaths) array
 )
-$(LOCALE_RU_RU
+$(LANG_RU
 	Функция выполняет разрешение путей в конфигурации
 	Params:
 	jsonPaths = JSONValue значения типа JSON_TYPE.OBJECT, представляющие список путей

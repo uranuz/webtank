@@ -68,11 +68,10 @@ T conv(T, V)(V value)
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function converts character of hex number to byte
 )
-
-$(LOCALE_RU_RU
+$(LANG_RU
 	Преобразование символа соотв. шестнадцатеричной цифре в байт
 )
 +/
@@ -88,11 +87,10 @@ ubyte hexSymbolToByte(char symbol)
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function checks if character corresponds to hex number
 )
-
-$(LOCALE_RU_RU
+$(LANG_RU
 	Функция определяет соответствует ли переданный символ цифре шестнадцатеричного числа
 )
 +/
@@ -101,11 +99,10 @@ bool isHexSymbol(char symbol) {
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function converts string corresponding to hex number into byte array representing this number
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Функция преобразует строку соответствующую шестнадцатеричному числу в массив байтов пердставляющих число
 )
 +/
@@ -166,11 +163,10 @@ ubyte[arrayLen] hexStringToStaticByteArray(size_t arrayLen)(string hexString)
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function converts very long number into it's hex string representation
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Функция преобразует очень длинное число в строку, сотоящую из шестнадцатеричных цифр числа
 )
 +/
@@ -203,11 +199,10 @@ unittest
 }
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	String values representing values that treated as boolean true value
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Строковые значения, которые трактуются как true при преобразовании типов
 )
 +/
@@ -221,11 +216,10 @@ static immutable falseStrings = [
 ];
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function converts some string values into boolean value
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Функция преобразования некоторых строковых значений в логическое
 )
 +/
@@ -244,11 +238,10 @@ bool toBool(S)(S src)
 
 import std.datetime;
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function converts string of PostgreSQL timestamp into D std.datetime.DateTime
 )
-
-$(LOCALE_RU_RU
+	$(LANG_RU
 	Функция преобразует строку штампа времени PostgreSQL в формат дата/время языка D
 )
 +/

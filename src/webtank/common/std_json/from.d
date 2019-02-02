@@ -3,11 +3,10 @@ module webtank.common.std_json.from;
 import std.json: JSONValue, JSON_TYPE;
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Function deserializes std.json.JSONValue struct into D language value 
 )
-
-$(LOCALE_RU_RU
+$(LANG_RU
 	Функция десериализует структуру std.json.JSONValue в значение языка D
 )
 +/

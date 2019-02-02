@@ -1,12 +1,11 @@
 module webtank.common.optional_date;
 
 /++
-$(LOCALE_EN_US
+$(LANG_EN
 	Special date type that holds date components (year, month, day) in seperate fields, so each component of date is optional.
 	It's designed to interface with standard std.datetime Date type
 )
-
-$(LOCALE_RU_RU
+$(LANG_RU
 	Специальный тип даты, хранящий составляющие даты (год, месяц, день) в отдельных полях. При это каждая из компонент
 	является необязательной. Разработано для взаимодействия со стандартным типом даты std.datetime Date
 )

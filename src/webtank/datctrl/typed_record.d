@@ -41,10 +41,10 @@ struct TypedRecord(RecordFormatT, RecordType)
 		alias ValueType = FormatType.getValueType!(fieldName);
 
 		/++
-		$(LOCALE_EN_US Function for getting value for field with name $(D_PARAM fieldName).
+		$(LANG_EN Function for getting value for field with name $(D_PARAM fieldName).
 			If field value is null then behaviour is undefined
 		)
-		$(LOCALE_RU_RU Функция получения значения для поля с именем $(D_PARAM fieldName).
+		$(LANG_RU Функция получения значения для поля с именем $(D_PARAM fieldName).
 			При пустом значении поля поведение не определено
 		)
 		+/
@@ -53,11 +53,11 @@ struct TypedRecord(RecordFormatT, RecordType)
 		}
 
 		/++
-		$(LOCALE_EN_US Function for getting value for field with name $(D_PARAM fieldName).
+		$(LANG_EN Function for getting value for field with name $(D_PARAM fieldName).
 			Parameter $(D_PARAM defaultValue) determines returned value if value
 			for field with name $(D_PARAM fieldName) is null
 		)
-		$(LOCALE_RU_RU Функция получения значения для поля с именем $(D_PARAM fieldName).
+		$(LANG_RU Функция получения значения для поля с именем $(D_PARAM fieldName).
 			Параметр $(D_PARAM defaultValue) определяет возвращаемое значение,
 			если значение для поля с именем $(D_PARAM fieldName) является пустым (null)
 		)
@@ -81,10 +81,10 @@ struct TypedRecord(RecordFormatT, RecordType)
 	}
 	
 	/++
-	$(LOCALE_EN_US Method returns format for enumerated field with name $(D_PARAM fieldName).
+	$(LANG_EN Method returns format for enumerated field with name $(D_PARAM fieldName).
 		If field $(D_PARAM fieldName) is not enumerated this will not compile
 	)
-	$(LOCALE_RU_RU Метод возвращает формат для перечислимого поля с именем $(D_PARAM fieldName).
+	$(LANG_RU Метод возвращает формат для перечислимого поля с именем $(D_PARAM fieldName).
 		Если поле $(D_PARAM fieldName) не является перечислимым, то это породит ошибку компиляции
 	)
 	+/
