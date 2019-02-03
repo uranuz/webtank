@@ -31,9 +31,23 @@ public:
 
 		void addItems(size_t count, size_t index = size_t.max)
 		{
+			import std.array: insertInPlace;
+
+			if( index == size_t.max ) {
+				index = this.length? this.length - 1: 0;
+			}
+
 			foreach( dataField; _dataFields ) {
 				dataField.addItems(count, index);
 			}
+
+			RecordType[] newCursors;
+			foreach( i; 0..count ) {
+				newCursors ~= new RecordType(this);
+			}
+
+			_cursors.insertInPlace(index, newCursors);
+
 			_reindexRecords(); // Reindex after adding new items
 		}
 
@@ -124,6 +138,9 @@ protected:
 	size_t[string] _recordIndexes;
 	size_t[string] _fieldIndexes;
 
+	RecordType[] _cursors;
+	size_t[RecordType] _cursorIndexes;
+
 	void _reindexFields()
 	{
 		_fieldIndexes.clear();
@@ -141,8 +158,29 @@ protected:
 		foreach( i; 0 .. keyField.length )
 		{
 			auto keyValue = keyField.getStr(i);
-			enforce(keyValue !in _recordIndexes, `Record key "` ~ keyValue ~ `" is not unique!`);
-			_recordIndexes[keyValue] = i;
+			if( !keyField.isNull(i) ) {
+				// Костыль: если добавили несколько пустых записей с помощью addItems,
+				// то не ругаемся на неуникальность по пустому ключу
+				enforce(keyValue !in _recordIndexes, `Record key "` ~ keyValue ~ `" is not unique!`);
+			}
+
+			if( keyValue !in _recordIndexes ) {
+				// Хотим, чтобы по пустому ключу была первая запись из пустых
+				_recordIndexes[keyValue] = i;
+			}
+		}
+
+		// Индексируем курсоры
+		foreach( i, curs; _cursors ) {
+			_cursorIndexes[curs] = i;
+		}
+	}
+
+	void _initCursors()
+	{
+		// Создаем курсоры. При этом при каждом получении записи будет физически один и тот же курсор
+		foreach( i; 0..this.length ) {
+			_cursors ~= new RecordType(this);
 		}
 	}
 
@@ -153,6 +191,7 @@ public:
 		_dataFields = dataFields;
 		_keyFieldIndex = keyFieldIndex;
 		_reindexFields();
+		_initCursors();
 		_reindexRecords();
 	}
 
@@ -169,8 +208,10 @@ public:
 
 		RecordIface getRecord(size_t recordIndex)
 		{
-			import std.conv: to;
-			return new RecordType(this, _dataFields[_keyFieldIndex].getStr(recordIndex));
+			import std.exception: enforce;
+			enforce(recordIndex < _cursors.length, `No record with specified index in record set`);
+
+			return _cursors[recordIndex];
 		}
 
 		string getStr(string fieldName, size_t recordIndex) {
@@ -222,6 +263,14 @@ public:
 		{
 			enforce(recordKey in _recordIndexes, `Cannot find record with specified key!`);
 			return _recordIndexes[recordKey];
+		}
+
+		size_t getIndexByCursor(IBaseRecord cursor)
+		{
+			RecordType typedCursor = cast(RecordType) cursor;
+			enforce(typedCursor, `Record type mismatch`);
+			enforce(typedCursor in _cursorIndexes, `Cannot get index in record set for specified record`);
+			return _cursorIndexes[typedCursor];
 		}
 	} // override
 

@@ -127,6 +127,13 @@ public:
 			_testIndex(recordIndex);
 			return recordIndex;
 		}
+
+		size_t getIndexByCursor(IBaseRecord cursor)
+		{
+			size_t recordIndex = _sourceRS.getIndexByCursor(cursor);
+			_testIndex(recordIndex);
+			return recordIndex;
+		}
 	} // override
 
 	import webtank.datctrl.record_set_range;

@@ -137,6 +137,18 @@ interface IBaseRecordSet
 	)
 	+/
 	size_t getIndexByStringKey(string recordKey);
+
+	/++
+	$(LANG_EN
+		Returns record index by link on cursor-record.
+		Intended for internal library usage
+	)
+	$(LANG_RU
+		Возвращает номер записи по записи-курсору.
+		Предназанчено для внутреннего использования
+	)
+	+/
+	size_t getIndexByCursor(IBaseRecord cursor);
 }
 
 // В основном этот интерфейс - это хак, чтобы сделать ковариантный интерфейс range с записываемым элементом

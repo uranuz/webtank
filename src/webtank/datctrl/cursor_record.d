@@ -44,17 +44,16 @@ protected:
 	string _recordKey;
 
 public:
-	this(RecordSetIface recordSet, string recordKey)
+	this(RecordSetIface recordSet)
 	{
 		import std.exception: enforce;
 		enforce(recordSet !is null, `Expected record set, but got null!`);
 		_recordSet = recordSet;
-		_recordKey = recordKey;
 	}
 
 	override {
 		size_t recordIndex() @property {
-			return _recordSet.getIndexByStringKey(_recordKey);
+			return _recordSet.getIndexByCursor(this);
 		}
 
 		DataFieldIface getField(string fieldName) {
@@ -96,6 +95,16 @@ public:
 
 		size_t keyFieldIndex() @property {
 			return _recordSet.keyFieldIndex();
+		}
+
+		size_t toHash() @trusted {
+			return cast(size_t)(cast(void*)this) + 100;
+		}
+
+		bool opEquals(Object rhs)
+		{
+			typeof(this) rhsCast = cast(typeof(this)) rhs;
+			return this is rhsCast;
 		}
 	} //override
 }
