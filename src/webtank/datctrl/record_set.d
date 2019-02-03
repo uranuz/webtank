@@ -75,7 +75,7 @@ public:
 		auto newRS = new WriteableRecordSet(dataFields, RecordFormatT.getKeyFieldIndex!());
 		newRS.addItems(jData.array.length); // Expand fields to desired size
 
-		enum size_t expectedFieldCount = RecordFormatT.tupleOfNames!().length;
+		enum size_t expectedFieldCount = RecordFormatT.tupleOfNames.length;
 		import std.conv: text;
 		foreach( size_t recIndex, JSONValue jRecord; jData )
 		{

@@ -30,8 +30,17 @@ struct RecordFormat(Args...)
 	bool[string] nullableFlags; ///Флаги "обнулябельности"
 	Tuple!(EnumFormatDecls) enumFormats;
 
+	/++
+	$(LANG_EN Returns true if format includes primary key field)
+	$(LANG_RU Возвращает true, если в формате есть поле первичного ключа)
+	+/
 	enum bool hasKeyField = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs).length > 0;
 
+
+	/++
+	$(LANG_EN Returns instance of EnumFormat for specified field. Field should have enum type of course)
+	$(LANG_RU Возвращает экземпляр структуры EnumFormat для поля с именем fieldName. Поле должно быть перечислимого типа)
+	+/
 	template getEnumFormat(string fieldName)
 	{
 		alias enumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
@@ -42,6 +51,10 @@ struct RecordFormat(Args...)
 		}
 	}
 
+	/++
+	$(LANG_EN Set format of field with specified name that should have enum type)
+	$(LANG_RU Устанвливает формат поля с именем fieldName, которое должно быть перечислимого типа)
+	+/
 	template setEnumFormat(string fieldName)
 	{
 		alias enumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
@@ -52,19 +65,6 @@ struct RecordFormat(Args...)
 		}
 	}
 
-	/++
-	/++
-	$(LANG_EN Property returns array of semantic types of fields)
-	$(LANG_RU Свойство возвращает массив семантических типов полей)
-	+/
-	static pure FieldType[] types() @property
-	{
-		FieldType[] result;
-		foreach( spec; _fieldSpecs )
-			result ~= spec.fieldType;
-		return result;
-	}
-	+/
 
 	private static immutable(string[]) _names = ((){
 		string[] result;
@@ -74,8 +74,8 @@ struct RecordFormat(Args...)
 	})();
 
 	/++
-	$(LANG_EN Property returns array of field names for record format)
-	$(LANG_RU Свойство возвращает массив имен полей для формата записи)
+	$(LANG_EN Returns array of field names for record format)
+	$(LANG_RU Возвращает массив имен полей для формата записи)
 	+/
 	static pure immutable(string[]) names() @property {
 		return _names;
@@ -90,8 +90,8 @@ struct RecordFormat(Args...)
 	}
 
 	/++
-	$(LANG_EN Property returns AA of indexes of fields, indexed by their names)
-	$(LANG_RU Свойство возвращает словарь номеров полей данных, индексируемых их именами)
+	$(LANG_EN Returns AA of indexes of fields, indexed by their names)
+	$(LANG_RU Возвращает словарь номеров полей данных, индексируемых их именами)
 	+/
 	static pure immutable(size_t[string]) indexes() @property {
 		return _indexes;
@@ -106,89 +106,77 @@ struct RecordFormat(Args...)
 
 	/++
 	$(LANG_EN
-		Template returns tuple of names for fields having semantic types from
+		Returns tuple of names for fields having semantic types from
 		$(D_PARAM FilterFieldTypes) parameter. All elements from $(D_PARAM FilterFieldTypes)
 		tuple must be of FieldType type
 	)
 	$(LANG_RU
-		Шаблон возвращает кортеж имен для полей, имеющих семантический тип из
+		Возвращает кортеж имен для полей, имеющих семантический тип из
 		кортежа $(D_PARAM FilterFieldTypes). Все элементы в кортеже $(D_PARAM FilterFieldTypes)
 		должны иметь тип FieldType
 	)
 	+/
-	///Шаблон возвращает кортеж имён полей отфильтрованных по типам FilterDecls
-	///Элементы кортежа FilterDecls должны иметь тип FieldType
-	template filterNamesByTypes(FilterDecls...) {
-		alias filterNamesByTypes = _getFieldNameTuple!( _filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterDecls) );
-	}
+	alias filterNamesByTypes(FilterDecls...) = _getFieldNameTuple!(
+		_filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterDecls) );
 
-	template filterFieldFormatDecls(FilterDecls...) {
-		alias filterFieldFormatDecls = _getFieldFormatDeclTuple!( _filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterDecls) );
-	}
+	alias filterFieldFormatDecls(FilterDecls...) = _getFieldFormatDeclTuple!(
+		_filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterDecls) );
 
 
 	/++
-	$(LANG_EN Template returns tuple of all field names for record format)
-	$(LANG_RU Шаблон возвращает кортеж всех имен полей для формата записи)
+	$(LANG_EN Returns tuple of all field names for record format)
+	$(LANG_RU Возвращает кортеж всех имен полей для формата записи)
 	+/
-	template tupleOfNames() {
-		alias tupleOfNames = _getFieldNameTuple!(_fieldSpecs);
-	}
+	alias tupleOfNames = _getFieldNameTuple!(_fieldSpecs);
 
-	template getFieldValueTypes() {
-		alias getFieldValueTypes = _getFieldValueTypes!(_fieldSpecs);
-	}
+	alias getFieldValueTypes = _getFieldValueTypes!(_fieldSpecs);
 
 	/++
-	$(LANG_EN Template returns semantic field type $(D FieldType) for field with name $(D_PARAM fieldName))
-	$(LANG_RU Шаблон возвращает семантический тип поля $(D FieldType) для поля с именем $(D_PARAM fieldName))
+	$(LANG_EN Returns semantic field type $(D FieldType) for field with name $(D_PARAM fieldName))
+	$(LANG_RU Возвращает семантический тип поля $(D FieldType) для поля с именем $(D_PARAM fieldName))
 	+/
-	template getFieldFormatDecl(string fieldName) {
-		alias getFieldFormatDecl = _getFieldSpec!(fieldName, _fieldSpecs).FormatDecl;
-	}
+	alias getFieldFormatDecl(string fieldName) = _getFieldSpec!(fieldName, _fieldSpecs).FormatDecl;
 
 	/++
-	$(LANG_EN Template returns semantic field type $(D FieldType) for field with index $(D_PARAM fieldIndex))
-	$(LANG_RU Шаблон возвращает семантический тип поля $(D FieldType) для поля с номером $(D_PARAM fieldIndex))
+	$(LANG_EN Returns semantic field type $(D FieldType) for field with index $(D_PARAM fieldIndex))
+	$(LANG_RU Возвращает семантический тип поля $(D FieldType) для поля с номером $(D_PARAM fieldIndex))
 	+/
-	template getFieldFormatDecl(size_t fieldIndex) {
-		alias getFieldFormatDecl = _getFieldSpec!(fieldIndex, _fieldSpecs).FormatDecl;
-	}
+	alias getFieldFormatDecl(size_t fieldIndex) = _getFieldSpec!(fieldIndex, _fieldSpecs).FormatDecl;
 
 	/++
-	$(LANG_EN Template returns D value type for field with name $(D_PARAM fieldName))
-	$(LANG_RU Шаблон возвращает тип языка D для поля с именем $(D_PARAM fieldName))
+	$(LANG_EN Returns D value type for field with name $(D_PARAM fieldName))
+	$(LANG_RU Возвращает тип языка D для поля с именем $(D_PARAM fieldName))
 	+/
-	template getValueType(string fieldName) {
-		alias getValueType = _getFieldSpec!(fieldName, _fieldSpecs).ValueType;
-	}
+	alias getValueType(string fieldName) = _getFieldSpec!(fieldName, _fieldSpecs).ValueType;
 
 	/++
-	$(LANG_EN Template returns D value type for field with index $(D_PARAM fieldIndex))
-	$(LANG_RU Шаблон возвращает тип языка D для поля с номером $(D_PARAM fieldIndex))
+	$(LANG_EN Returns D value type for field with index $(D_PARAM fieldIndex))
+	$(LANG_RU Возвращает тип языка D для поля с номером $(D_PARAM fieldIndex))
 	+/
-	template getValueType(size_t fieldIndex) {
-		alias getValueType = _getFieldSpec!(fieldIndex, _fieldSpecs).ValueType;
-	}
+	alias getValueType(size_t fieldIndex) = _getFieldSpec!(fieldIndex, _fieldSpecs).ValueType;
 
 	/++
-	$(LANG_EN Template returns name for field with index $(D_PARAM fieldIndex))
-	$(LANG_RU Шаблон возвращает имя для поля с номером $(D_PARAM fieldIndex))
+	$(LANG_EN Returns name for field with index $(D_PARAM fieldIndex))
+	$(LANG_RU Возвращает имя поля с номером $(D_PARAM fieldIndex))
 	+/
-	template getFieldName(size_t fieldIndex) {
-		alias getFieldName = _getFieldSpec!(fieldIndex, _fieldSpecs).name;
-	}
+	alias getFieldName(size_t fieldIndex) = _getFieldSpec!(fieldIndex, _fieldSpecs).name;
 
 	/++
-	$(LANG_EN Template returns index for field with name $(D_PARAM fieldName))
-	$(LANG_RU Шаблон возвращает номер для поля с именем $(D_PARAM fieldName))
+	$(LANG_EN Returns index for field with name $(D_PARAM fieldName))
+	$(LANG_RU Возвращает номер для поля с именем $(D_PARAM fieldName))
 	+/
-	template getFieldIndex(string fieldName) {
-		alias getFieldIndex = _getFieldIndex!(fieldName, 0, _fieldSpecs);
-	}
+	alias getFieldIndex(string fieldName) = _getFieldIndex!(fieldName, 0, _fieldSpecs);
 
+	/++
+	$(LANG_EN Returns true if primary key field specification is passed as argument)
+	$(LANG_RU Возвращает true, если в качестве аргумента передана спецификация ключевого поля)
+	+/
 	alias isPrimaryKeyFieldSpec(alias FieldSpec) = isPrimaryKeyFormat!(FieldSpec.FormatDecl);
 
+	/++
+	$(LANG_EN Returns index of primary key field if it is present)
+	$(LANG_RU Возвращает номер поля первичного ключа, если оно присутствует)
+	+/
 	template getKeyFieldIndex()
 	{
 		alias PKFieldSpecs = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs);
@@ -198,6 +186,10 @@ struct RecordFormat(Args...)
 		alias getKeyFieldIndex = _getFieldIndex!(PKFieldSpecs[0].name, 0, _fieldSpecs);
 	}
 
+	/++
+	$(LANG_EN Returns specification primary key field if it is present)
+	$(LANG_RU Возвращает спецификацию поля первичного ключа, если оно присутствует)
+	+/
 	template getKeyFieldSpec()
 	{
 		alias PKFieldSpecs = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs);
@@ -207,60 +199,19 @@ struct RecordFormat(Args...)
 		alias getKeyFieldSpec = PKFieldSpecs[0];
 	}
 
-	template getEnumFormatIndex(string fieldName)
-	{
-		alias getEnumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
-	}
+	/++
+		$(LANG_EN Returns index of field with specified name in record format)
+		$(LANG_RU Возвращает номер поля с именем fieldName в формате записи)
+	+/
+	alias getEnumFormatIndex(string fieldName) = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
 
-	template hasField(string fieldName)
-	{
-		enum bool hasField = _getHasField!(fieldName, _fieldSpecs);
-	}
+	/++
+		$(LANG_EN Test if record format contains field with specified name)
+		$(LANG_RU Проверяет наличие в формате поля с именем fieldName)
+	+/
+	enum bool hasField(string fieldName) = _getHasField!(fieldName, _fieldSpecs);
 }
 
-
-alias NullableFlag = Flag!("nullable");
-
-/**
-	static immutable fmt = makeRecordFormat!(
-
-	) (
-		t!("nullableFlags", "enumFormats")(
-			[ "name": NullableFlag.yes ],
-			t!("готовность", "статус", "видТуризма") (
-				готовность,
-				статус,
-				видТуризма
-			)
-		)
-	);
-
-	static immutable fmt = makeRecordFormat!(
-
-	) (  );
-
-	alias
-
-
-*/
-
-/*
-template makeRecordFormat(Opts...)
-{
-	alias MethodArgs = ;
-	alias
-
-	auto makeRecordFormat(MethodArgs methodArgs)
-	{
-		foreach( MethodArg; MethodArgs )
-		{
-
-
-		}
-	}
-
-}
-*/
 
 template _getHasField(string fieldName, FieldSpecs...)
 {

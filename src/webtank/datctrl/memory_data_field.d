@@ -168,7 +168,7 @@ protected:
 IBaseWriteableDataField[] makeMemoryDataFields(RecordFormatT)(RecordFormatT format)
 {
 	IBaseWriteableDataField[] dataFields;
-	foreach( fieldName; RecordFormatT.tupleOfNames!() )
+	foreach( fieldName; RecordFormatT.tupleOfNames )
 	{
 		alias FieldFormatDecl = RecordFormatT.getFieldFormatDecl!(fieldName);
 		alias DataFieldType = MemoryDataField!FieldFormatDecl;

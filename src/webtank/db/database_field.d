@@ -186,7 +186,7 @@ public:
 IBaseDataField[] makePostgreSQLDataFields(RecordFormatType)(IDBQueryResult queryResult, RecordFormatType format)
 {
 	IBaseDataField[] dataFields;
-	foreach( fieldName; RecordFormatType.tupleOfNames!() )
+	foreach( fieldName; RecordFormatType.tupleOfNames )
 	{
 		alias FieldFormatDecl = RecordFormatType.getFieldFormatDecl!(fieldName);
 		alias CurrFieldT = DatabaseField!(FieldFormatDecl);
