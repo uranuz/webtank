@@ -27,7 +27,8 @@ struct RecordFormat(Args...)
 	alias EnumFormatDecls = filterFieldFormatDecls!( EnumFormat );
 	alias EnumFieldSpecs = _filterFieldSpecs!(_fieldSpecs).ByTypes!(EnumFormat);
 
-	bool[string] nullableFlags; ///Флаги "обнулябельности"
+	
+	bool[string] nullableFlags;
 	Tuple!(EnumFormatDecls) enumFormats;
 
 	/++
