@@ -211,7 +211,7 @@ struct URI
 		}
 
 		/// Returns: Authority part of the URI.
-		string rawAuthority() @property pure const nothrow
+		string rawAuthority() @property pure const /+nothrow+/
 		{
 			if( rawHost.length == 0 )
 				return "";
@@ -220,10 +220,7 @@ struct URI
 			if( rawUserInfo.length > 0 )
 				res ~= rawUserInfo ~ "@";
 
-			res ~= rawHost;
-
-			if( port != 0 )
-				res ~= ":" ~ itos(port);
+			res ~= rawHost ~ _prettyPort();
 
 			return res;
 		}
@@ -238,22 +235,28 @@ struct URI
 			if( userInfo.length > 0 )
 				res ~= userInfo ~ "@";
 
-			res ~= host;
+			res ~= host ~ _prettyPort();
 
+			return res;
+		}
+
+		private string _prettyPort() @property pure const /+nothrow+/
+		{
 			if( port != 0 )
-			{	bool isDefaultPort = false;
+			{
+				bool isDefaultPort = false;
 				foreach( e; knownSchemes )
-				{	if( e.defaultPort == port && scheme == e.scheme )
-					{	isDefaultPort = true;
+				{
+					if( e.defaultPort == port && scheme == e.scheme )
+					{
+						isDefaultPort = true;
 						break;
 					}
 				}
 				if( !isDefaultPort )
-					res ~= ":" ~ itos(port);
+					return ":" ~ itos(port);
 			}
-				
-
-			return res;
+			return null;
 		}
 
 		void authority(string value) @property /+pure+/
@@ -261,7 +264,7 @@ struct URI
 			_rawUserInfo = null;
 			_rawHost = null;
 			_port = 0;
-			string encodedValue = encodeURIHost(value);
+			string encodedValue = encodeURIAuthority(value);
 			parseAuthority( encodedValue );
 		}
 
@@ -345,7 +348,7 @@ struct URI
 		HostType _hostType; // what the hostname string is (NONE if no host in URI)
 		string _rawHost;   // null if no authority in URI
 		ushort _port;          // 0 if no port in URI
-		string _rawPath;       // never null, bu could be empty
+		string _rawPath;       // never null, but could be empty
 		string _rawQuery;      // can be null
 		string _rawFragment;   // can be null
 
@@ -731,12 +734,6 @@ struct URI
 
 private pure
 {
-	bool isMaybeHostname(T)(T input)
-	{
-		
-
-	}
-
 	bool contains(string s, char c) nothrow
 	{
 		foreach(char sc; s)
@@ -865,7 +862,7 @@ unittest
 	{
 		string s = "HTTP://machin@fr.wikipedia.org:80/wiki/Uniform_Resource_Locator?Query%20Part=4#fragment%20part";
 		assert(URI.isValid(s));
-		auto uri = new URI(s);
+		auto uri = URI(s);
 		assert(uri.scheme == "http");
 		assert(uri.userInfo == "machin");
 		assert(uri.host == "fr.wikipedia.org");
@@ -878,10 +875,10 @@ unittest
 
 	// host tests
 	{
-		assert((new URI("http://truc.org")).hostType == URI.HostType.REG_NAME);
-		assert((new URI("http://127.0.0.1")).hostType == URI.HostType.IPV4);
-		assert((new URI("http://[2001:db8::7]")).hostType == URI.HostType.IPV6);
-		assert((new URI("http://[v9CrazySchemeFromOver9000year]")).hostType == URI.HostType.IPVFUTURE);
+		assert(URI("http://truc.org").hostType == URI.HostType.REG_NAME);
+		assert(URI("http://127.0.0.1").hostType == URI.HostType.IPV4);
+		assert(URI("http://[2001:db8::7]").hostType == URI.HostType.IPV6);
+		assert(URI("http://[v9CrazySchemeFromOver9000year]").hostType == URI.HostType.IPVFUTURE);
 	}
 
 	auto wellFormedURIs =
@@ -903,6 +900,114 @@ unittest
 	{	bool valid = URI.isValid(wuri);
 		assert(valid);
 	}
+	
+	URI test = URI(`https://test.example.org/check.html?param1=val1&param2=val2#from.example.com`);
+	assert(test.scheme == `https`);
+	assert(test.authority == `test.example.org`);
+	assert(test.rawAuthority == `test.example.org`);
+	assert(test.host == `test.example.org`);
+	assert(test.rawHost == `test.example.org`);
+	assert(test.hostType == URI.HostType.REG_NAME);
+	assert(test.port == 443);
+	assert(test.query == `param1=val1&param2=val2`);
+	assert(test.rawQuery == `param1=val1&param2=val2`);
+	assert(test.path == `/check.html`);
+	assert(test.rawPath == `/check.html`);
+	assert(test.fragment == `from.example.com`);
+	assert(test.rawFragment == `from.example.com`);
+	assert(test.userInfo.length == 0);
+	assert(test.rawUserInfo.length == 0);
+
+
+	test.authority = `test2.example.org:5000`;
+
+	assert(test.scheme == `https`);
+	assert(test.authority == `test2.example.org:5000`);
+	assert(test.rawAuthority == `test2.example.org:5000`, test.rawAuthority);
+	assert(test.host == `test2.example.org`);
+	assert(test.rawHost == `test2.example.org`);
+	assert(test.hostType == URI.HostType.REG_NAME);
+	assert(test.port == 5000);
+	assert(test.query == `param1=val1&param2=val2`);
+	assert(test.rawQuery == `param1=val1&param2=val2`);
+	assert(test.path == `/check.html`);
+	assert(test.rawPath == `/check.html`);
+	assert(test.fragment == `from.example.com`);
+	assert(test.rawFragment == `from.example.com`);
+	assert(test.userInfo.length == 0);
+	assert(test.rawUserInfo.length == 0);
+
+	test.host = `test3.example.org`;
+
+	assert(test.scheme == `https`);
+	assert(test.authority == `test3.example.org:5000`);
+	assert(test.rawAuthority == `test3.example.org:5000`, test.rawAuthority);
+	assert(test.host == `test3.example.org`);
+	assert(test.rawHost == `test3.example.org`);
+	assert(test.hostType == URI.HostType.REG_NAME);
+	assert(test.port == 5000);
+	assert(test.query == `param1=val1&param2=val2`);
+	assert(test.rawQuery == `param1=val1&param2=val2`);
+	assert(test.path == `/check.html`);
+	assert(test.rawPath == `/check.html`);
+	assert(test.fragment == `from.example.com`);
+	assert(test.rawFragment == `from.example.com`);
+	assert(test.userInfo.length == 0);
+	assert(test.rawUserInfo.length == 0);
+
+	test.port = 5003;
+
+	assert(test.scheme == `https`);
+	assert(test.authority == `test3.example.org:5003`);
+	assert(test.rawAuthority == `test3.example.org:5003`, test.rawAuthority);
+	assert(test.host == `test3.example.org`);
+	assert(test.rawHost == `test3.example.org`);
+	assert(test.hostType == URI.HostType.REG_NAME);
+	assert(test.port == 5003);
+	assert(test.query == `param1=val1&param2=val2`);
+	assert(test.rawQuery == `param1=val1&param2=val2`);
+	assert(test.path == `/check.html`);
+	assert(test.rawPath == `/check.html`);
+	assert(test.fragment == `from.example.com`);
+	assert(test.rawFragment == `from.example.com`);
+	assert(test.userInfo.length == 0);
+	assert(test.rawUserInfo.length == 0);
+
+	test.scheme = `http`;
+
+	assert(test.scheme == `http`);
+	assert(test.authority == `test3.example.org:5003`);
+	assert(test.rawAuthority == `test3.example.org:5003`, test.rawAuthority);
+	assert(test.host == `test3.example.org`);
+	assert(test.rawHost == `test3.example.org`);
+	assert(test.hostType == URI.HostType.REG_NAME);
+	assert(test.port == 5003);
+	assert(test.query == `param1=val1&param2=val2`);
+	assert(test.rawQuery == `param1=val1&param2=val2`);
+	assert(test.path == `/check.html`);
+	assert(test.rawPath == `/check.html`);
+	assert(test.fragment == `from.example.com`);
+	assert(test.rawFragment == `from.example.com`);
+	assert(test.userInfo.length == 0);
+	assert(test.rawUserInfo.length == 0);
+
+	test.port = 0;
+
+	assert(test.scheme == `http`);
+	assert(test.authority == `test3.example.org`);
+	assert(test.rawAuthority == `test3.example.org`, test.rawAuthority);
+	assert(test.host == `test3.example.org`);
+	assert(test.rawHost == `test3.example.org`);
+	assert(test.hostType == URI.HostType.REG_NAME);
+	assert(test.port == 80);
+	assert(test.query == `param1=val1&param2=val2`);
+	assert(test.rawQuery == `param1=val1&param2=val2`);
+	assert(test.path == `/check.html`);
+	assert(test.rawPath == `/check.html`);
+	assert(test.fragment == `from.example.com`);
+	assert(test.rawFragment == `from.example.com`);
+	assert(test.userInfo.length == 0);
+	assert(test.rawUserInfo.length == 0);
 }
 
 immutable(char[]) hexChars = "0123456789ABCDEF";
@@ -988,6 +1093,9 @@ template decodeURICustom(string allowedSpecChars = null, bool isFormEncoding = f
 alias decodeURICustom!("!$&'()*+,;=") decodeURIHost;
 ///Кодирует имя хоста идентификатора ресурса в URI кодировку
 alias encodeURICustom!("!$&'()*+,;=") encodeURIHost;
+
+alias decodeURICustom!("!$&'()*+,;=:@") decodeURIAuthority;
+alias encodeURICustom!("!$&'()*+,;=:@") encodeURIAuthority;
 
 ///Декодирует путь идентификатора ресурса из URI кодировки
 alias decodeURICustom!("!$&'()*+,;=:@/") decodeURIPath;
