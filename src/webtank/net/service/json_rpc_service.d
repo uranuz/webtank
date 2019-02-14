@@ -38,17 +38,19 @@ protected:
 public:
 	this(string serviceName, IAccessController accessController, IRightController rights)
 	{
+		import std.exception: enforce;
+		
 		_serviceName = serviceName;
 		readConfig();
 		_startLoging();
 
 		_rootRouter = new HTTPRouter;
-		assert( "siteJSON_RPC" in _virtualPaths, `Failed to get JSON-RPC virtual path!` );
-		_jsonRPCRouter = new JSON_RPC_Router( _virtualPaths["siteJSON_RPC"] ~ "{remainder}" );
+		enforce("siteJSON_RPC" in virtualPaths, `Failed to get JSON-RPC virtual path!`);
+		_jsonRPCRouter = new JSON_RPC_Router( virtualPaths["siteJSON_RPC"] ~ "{remainder}" );
 		_rootRouter.addHandler(_jsonRPCRouter);
 
-		assert( "siteWebFormAPI" in _virtualPaths, `Failed to get web-form API virtual path!` );
-		_pageRouter = new URIPageRouter( _virtualPaths["siteWebFormAPI"] ~ "{remainder}" );
+		enforce("siteWebFormAPI" in virtualPaths, `Failed to get web-form API virtual path!`);
+		_pageRouter = new URIPageRouter( virtualPaths["siteWebFormAPI"] ~ "{remainder}" );
 		_rootRouter.addHandler(_pageRouter);
 
 		_accessController = accessController;
@@ -58,19 +60,26 @@ public:
 
 	private void _startLoging()
 	{
-		if( !_loger ) {
-			assert( "siteEventLogFile" in _fileSystemPaths, `Failed to get event log file path!` );
-			_loger = new ThreadedLoger( cast(shared) new FileLoger(_fileSystemPaths["siteEventLogFile"], LogLevel.info) );
+		import std.exception: enforce;
+
+		if( !_loger )
+		{
+			auto eventLogParamPtr = "siteEventLogFile" in _fileSystemPaths;
+			enforce(eventLogParamPtr, `Failed to get event log file path!`);
+			_loger = new ThreadedLoger(cast(shared) new FileLoger(*eventLogParamPtr, LogLevel.info));
 		}
 
-		if( !_databaseLoger ) {
-			assert( "siteDatabaseLogFile" in _fileSystemPaths, `Failed to get database log file path!` );
-			_databaseLoger = new ThreadedLoger( cast(shared) new FileLoger(_fileSystemPaths["siteDatabaseLogFile"], LogLevel.dbg) );
+		if( !_databaseLoger )
+		{
+			auto databaseLogParamPtr = "siteDatabaseLogFile" in _fileSystemPaths;
+			enforce(databaseLogParamPtr, `Failed to get database log file path!`);
+			_databaseLoger = new ThreadedLoger(cast(shared) new FileLoger(*databaseLogParamPtr, LogLevel.dbg));
 		}
 	}
 
-	override Loger loger() @property {
-		assert( _rootRouter, `Main service loger is not initialized!` );
+	override Loger loger() @property
+	{
+		assert(_rootRouter, `Main service loger is not initialized!`);
 		return _loger;
 	}
 
@@ -135,28 +144,33 @@ public:
 		return true;
 	}
 
-	override HTTPRouter rootRouter() @property {
-		assert( _rootRouter, `Main service root router is not initialized!` );
+	override HTTPRouter rootRouter() @property
+	{
+		assert(_rootRouter, `Main service root router is not initialized!`);
 		return _rootRouter;
 	}
 
-	JSON_RPC_Router JSON_RPCRouter() @property {
-		assert( _jsonRPCRouter, `Main service JSON-RPC router is not initialized!` );
+	JSON_RPC_Router JSON_RPCRouter() @property
+	{
+		assert(_jsonRPCRouter, `Main service JSON-RPC router is not initialized!`);
 		return _jsonRPCRouter;
 	}
 
-	URIPageRouter pageRouter() @property {
-		assert( _pageRouter, `Main service page router is not initialized!` );
+	URIPageRouter pageRouter() @property
+	{
+		assert(_pageRouter, `Main service page router is not initialized!`);
 		return _pageRouter;
 	}
 
-	IAccessController accessController() @property {
-		assert( _accessController, `Main service access controller is not initialized!` );
+	IAccessController accessController() @property
+	{
+		assert(_accessController, `Main service access controller is not initialized!`);
 		return _accessController;
 	}
 
-	override IRightController rightController() @property {
-		assert( _rights, `Main service rights controller is not initialized!` );
+	override IRightController rightController() @property
+	{
+		assert(_rights, `Main service rights controller is not initialized!`);
 		return _rights;
 	}
 

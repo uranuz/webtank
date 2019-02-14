@@ -8,10 +8,15 @@ import webtank.net.http.input, webtank.net.http.output, webtank.net.uri;
 /// и какое-то сообщение (используя метод write), если, например, используется HTTP метод POST
 HTTPInput sendBlocking(HTTPOutput request)
 {
-	assert( request, `Request is null!!!` );
-	
-	import std.socket;
+	import std.socket: Socket, TcpSocket, InternetAddress;
+	import std.exception: enforce;
+	enforce(request, `Request is null!!!`);
+
 	URI requestURI = request.requestURI;
+	enforce(requestURI.scheme.length > 0, `Request scheme is not set!`);
+	enforce(requestURI.host.length > 3, `Request hostname is invalid!`);
+	enforce(requestURI.port != 0, `Request port is not set!`);
+
 	Socket sock = new TcpSocket( new InternetAddress(requestURI.host, requestURI.port) );
 	
 	sock.send(request.getRequestString());

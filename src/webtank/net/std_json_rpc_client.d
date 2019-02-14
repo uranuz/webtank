@@ -146,7 +146,7 @@ string[string] getAllowedRequestHeaders(HTTPContext ctx)
 	3. Есть HTTP-контекст текущего вызова и имя удалённого сервиса (и опционально заголовки)
 +/
 
-RemoteCallInfo endpoint(HTTPContext ctx, string serviceName, string endpointName = `default`)
+RemoteCallInfo endpoint(HTTPContext ctx, string serviceName, string endpointName = null)
 {
 	return RemoteCallInfo(
 		ctx.service.endpoint(serviceName, endpointName),

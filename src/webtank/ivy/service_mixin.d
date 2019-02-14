@@ -238,9 +238,23 @@ protected:
 
 
 public:
-	this(RoutingConfigEntry entry) {
+	this(RoutingConfigEntry entry)
+	{
+		import std.exception: enforce;
 		_entry = entry;
 		_uriPattern = new URIPattern(entry.pageURI);
+	}
+
+	static string defaultBackend(HTTPContext ctx) @property
+	{
+		import std.exception: enforce;
+		import std.json: JSON_TYPE;
+		auto backendNamePtr = `backendService` in ctx.service.rawConfig;
+		enforce(backendNamePtr, `Expected default backend service name in config`);
+		enforce(backendNamePtr.type == JSON_TYPE.STRING, `Backend service name must be a string`);
+		string backendName = backendNamePtr.str;
+		enforce(backendName.length > 0, `Backend service name must not be empty`);
+		return backendName;
 	}
 
 	override HTTPHandlingResult processRequest(HTTPContext context)
@@ -270,20 +284,40 @@ public:
 		if( !_entry.apiURI.empty )
 		{
 			URI apiURI = URI(_entry.apiURI);
-			if( apiURI.scheme.empty )
-			{
-				apiURI.scheme = `http`;
-			}
 
-			if( apiURI.host.empty )
+			if( apiURI.host.empty || apiURI.scheme.empty )
 			{
-				apiURI.host = `localhost`;
+				// If backend service name is specified in routing config then use it
+				// If it is not specified use default backend for current service
+				string service = _entry.service.empty? defaultBackend(context): _entry.service;
+
+				// If vpath name is specified the use it
+				// If it is not specified use default constant
+				string endpoint = _entry.endpoint.empty? `siteWebFormAPI`: _entry.endpoint;
+
+				// Get endpoint URI from service config using service name and vpath name
+				URI epURI = URI(context.service.endpoint(service, endpoint));
+
+				if( apiURI.host.empty ) {
+					apiURI.scheme = epURI.scheme;
+				}
+				if( apiURI.rawAuthority ) {
+					apiURI.rawAuthority = epURI.rawAuthority;
+				}
+
+				import std.path: buildNormalizedPath;
+				apiURI.path = buildNormalizedPath(epURI.path, apiURI.path);
 			}
 
 			if( apiURI.rawQuery.empty )
 			{
+				// Change response with what is passed by user
 				apiURI.rawQuery = context.request.requestURI.rawQuery;
 			}
+
+			enforce(!apiURI.scheme.empty, `Failed to determine scheme for request`);
+			enforce(!apiURI.host.empty, `Failed to determine remote host for request`);
+			enforce(apiURI.port != 0, `Failed to determine remote port for request`);
 
 			RemoteCallInfo callInfo = RemoteCallInfo(apiURI.toRawString(), getAllowedRequestHeaders(context));
 			string HTTPMethod = (!_entry.HTTPMethod.empty? _entry.HTTPMethod: context.request.method);
@@ -307,6 +341,7 @@ public:
 		void renderError(Throwable error) {
 			import ivy.interpreter.data_node: errorToIvyData;
 			ivyService.renderResult(errorToIvyData(error), context);
+			throw error;
 		}
 
 		// Если ошибка и есть спец. Ivy модуль/ метод для обработки в конфигурации, то используем его
