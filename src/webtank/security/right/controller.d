@@ -119,7 +119,7 @@ public:
 		_assureLoaded(); // Will load rights lazily
 		
 		import std.array: split, array, join;
-		import std.algorithm: filter, map, splitter;
+		import std.algorithm: filter, map;
 		import std.range: empty, dropBack, popBack, save;
 		import std.string: strip;
 		if( accessObject !in _objectNumByFullName ) {
@@ -134,22 +134,10 @@ public:
 		// Get nonempty role names tha mentioned in the list
 		string[] userRoles =
 			user.data.get("accessRoles", null).split(";")
-			.map!( (it) => it.strip() )
+			.map!(strip)
 			.filter!( (it) => it.length && it in _roleNumByName ).array;
 
-		size_t[] parentObjects;
-		for(
-			string[] shortParentObjects = accessObject.splitter(".").filter!( (it) => it.length > 0 ).array.dropBack(1);
-			!shortParentObjects.empty;
-			shortParentObjects.popBack()
-		) {
-			string parentObj = shortParentObjects.save.join(".");
-			if( auto it = parentObj in _objectNumByFullName ) {
-				parentObjects ~= *it;
-			} else {
-				break; // If there is no innest parent then there is no logic to search for outer parent
-			}
-		}
+		size_t[] parentObjects = _getParentObjectIds(accessObject);
 
 		foreach( roleName; userRoles )
 		{
@@ -159,11 +147,13 @@ public:
 				// Consider null and "" are the same
 				accessKind: (accessKind.length? accessKind: null)
 			};
+			// First of all try to find and apply rule exactly specialized for this object
 			if( auto item = rightKey in _rulesByRightKey ) {
 				if( item.rule.hasRight(user, data) )
 					return true;
 				continue; // Do not search in parent object if have specialized right
 			}
+			// There could be parents for this object with rights that propagate to child objects
 			parents_loop:
 			foreach( parentObjNum; parentObjects )
 			{
@@ -180,6 +170,28 @@ public:
 			}
 		}
 		return false;
+	}
+
+	size_t[] _getParentObjectIds(string accessObject)
+	{
+		import std.algorithm: filter, splitter;
+		import std.array: array, join;
+		import std.range: empty, dropBack, popBack, save;
+		// Create list of parent objects starting from the innermost
+		size_t[] parentObjects;
+		for(
+			string[] parentObjectsRange = accessObject.splitter(".").filter!( (it) => it.length > 0 ).array.dropBack(1);
+			!parentObjectsRange.empty;
+			parentObjectsRange.popBack()
+		) {
+			string parentObj = parentObjectsRange.save.join(".");
+			if( auto it = parentObj in _objectNumByFullName ) {
+				parentObjects ~= *it;
+			} else {
+				break; // If there is no innest parent then there is no logic to search for outer parent
+			}
+		}
+		return parentObjects;
 	}
 
 	static foreach( alias RightType; RightDataTypes )
