@@ -1,23 +1,23 @@
 module webtank.ivy.access_rule_factory;
 
 import webtank.security.right.iface.access_rule_factory: IAccessRuleFactory;
-import webtank.ivy.service_mixin: IIvyServiceMixin;
 import webtank.ivy.access_rule: IvyAccessRule;
 import webtank.security.right.iface.access_rule: IAccessRule;
+import ivy.engine: IvyEngine;
 
 class IvyAccessRuleFactory: IAccessRuleFactory
 {
 public:
-	this(IIvyServiceMixin ivyService)
+	this(IvyEngine ivyEngine)
 	{
 		import std.exception: enforce;
-		enforce(ivyService !is null, `Expected non null IvyServiceMixin`);
-		_ivyService = ivyService;
+		enforce(ivyEngine, `Expected IvyEngine`);
+		_ivyEngine = ivyEngine;
 	}
 
 	override IAccessRule get(string name) {
-		return new IvyAccessRule(_ivyService, name);
+		return new IvyAccessRule(_ivyEngine, name);
 	}
 private:
-	IIvyServiceMixin _ivyService;
+	IvyEngine _ivyEngine;
 }

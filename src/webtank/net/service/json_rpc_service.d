@@ -36,9 +36,10 @@ protected:
 	IRightController _rights;
 
 public:
-	this(string serviceName, IAccessController accessController, IRightController rights)
+	this(string serviceName)
 	{
 		import std.exception: enforce;
+		enforce(serviceName.length, `Expected service name`);
 		
 		_serviceName = serviceName;
 		readConfig();
@@ -53,9 +54,18 @@ public:
 		_pageRouter = new URIPageRouter( virtualPaths["siteWebFormAPI"] ~ "{remainder}" );
 		_rootRouter.addHandler(_pageRouter);
 
+		_subscribeRoutingEvents();
+	}
+
+	this(string serviceName, IAccessController accessController, IRightController rights)
+	{
+		import std.exception: enforce;
+		enforce(accessController, `Access controller expected`);
+		enforce(rights, `Right controller expected`);
+
+		this(serviceName);
 		_accessController = accessController;
 		_rights = rights;
-		_subscribeRoutingEvents();
 	}
 
 	private void _startLoging()

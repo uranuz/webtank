@@ -35,8 +35,10 @@ protected:
 	IRightController _rights;
 
 public:
-	this(string serviceName, IAccessController accessController, string pageURIPatternStr, IRightController rights)
+	this(string serviceName, string pageURIPatternStr)
 	{
+		import std.exception: enforce;
+		enforce(serviceName.length, `Expected service name`);
 		_serviceName = serviceName;
 		readConfig(); // Читаем конфиг при старте сервиса
 		_startLoging(); // Запускаем логирование сервиса
@@ -50,9 +52,18 @@ public:
 		_addPageRoutes();
 		_rootRouter.addHandler(_pageRouter);
 
+		_subscribeRoutingEvents();
+	}
+
+	this(string serviceName, string pageURIPatternStr, IAccessController accessController, IRightController rights)
+	{
+		import std.exception: enforce;
+		enforce(accessController, `Access controller expected`);
+		enforce(rights, `Right controller expected`);
+		this(serviceName, pageURIPatternStr);
+
 		_accessController = accessController;
 		_rights = rights;
-		_subscribeRoutingEvents();
 	}
 
 	void _addPageRoutes()

@@ -4,41 +4,9 @@ interface IIvyServiceMixin
 {
 	import webtank.net.http.context: HTTPContext;
 	import ivy.interpreter.data_node: IvyData;
-	import ivy.programme: ExecutableProgramme, SaveStateResult;
-	import ivy.interpreter.interpreter: Interpreter;
-	import ivy.interpreter.async_result: AsyncResult;
+	import ivy.engine: IvyEngine;
 
-	ExecutableProgramme getIvyModule(string moduleName);
-
-	AsyncResult runIvyModule(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init);
-	AsyncResult runIvyModule(string moduleName, IvyData dataDict);
-
-	IvyData runIvyModuleSync(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init);
-	IvyData runIvyModuleSync(string moduleName, IvyData dataDict);
-
-	AsyncResult runIvyMethod(
-		string moduleName,
-		string methodName,
-		HTTPContext ctx,
-		IvyData dataDict = IvyData.init
-	);
-	AsyncResult runIvyMethod(
-		string moduleName,
-		string methodName,
-		IvyData dataDict = IvyData.init
-	);
-
-	IvyData runIvyMethodSync(
-		string moduleName,
-		string methodName,
-		HTTPContext ctx,
-		IvyData dataDict = IvyData.init
-	);
-	IvyData runIvyMethodSync(
-		string moduleName,
-		string methodName,
-		IvyData dataDict = IvyData.init
-	);
+	IvyEngine ivyEngine() @property;
 
 	void renderResult(IvyData content, HTTPContext context);
 }
@@ -48,9 +16,6 @@ mixin template IvyServiceMixin()
 	import webtank.net.http.context: HTTPContext;
 	import webtank.net.http.output: HTTPOutput;
 	import webtank.common.loger: Loger, LogEvent, LogEventType, ThreadedLoger, FileLoger, LogLevel;
-	import webtank.ivy.user: IvyUserIdentity;
-	import webtank.ivy.rights: IvyUserRights;
-	import webtank.net.std_json_rpc_client: getAllowedRequestHeaders;
 	import webtank.ivy.remote_call: RemoteCallInterpreter;
 
 	import ivy.engine: IvyEngine;
@@ -64,73 +29,11 @@ mixin template IvyServiceMixin()
 	import ivy.interpreter.async_result: AsyncResult;
 
 public:
-	override ExecutableProgramme getIvyModule(string moduleName)
+	IvyEngine ivyEngine() @property
 	{
 		import std.exception: enforce;
-		enforce(_ivyEngine !is null, `ViewService template cache is null!!!`);
-		return _ivyEngine.getByModuleName(moduleName);
-	}
-
-	private IvyData[string] _prepareExtraGlobals(HTTPContext ctx)
-	{
-		import std.exception: enforce;
-		enforce(ctx !is null, `Expected context!`);
-		IvyData[string] extraGlobals;
-		extraGlobals[`userRights`] = new IvyUserRights(ctx.rights);
-		extraGlobals[`userIdentity`] = new IvyUserIdentity(ctx.user);
-		extraGlobals[`vpaths`] = ctx.service.virtualPaths;
-		extraGlobals[`forwardHTTPHeaders`] = ctx.getAllowedRequestHeaders();
-		return extraGlobals;
-	}
-
-	override AsyncResult runIvyModule(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init) {
-		return getIvyModule(moduleName).run(dataDict, _prepareExtraGlobals(ctx));
-	}
-
-	override AsyncResult runIvyModule(string moduleName, IvyData dataDict) {
-		return getIvyModule(moduleName).run(dataDict);
-	}
-
-	override IvyData runIvyModuleSync(string moduleName, HTTPContext ctx, IvyData dataDict = IvyData.init) {
-		return getIvyModule(moduleName).runSync(dataDict, _prepareExtraGlobals(ctx));
-	}
-
-	override IvyData runIvyModuleSync(string moduleName, IvyData dataDict) {
-		return getIvyModule(moduleName).runSync(dataDict);
-	}
-
-	override AsyncResult runIvyMethod(
-		string moduleName,
-		string methodName,
-		HTTPContext ctx,
-		IvyData dataDict = IvyData.init
-	) {
-		return getIvyModule(moduleName).runMethod(methodName, dataDict, _prepareExtraGlobals(ctx));
-	}
-
-	override AsyncResult runIvyMethod(
-		string moduleName,
-		string methodName,
-		IvyData dataDict = IvyData.init
-	) {
-		return getIvyModule(moduleName).runMethod(methodName, dataDict);
-	}
-
-	override IvyData runIvyMethodSync(
-		string moduleName,
-		string methodName,
-		HTTPContext ctx,
-		IvyData dataDict = IvyData.init
-	) {
-		return getIvyModule(moduleName).runMethodSync(methodName, dataDict, _prepareExtraGlobals(ctx));
-	}
-
-	override IvyData runIvyMethodSync(
-		string moduleName,
-		string methodName,
-		IvyData dataDict = IvyData.init
-	) {
-		return getIvyModule(moduleName).runMethodSync(methodName, dataDict);
+		enforce(_ivyEngine, `Ivy engine is not initialized`);
+		return _ivyEngine;
 	}
 
 	override void renderResult(IvyData content, HTTPContext context)
@@ -154,9 +57,13 @@ private:
 
 	void _initTemplateCache()
 	{
-		assert( "siteIvyTemplates" in _fileSystemPaths, `Failed to get path to site Ivy templates!` );
+		if( _ivyEngine )
+			return; //Already initialized
+		
+		import std.exception: enforce;
+		enforce("siteIvyTemplates" in _fileSystemPaths, `Failed to get path to site Ivy templates!`);
 		IvyConfig ivyConfig;
-		ivyConfig.importPaths = [ _fileSystemPaths["siteIvyTemplates"] ];
+		ivyConfig.importPaths = [_fileSystemPaths["siteIvyTemplates"]];
 		ivyConfig.fileExtension = ".ivy";
 
 		// Направляем логирование шаблонизатора в файл
@@ -221,17 +128,16 @@ private:
 	}
 }
 
+import webtank.net.http.context: HTTPContext;
+import ivy.interpreter.data_node: IvyData;
 import webtank.net.http.handler: IHTTPHandler, HTTPHandlingResult;
 class ViewServiceURIPageRoute: IHTTPHandler
 {
 	import webtank.net.service.config: RoutingConfigEntry;
 	import webtank.net.uri_pattern;
-	import webtank.net.http.context: HTTPContext;
 	import webtank.ivy.rpc_client: remoteCallWebForm;
 	import webtank.net.std_json_rpc_client: RemoteCallInfo, getAllowedRequestHeaders;
 	import webtank.net.uri: URI;
-
-	import ivy.interpreter.data_node: IvyData;
 protected:
 	RoutingConfigEntry _entry;
 	URIPattern _uriPattern;
@@ -367,17 +273,17 @@ public:
 
 		if( !ivyModule.empty )
 		{
+			import ivy.programme: ExecutableProgramme;
+			ExecutableProgramme ivyProg = ivyService.ivyEngine.getByModuleName(ivyModule);
 			if( !ivyMethod.empty )
 			{
-				ivyService.runIvyMethod(
-					ivyModule, ivyMethod, context, methodParams
-				).then(&renderResult, &renderError);
+				ivyProg.runMethod(ivyMethod, methodParams, prepareIvyGlobals(context))
+					.then(&renderResult, &renderError);
 			}
 			else
 			{
-				ivyService.runIvyModule(
-					ivyModule, context
-				).then(&renderResult, &renderError);
+				ivyProg.run(IvyData(), prepareIvyGlobals(context))
+					.then(&renderResult, &renderError);
 			}
 		} else {
 			// Шаблон не указан - просто выводим сам результат вызова
@@ -386,5 +292,19 @@ public:
 
 		return HTTPHandlingResult.handled; // Запрос обработан
 	}
+}
 
+IvyData[string] prepareIvyGlobals(HTTPContext ctx)
+{
+	import std.exception: enforce;
+	import webtank.ivy.user: IvyUserIdentity;
+	import webtank.ivy.rights: IvyUserRights;
+	import webtank.net.std_json_rpc_client: getAllowedRequestHeaders;
+	enforce(ctx !is null, `Expected context!`);
+	IvyData[string] extraGlobals;
+	extraGlobals[`userRights`] = new IvyUserRights(ctx.rights);
+	extraGlobals[`userIdentity`] = new IvyUserIdentity(ctx.user);
+	extraGlobals[`vpaths`] = ctx.service.virtualPaths;
+	extraGlobals[`forwardHTTPHeaders`] = ctx.getAllowedRequestHeaders();
+	return extraGlobals;
 }

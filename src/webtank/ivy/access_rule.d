@@ -5,6 +5,7 @@ import webtank.security.right.common: RightDataTypes, RightDataVariant;
 import webtank.security.access_control: IUserIdentity;
 import webtank.ivy.service_mixin: IIvyServiceMixin;
 import ivy.interpreter.data_node: IvyData, IvyDataType;
+import ivy.engine: IvyEngine;
 import webtank.ivy.user: IvyUserIdentity;
 import webtank.datctrl.iface.record: IBaseRecord;
 import ivy.json: toIvyJSON;
@@ -15,9 +16,12 @@ import std.variant: visit;
 
 class IvyAccessRule: IAccessRule
 {
-	this(IIvyServiceMixin ivyService, string ruleName)
+	this(IvyEngine ivyEngine, string ruleName)
 	{
-		_ivyService = ivyService;
+		import std.exception: enforce;
+		enforce(ivyEngine, `Expected ivy engine`);
+		enforce(ruleName.length, `Expected rule name`);
+		_ivyEngine = ivyEngine;
 		_name = ruleName;
 	}
 	
@@ -67,10 +71,11 @@ public override {
 			dirName = splitted[2];
 		}
 
-		IvyData res = _ivyService.runIvyMethodSync(moduleName, dirName, IvyData([
+		IvyData res = _ivyEngine.getByModuleName(moduleName).runMethodSync(dirName, IvyData([
 			`identity`: IvyData(new IvyUserIdentity(identity)),
 			`data`: IvyData(data)
 		]));
+
 		enforce([
 			IvyDataType.Undef,
 			IvyDataType.Null,
@@ -92,6 +97,6 @@ public override {
 	}
 }
 private:
-	IIvyServiceMixin _ivyService;
+	IvyEngine _ivyEngine;
 	string _name;
 }
