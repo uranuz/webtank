@@ -28,9 +28,9 @@ mixin template RecordSetRangeImpl()
 				foreach( i; 0.._rs.length )
 				{
 					static if( withIndex ) {
-						result = dg(i, _rs.getRecord(i));
+						result = dg(i, _rs.getRecordAt(i));
 					} else {
-						result = dg(_rs.getRecord(i));
+						result = dg(_rs.getRecordAt(i));
 					}
 					if (result)
 						break;
@@ -45,7 +45,7 @@ mixin template RecordSetRangeImpl()
 			}
 
 			RecordIface front() @property {
-				return _rs.getRecord(_index);
+				return _rs.getRecordAt(_index);
 			}
 
 			RecordIface moveFront() {

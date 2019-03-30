@@ -12,25 +12,21 @@ public:
 	import std.exception: enforce;
 	this(IUserIdentity identity)
 	{
-		assert(identity !is null, `IUserIdentity object is null`);
+		enforce(identity !is null, `IUserIdentity object is null`);
 		_identity = identity;
 	}
 
 	override {
 		IvyNodeRange opSlice() {
-			assert(false, "Method opSlice not implemented");
+			throw new Exception("Method opSlice not implemented");
 		}
 
 		IClassNode opSlice(size_t, size_t) {
-			assert(false, "Method opSlice not implemented");
+			throw new Exception("Method opSlice not implemented");
 		}
 
-		IvyData opIndex(string) {
-			assert(false, "Method opIndex not implemented");
-		}
-
-		IvyData opIndex(size_t) {
-			assert(false, "Method opIndex not implemented");
+		IvyData opIndex(IvyData) {
+			throw new Exception("Method opIndex not implemented");
 		}
 
 		IvyData __getAttr__(string attrName)
@@ -48,9 +44,8 @@ public:
 			throw new Exception(`Unexpected IvyUserIdentity attribute: ` ~ attrName);
 		}
 
-		void __setAttr__(IvyData val, string attrName)
-		{
-			assert(false, "Method __setAttr__ not implemented");
+		void __setAttr__(IvyData val, string attrName) {
+			throw new Exception("Method __setAttr__ not implemented");
 		}
 		
 		IvyData __serialize__() {
@@ -62,7 +57,7 @@ public:
 		}
 		
 		size_t length() @property {
-			assert(false, "Method length not implemented");
+			throw new Exception("Method length not implemented");
 		}
 	}
 }

@@ -61,7 +61,7 @@ public:
 
 	void _loadRights()
 	{
-		import std.json: JSONValue;
+		import std.json: JSONValue, JSONType;
 		import webtank.net.std_json_rpc_client: remoteCall;
 		import std.exception: enforce;
 
@@ -71,9 +71,11 @@ public:
 		foreach( Meta; RightObjMetas )
 		{
 			enforce(Meta.fieldName in jRightsData, `Expected ` ~ Meta.fieldName ~ ` RecordSet in rights data!!!`);
-			__traits(getMember, this, `_` ~ Meta.fieldName) = TypedRecordSet!(typeof(Meta.recFormat), IBaseRecordSet)(
-				fromStdJSON!(TypedRecordSet!(typeof(Meta.recFormat), WriteableRecordSet))(jRightsData[Meta.fieldName])
-			);
+			JSONValue jRightComponent = jRightsData[Meta.fieldName];
+			enforce(jRightComponent.type == JSONType.OBJECT, `Right component "` ~ Meta.fieldName ~ `" is not an object`);
+			auto rightComponent = fromStdJSON!(TypedRecordSet!(typeof(Meta.recFormat), WriteableRecordSet))(jRightComponent);
+			enforce(rightComponent !is null, `Right data is null`);
+			__traits(getMember, this, `_` ~ Meta.fieldName) = TypedRecordSet!(typeof(Meta.recFormat), IBaseRecordSet)(rightComponent);
 		}
 	}
 

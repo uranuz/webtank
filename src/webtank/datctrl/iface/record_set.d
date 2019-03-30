@@ -24,7 +24,7 @@ interface IBaseRecordSet
 	$(LANG_EN Returns record by $(D_PARAM recordIndex))
 	$(LANG_RU Возвращает запись на позиции $(D_PARAM recordIndex))
 	+/
-	IBaseRecord getRecord(size_t recordIndex);
+	IBaseRecord getRecordAt(size_t recordIndex);
 
 	/++
 	$(LANG_EN
@@ -90,13 +90,13 @@ interface IBaseRecordSet
 	$(LANG_EN Returns number of records in set)
 	$(LANG_RU Возвращает количество записей в наборе)
 	+/
-	size_t length() @property;
+	size_t length() @property inout;
 
 	/++
 	$(LANG_EN Returns number of data fields in record set)
 	$(LANG_RU Возвращает количество полей данных в наборе)
 	+/
-	size_t fieldCount() @property;
+	size_t fieldCount() @property inout;
 
 	import std.json: JSONValue;
 
@@ -104,19 +104,19 @@ interface IBaseRecordSet
 	$(LANG_EN Serializes data of record at $(D_PARAM index) into std.json)
 	$(LANG_RU Сериализует данные записи под номером $(D_PARAM index) в std.json)
 	+/
-	JSONValue getStdJSONData(size_t index);
+	JSONValue getStdJSONData(size_t index) inout;
 
 	/++
 	$(LANG_EN Serializes format of record set into std.json)
 	$(LANG_RU Сериализует формат набора записей в std.json)
 	+/
-	JSONValue getStdJSONFormat();
+	JSONValue getStdJSONFormat() inout;
 
 	/++
 	$(LANG_EN Serializes format and data of record set into std.json)
 	$(LANG_RU Сериализует формат и данные набора данных в std.json)
 	+/
-	JSONValue toStdJSON();
+	JSONValue toStdJSON() inout;
 
 	/++
 	$(LANG_EN Operator for getting range over record set in foreach loop)
@@ -172,7 +172,7 @@ interface IBaseWriteableRecordSet: IBaseRecordSet
 		// Ковариантные переопределения методов для записываемых типов
 		IBaseWriteableDataField getField(string fieldName);
 		IBaseWriteableRecord opIndex(size_t recordIndex);
-		IBaseWriteableRecord getRecord(size_t recordIndex);
+		IBaseWriteableRecord getRecordAt(size_t recordIndex);
 		IWriteableRecordSetRange opSlice();
 	}
 }

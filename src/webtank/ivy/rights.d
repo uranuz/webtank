@@ -20,19 +20,15 @@ public:
 
 	override {
 		IvyNodeRange opSlice() {
-			assert(false, "Method opSlice not implemented");
+			throw new Exception("Method opSlice not implemented");
 		}
 
 		IClassNode opSlice(size_t, size_t) {
-			assert(false, "Method opSlice not implemented");
+			throw new Exception("Method opSlice not implemented");
 		}
 
-		IvyData opIndex(string) {
-			assert(false, "Method opIndex not implemented");
-		}
-
-		IvyData opIndex(size_t) {
-			assert(false, "Method opIndex not implemented");
+		IvyData opIndex(IvyData) {
+			throw new Exception("Method opIndex not implemented");
 		}
 
 		IvyData __getAttr__(string attrName)
@@ -92,7 +88,7 @@ public:
 		}
 		
 		size_t length() @property {
-			assert(false, "Method length not implemented");
+			throw new Exception("Method length not implemented");
 		}
 	}
 }

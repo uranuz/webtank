@@ -159,9 +159,7 @@ T fromStdJSON(T)(JSONValue jValue)
 	}
 	else static if( is( T == struct ) )
 	{
-		static if( __traits(compiles, {
-			auto result = T.fromStdJSON(jValue);
-		}) ) {
+		static if( __traits(hasMember, T, "fromStdJSON") ) {
 			return T.fromStdJSON(jValue);
 		} else {
 			T result;
@@ -194,9 +192,10 @@ T fromStdJSON(T)(JSONValue jValue)
 			return result;
 		}
 	}
-	else static if( is( T == class) && __traits(compiles, {
-		auto result = T.fromStdJSON(jValue);
-	}) ) {
+	else static if(
+		is( T == class)
+		&& __traits(hasMember, T, "fromStdJSON")
+	) {
 		return T.fromStdJSON(jValue);
 	}
 	else

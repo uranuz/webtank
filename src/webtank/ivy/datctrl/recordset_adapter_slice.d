@@ -50,7 +50,7 @@ public:
 			}
 
 			IvyData front() {
-				return _rs[i];
+				return _rs[IvyData(i)];
 			}
 
 			void popFront() {
@@ -70,16 +70,22 @@ public:
 	}
 
 	override RecordSetAdapter opSlice(size_t, size_t) {
-		assert(false, `Getting slice for RecordSetAdapterSlice is not supported yet`);
+		throw new Exception(`Getting slice for RecordSetAdapterSlice is not supported yet`);
 	}
 
-	override IvyData opIndex(size_t index) {
-		_testIndex(index);
-		return _rs[index + _begin];
-	}
-
-	override IvyData opIndex(string key) {
-		assert(false, `Indexing by string key is not supported for RecordSetAdapterSlice`);
+	override IvyData opIndex(IvyData index)
+	{
+		import std.conv: text;
+		import std.exception: enforce;
+		switch( index.type )
+		{
+			case IvyDataType.Integer: {
+				_testIndex(index.integer);
+				return _rs[IvyData(index.integer + _begin)];
+			}
+			default: break;
+		}
+		throw new Exception(`Unexpected kind of index argument: ` ~ index.type.text);
 	}
 
 	override IvyData __getAttr__(string attrName) {
@@ -87,7 +93,7 @@ public:
 	}
 
 	override void __setAttr__(IvyData node, string attrName) {
-		assert(false, `Not attributes setting is yet supported by RecordSetAdapterSlice`);
+		throw new Exception(`Not attributes setting is yet supported by RecordSetAdapterSlice`);
 	}
 
 	override IvyData __serialize__() {

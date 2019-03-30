@@ -1,23 +1,24 @@
 module webtank.net.service.json_rpc_service;
 
-import webtank.common.loger;
-import webtank.net.http.context;
-import webtank.net.http.json_rpc_handler;
-import webtank.net.http.handler;
-import webtank.net.service.config;
-import webtank.net.service.iface;
-import webtank.net.utils: makeErrorMsg;
-import webtank.security.access_control;
-import webtank.security.right.iface.controller: IRightController;
-
-
-import std.json: JSONValue, parseJSON;
+import webtank.net.service.iface: IWebService;
 
 // Класс основного сервиса работающего по протоколу JSON-RPC.
 // Служит для чтения и хранения конфигурации, единого доступа к логам,
 // маршрутизации и выполнения аутентификации запросов
 class JSON_RPCService: IWebService
 {
+	import webtank.net.service.config: ServiceConfigImpl, RoutingConfigEntry;
+	import webtank.net.http.handler.router: HTTPRouter;
+	import webtank.net.http.handler.json_rpc: JSON_RPC_Router;
+	import webtank.net.http.handler.uri_page_router: URIPageRouter;
+	import webtank.net.http.context: HTTPContext;
+	import webtank.common.loger: Loger, FileLoger, ThreadedLoger, LogEvent, LogEventType, LogLevel;
+	import webtank.net.utils: makeErrorMsg;
+	import webtank.security.access_control: IAccessController;
+	import webtank.security.right.iface.controller: IRightController;
+
+	import std.json: JSONValue, parseJSON;
+
 	mixin ServiceConfigImpl;
 protected:
 	string _serviceName;
@@ -125,7 +126,8 @@ public:
 		_jsonRPCRouter.onPostPoll ~= ( (HTTPContext context, bool) {
 			import std.conv: to;
 			string msg = "Received JSON-RPC request. Headers:\r\n" ~ context.request.headers.toAA().to!string;
-			debug msg ~=  "\r\nMessage body:\r\n" ~ context.request.messageBody;
+			//debug
+			msg ~=  "\r\nMessage body:\r\n" ~ context.request.messageBody;
 
 			_loger.info(msg);
 		});
@@ -138,20 +140,6 @@ public:
 
 			_loger.info(msg);
 		});
-
-		//Обработка ошибок в JSON-RPC вызовах
-		_rootRouter.onError.join(&this._handleError);
-		_jsonRPCRouter.onError.join(&this._handleError);
-		_pageRouter.onError.join(&this._handleError);
-	}
-
-	// Обработчик пишет информацию о возникших ошибках при выполнении в журнал
-	private bool _handleError(Throwable error, HTTPContext)
-	{
-		auto messages = makeErrorMsg(error);
-		loger.error(messages.details);
-
-		return true;
 	}
 
 	override HTTPRouter rootRouter() @property

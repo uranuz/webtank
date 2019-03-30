@@ -45,7 +45,7 @@ public:
 	void _deserializeInplace()
 	{
 		foreach( i, ref fieldData; _rawData.array ) {
-			_deserializeFieldInplace(fieldData, _fmt[i]);
+			_deserializeFieldInplace(fieldData, _fmt[IvyData(i)]);
 		}
 	}
 
@@ -87,20 +87,25 @@ public:
 		}
 
 		IClassNode opSlice(size_t, size_t) {
-			assert(false, `opSlice for RecordAdapter is not implemented yet`);
+			throw new Exception(`opSlice for RecordAdapter is not implemented yet`);
 		}
 
-		IvyData opIndex(size_t index)
+		IvyData opIndex(IvyData index)
 		{
 			import std.conv: text;
-			enforce(index < _rawData.array.length, `Record column with index ` ~ index.text ~ ` is not found!`);
-			return _rawData[index];
-		}
-
-		IvyData opIndex(string key)
-		{
-			enforce(key in _fmt.namesMapping, `Record column with name "` ~ key ~ `" is not found!`);
-			return _rawData[ _fmt.namesMapping[key] ];
+			switch( index.type )
+			{
+				case IvyDataType.Integer: {
+					enforce(index.integer < _rawData.array.length, `Record column with index ` ~ index.integer.text ~ ` is not found!`);
+					return _rawData[index.integer];
+				}
+				case IvyDataType.String: {
+					enforce(index.str in _fmt.namesMapping, `Record column with name "` ~ index.str ~ `" is not found!`);
+					return _rawData[ _fmt.namesMapping[index.str] ];
+				}
+				default: break;
+			}
+			throw new Exception(`Unexpected kind of index argument: ` ~ index.type.text);
 		}
 
 		IvyData __getAttr__(string attrName)
@@ -110,7 +115,7 @@ public:
 				case "format": return IvyData(_fmt);
 				default: break;
 			}
-			return this[attrName];
+			return this[IvyData(attrName)];
 		}
 
 		void __setAttr__(IvyData value, string attrName) {

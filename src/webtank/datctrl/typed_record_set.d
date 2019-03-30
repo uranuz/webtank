@@ -50,8 +50,8 @@ struct TypedRecordSet(FormatType, RecordSetType)
 	$(LANG_EN Returns record by $(D_PARAM recordIndex))
 	$(LANG_RU Возвращает запись на позиции $(D_PARAM recordIndex))
 	+/
-	RecordType getRecord(size_t recordIndex) {
-		return RecordType(_recordSet.getRecord(recordIndex));
+	RecordType getRecordAt(size_t recordIndex) {
+		return RecordType(_recordSet.getRecordAt(recordIndex));
 	}
 
 	static if( hasKeyField )
@@ -65,7 +65,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		RecordType getRecordByKey(PKValueType recordKey)
 		{
 			import std.conv: to;
-			return RecordType( _recordSet.getRecord( getRecordIndex(recordKey) ) );
+			return RecordType( _recordSet.getRecordAt( getRecordIndex(recordKey) ) );
 		}
 
 		template getByKey(string fieldName)
@@ -230,7 +230,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 	}
 
 	RecordType front() @property {
-		return getRecord(0);
+		return getRecordAt(0);
 	}
 
 	bool empty() @property {
@@ -285,7 +285,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		RecordType front() @property
 		{
 			assert(_index < _rs.length);
-			return _rs.getRecord(_index);
+			return _rs.getRecordAt(_index);
 		}
 
 		void popFront() {

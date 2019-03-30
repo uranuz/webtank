@@ -25,7 +25,7 @@ public:
 		foreach( i, ref recData; _rawData.array )
 		{
 			foreach( j, ref fieldData; recData.array ) {
-				_deserializeFieldInplace(fieldData, _fmt[j]);
+				_deserializeFieldInplace(fieldData, _fmt[IvyData(j)]);
 			}
 		}
 	}
@@ -76,7 +76,7 @@ public:
 	private IvyData _makeRecord(size_t index)
 	{
 		import std.conv: text;
-		assert( index < _rawData.array.length, `No record with index ` ~ index.text ~ ` in record set!` );
+		enforce(index < _rawData.array.length, `No record with index ` ~ index.text ~ ` in record set!`);
 		return IvyData(new RecordAdapter(
 			IvyData([
 				"d": _rawData.array[index],
@@ -96,12 +96,17 @@ public:
 			return new RecordSetAdapterSlice(this, begin, end);
 		}
 
-		IvyData opIndex(size_t index) {
-			return _makeRecord(index);
-		}
-
-		IvyData opIndex(string key) {
-			assert(false, `Indexing by string key is not supported for RecordSetAdapter`);
+		IvyData opIndex(IvyData index)
+		{
+			import std.conv: text;
+			switch( index.type )
+			{
+				case IvyDataType.Integer: {
+					return _makeRecord(index.integer);
+				}
+				default: break;
+			}
+			throw new Exception(`Unexpected kind of index argument: ` ~ index.type.text);
 		}
 
 		IvyData __getAttr__(string attrName)
@@ -115,7 +120,7 @@ public:
 		}
 
 		void __setAttr__(IvyData node, string attrName) {
-			assert(false, `Not attributes setting is yet supported by RecordSetAdapter`);
+			throw new Exception(`Not attributes setting is yet supported by RecordSetAdapter`);
 		}
 
 		IvyData __serialize__() {

@@ -8,4 +8,4 @@ public import
     webtank.net.uri,
     webtank.net.http.handler,
     webtank.net.http.context,
-    webtank.net.http.json_rpc_handler;
+    webtank.net.http.handler.json_rpc;

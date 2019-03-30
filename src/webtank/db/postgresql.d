@@ -240,7 +240,7 @@ public:
 
 
 		//Количество записей
-		size_t recordCount()
+		size_t recordCount() @property inout
 		{
 			if( _queryResult ) {
 				return ( PQntuples(_queryResult) ).to!size_t;
@@ -249,7 +249,7 @@ public:
 		}
 
 		//Количество полей данных (столбцов)
-		size_t fieldCount()
+		size_t fieldCount() @property inout
 		{
 			if( _queryResult ) {
 				return ( PQnfields(_queryResult) ).to!size_t;
@@ -285,7 +285,7 @@ public:
 		}
 
 		//Вернёт true, если поле пустое, и false иначе
-		bool isNull(size_t fieldIndex, size_t recordIndex)
+		bool isNull(size_t fieldIndex, size_t recordIndex) inout
 		{
 			if( _queryResult !is null )
 				return ( PQgetisnull(_queryResult, recordIndex.to!int, fieldIndex.to!int ) == 1 ) ? true : false;
@@ -294,7 +294,7 @@ public:
 
 		//Получение значения ячейки данных в виде строки
 		//Неопределённое поведение, если ячейка пуста или её нет
-		string get(size_t fieldIndex, size_t recordIndex)
+		string get(size_t fieldIndex, size_t recordIndex) inout
 		{
 			if( _queryResult is null )
 				return null;
@@ -304,7 +304,7 @@ public:
 
 		//Получение значения ячейки данных в виде строки
 		//Если ячейка пуста то вернёт значение параметра defaultValue
-		string get(size_t fieldIndex, size_t recordIndex, string defaultValue)
+		string get(size_t fieldIndex, size_t recordIndex, string defaultValue) inout
 		{
 			if( isNull(fieldIndex, recordIndex) )
 				return defaultValue;

@@ -1,6 +1,6 @@
 module webtank.net.server.thread_per_connection;
 
-import webtank.net.http.handler: IHTTPHandler;
+import webtank.net.http.handler.iface: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
 import webtank.common.loger: Loger;
 import webtank.net.server.common: processRequest, ensureBindSocket;

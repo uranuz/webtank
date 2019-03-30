@@ -101,13 +101,13 @@ interface IDBQueryResult
 	$(LANG_EN Property returns record count in result)
 	$(LANG_RU Свойство возвращает количество записей в результате)
 	+/
-	size_t recordCount() @property;
+	size_t recordCount() @property inout;
 
 	/++
 	$(LANG_EN Property returns field count in result)
 	$(LANG_RU Свойство возвращает количество полей в результате)
 	+/
-	size_t fieldCount() @property;
+	size_t fieldCount() @property inout;
 
 	/++
 	$(LANG_EN Method clears object and frees resources of result)
@@ -146,7 +146,7 @@ interface IDBQueryResult
 		false в противном случае
 	)
 	+/
-	bool isNull(size_t fieldIndex, size_t recordIndex);
+	bool isNull(size_t fieldIndex, size_t recordIndex) inout;
 
 	/++
 	$(LANG_EN
@@ -160,7 +160,7 @@ interface IDBQueryResult
 		поведение не определено
 	)
 	+/
-	string get(size_t fieldIndex, size_t recordIndex);
+	string get(size_t fieldIndex, size_t recordIndex) inout;
 
 	/++
 	$(LANG_EN
@@ -174,7 +174,7 @@ interface IDBQueryResult
 		$(D_PARAM defaultValue) задает возвращаемое значение, если ячейка пуста (null)
 	)
 	+/
-	string get(size_t fieldIndex, size_t recordIndex, string defaultValue);
+	string get(size_t fieldIndex, size_t recordIndex, string defaultValue) inout;
 }
 
 /++

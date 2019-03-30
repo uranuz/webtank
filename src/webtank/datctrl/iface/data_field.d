@@ -65,31 +65,31 @@ interface IBaseDataField
 	$(LANG_EN Returns number of rows in data field)
 	$(LANG_RU Возвращает количество строк в поле данных)
 	+/
-	size_t length() @property;
+	size_t length() @property inout;
 
 	/++
 	$(LANG_EN Returns name of data field)
 	$(LANG_RU Возвращает имя поля данных)
 	+/
-	string name() @property;
+	string name() @property inout;
 
 	/++
 	$(LANG_EN Returns true if field value could be null or false otherwise)
 	$(LANG_RU	Возвращает true, если значение поле может быть пустым	(null) иначе равно false)
 	+/
-	bool isNullable() @property;
+	bool isNullable() @property inout;
 
 	/++
 	$(LANG_EN Returns true if allowed to write into field)
 	$(LANG_RU Возвращает true, если разрешена запись в поле данных)
 	+/
-	bool isWriteable() @property;
+	bool isWriteable() @property inout;
 
 	/++
 	$(LANG_EN Returns true if value of field with $(D_PARAM index) is null)
 	$(LANG_RU Возвращает true, если значение поля с номером $(D_PARAM index) пустое (null) )
 	+/
-	bool isNull(size_t index);
+	bool isNull(size_t index) inout;
 
 	string getStr(size_t index);
 
@@ -109,13 +109,13 @@ interface IBaseDataField
 	$(LANG_EN Returns format of field in JSON representation)
 	$(LANG_RU Возвращает формат поля в представлении JSON)
 	+/
-	JSONValue getStdJSONFormat();
+	JSONValue getStdJSONFormat() inout;
 
 	/++
 	$(LANG_EN Returns value of cell with $(D_PARAM index) in JSON format)
 	$(LANG_RU Возвращает значение ячейки с номером $(D_PARAM index) в виде JSON)
 	+/
-	JSONValue getStdJSONValue(size_t index);
+	JSONValue getStdJSONValue(size_t index) inout;
 }
 
 
@@ -161,7 +161,7 @@ interface IDataField(FormatType) : IBaseDataField
 		Если значение пусто (null), то поведение не определено
 	)
 	+/
-	ValueType get(size_t index);
+	inout(ValueType) get(size_t index) inout;
 
 	/++
 	$(LANG_EN
@@ -173,7 +173,7 @@ interface IDataField(FormatType) : IBaseDataField
 		Параметр $(D_PARAM defaultValue) определяет возвращаемое значение, если значение поля пусто (null)
 	)
 	+/
-	ValueType get(size_t index, ValueType defaultValue);
+	inout(ValueType) get(size_t index, ValueType defaultValue) inout;
 
 	static if( isEnumFormat!(FormatType) )
 	{
@@ -181,7 +181,7 @@ interface IDataField(FormatType) : IBaseDataField
 		$(LANG_EN Returns format for enum field)
 		$(LANG_RU Возвращает формат для поля перечислимого типа)
 		+/
-		FormatType enumFormat();
+		inout(FormatType) enumFormat() inout;
 	}
 }
 

@@ -1,11 +1,12 @@
 module webtank.net.server.thread_pool;
 
-import webtank.net.http.handler: IHTTPHandler;
+import webtank.net.http.handler.iface: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
 import webtank.common.loger: Loger;
-import webtank.net.server.common: processRequest, ensureBindSocket, makeErrorMsg;
+import webtank.net.server.common: processRequest, ensureBindSocket;
 import webtank.net.service.iface: IWebService;
 import webtank.net.server.iface: IWebServer;
+import webtank.net.utils: makeErrorMsg;
 
 import std.parallelism: TaskPool, task;
 import std.socket: Socket, TcpSocket, InternetAddress, AddressFamily, SocketShutdown;
@@ -65,7 +66,7 @@ public:
 			}
 			catch(Throwable exc)
 			{
-				_service.loger.fatal( makeErrorMsg(exc) );
+				_service.loger.fatal( makeErrorMsg(exc).userError );
 				throw exc;
 			}
 		}

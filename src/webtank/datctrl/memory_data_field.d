@@ -47,24 +47,24 @@ protected:
 	}
 
 	override {
-		size_t length() @property {
+		size_t length() @property inout {
 			return _values.length;
 		}
 
-		string name() @property {
+		string name() @property inout {
 			return _name;
 		}
 
-		bool isNullable() @property {
+		bool isNullable() @property inout {
 			return _isNullable;
 		}
 
-		bool isWriteable() @property {
+		bool isWriteable() @property inout {
 			return true;
 		}
 
 		static immutable OUT_OF_BOUNDS = `Data field value index out of bounds!!!`;
-		bool isNull(size_t index)
+		bool isNull(size_t index) inout
 		{
 			enforce(index < _nullFlags.length, OUT_OF_BOUNDS);
 			return isNullable? _nullFlags[index]: false;
@@ -88,19 +88,19 @@ protected:
 		mixin GetStdJSONFieldFormatImpl;
 		mixin GetStdJSONFieldValueImpl;
 
-		ValueType get(size_t index) {
+		inout(ValueType) get(size_t index) inout {
 			return _values[index];
 		}
 
-		ValueType get(size_t index, ValueType defaultValue)
+		inout(ValueType) get(size_t index, ValueType defaultValue) inout
 		{
 			enforce(index < _values.length, OUT_OF_BOUNDS);
-			return isNull(index)? defaultValue: _values[index];
+			return cast(inout)(cast(ValueType) (isNull(index)? defaultValue: _values[index]));
 		}
 
 		static if( isEnumFormat!(FormatType) )
 		{
-			FormatType enumFormat() {
+			inout(FormatType) enumFormat() inout {
 				return _enumFormat;
 			}
 		}

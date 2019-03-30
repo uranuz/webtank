@@ -418,21 +418,28 @@ protected:
 
 	static void _run( Tid ownerTid, shared(Loger) baseLoger )
 	{
+		import std.exception: enforce;
+		import std.variant: Variant;
+		import std.conv: to;
+		
 		bool cont = true;
 		auto loger = cast(Loger) baseLoger;
 		while(cont)
 		{
 			receive(
-				(LogEvent ev) {
-					assert(loger, `Base loger object reference is null!!!`);
+				(shared(LogEvent) ev) {
+					enforce(loger !is null, `Base loger object reference is null!!!`);
 					loger.writeEvent(ev);
 				},
 				(LogStopMsg msg) {
 					cont = false;
 				},
 				(OwnerTerminated e) {
-					//loger.write(LogEventType.fatal, "Нить, породившая процесс логера, завершилась!!!");
 					throw e;
+				},
+				(Variant val) {
+					enforce(loger !is null, `Base loger object reference is null!!!`);
+					loger.error(`Unexpected message to loger thread: ` ~ val.to!string);
 				}
 			);
 		}

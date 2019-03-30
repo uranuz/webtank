@@ -1,13 +1,16 @@
 module webtank.net.http.context;
 
-import webtank.net.http.input, webtank.net.http.output, webtank.security.access_control, webtank.net.http.handler;
-
-import webtank.security.right.user_rights: UserRights;
-import webtank.net.service.iface: IWebService;
-import webtank.net.server.iface: IWebServer;
-
 class HTTPContext
 {
+	import webtank.net.http.handler.iface: IHTTPHandler;
+	import webtank.security.right.user_rights: UserRights;
+	import webtank.net.service.iface: IWebService;
+	import webtank.net.server.iface: IWebServer;
+	import webtank.net.http.input: HTTPInput;
+	import webtank.net.http.output: HTTPOutput;
+	import webtank.security.access_control: IUserIdentity;
+
+public:
 	this(HTTPInput request, HTTPOutput response, IWebService service, IWebServer server)
 	{
 		_request = request;

@@ -44,7 +44,7 @@ public:
 		_end = end;
 	}
 
-	private void _testIndex(size_t recordIndex)
+	private void _testIndex(size_t recordIndex) inout
 	{
 		if( recordIndex >= length )
 			throw new Exception(`Index is out of record`);
@@ -57,12 +57,12 @@ public:
 
 		RecordIface opIndex(size_t recordIndex) {
 			_testIndex(recordIndex);
-			return _sourceRS.getRecord(recordIndex + _begin);
+			return _sourceRS.getRecordAt(recordIndex + _begin);
 		}
 
-		RecordIface getRecord(size_t recordIndex) {
+		RecordIface getRecordAt(size_t recordIndex) {
 			_testIndex(recordIndex);
-			return _sourceRS.getRecord(recordIndex + _begin);
+			return _sourceRS.getRecordAt(recordIndex + _begin);
 		}
 
 		string getStr(string fieldName, size_t recordIndex) {
@@ -92,20 +92,20 @@ public:
 			return _sourceRS.isWriteable(fieldName);
 		}
 
-		size_t length() @property {
+		size_t length() @property inout {
 			return _end - _begin;
 		}
 
-		size_t fieldCount() @property {
+		size_t fieldCount() @property inout {
 			return _sourceRS.fieldCount;
 		}
 
 		import std.json: JSONValue;
-		JSONValue getStdJSONFormat() {
+		JSONValue getStdJSONFormat() inout {
 			return _sourceRS.getStdJSONFormat();
 		}
 
-		JSONValue getStdJSONData(size_t recordIndex) {
+		JSONValue getStdJSONData(size_t recordIndex) inout {
 			_testIndex(recordIndex);
 			return _sourceRS.getStdJSONData(recordIndex + _begin);
 		}

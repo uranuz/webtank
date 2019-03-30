@@ -34,7 +34,7 @@ import webtank.net.server.iface: IWebServer;
 import webtank.net.server.thread_pool: ThreadPoolServer;
 import webtank.net.server.thread_per_connection: ThreadPerConnectionServer;
 import webtank.net.server.plain: PlainServer;
-import webtank.net.http.handler: IHTTPHandler;
+import webtank.net.http.handler.iface: IHTTPHandler;
 import webtank.common.loger: Loger;
 
 void runServer(ref WorkerOpts opts)

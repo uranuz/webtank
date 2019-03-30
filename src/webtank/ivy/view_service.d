@@ -1,30 +1,28 @@
 module webtank.ivy.view_service;
 
-import webtank.common.loger;
-import webtank.common.event;
-import webtank.net.service.config;
-import webtank.net.service.iface;
-import webtank.security.access_control;
-import webtank.net.http.handler;
-import webtank.net.http.context;
-import webtank.net.http.output: HTTPOutput;
-import webtank.net.utils;
-import webtank.ivy;
-import webtank.security.right.iface.controller: IRightController;
-import webtank.ivy.rights: IvyUserRights;
-import webtank.ivy.user: IvyUserIdentity;
-
-import ivy;
-import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
-import webtank.ivy.service_mixin: IvyServiceMixin, IIvyServiceMixin, ViewServiceURIPageRoute;
-
+import webtank.net.service.iface: IWebService;
+import webtank.ivy.service_mixin: IIvyServiceMixin;
 
 class IvyViewService: IWebService, IIvyServiceMixin
 {
+	import webtank.net.service.config: ServiceConfigImpl, RoutingConfigEntry;
+	import webtank.net.http.handler.iface: IHTTPHandler, HTTPHandlingResult;
+	import webtank.net.http.handler.router: HTTPRouter;
+	import webtank.net.http.handler.uri_page_router: URIPageRouter;
+	import webtank.net.http.handler.mixins: EventBasedHTTPHandlerImpl;
+	import webtank.security.access_control: IAccessController;
+	import webtank.security.right.iface.controller: IRightController;
+	import webtank.ivy.rights: IvyUserRights;
+	import webtank.ivy.user: IvyUserIdentity;
+
+	import ivy.interpreter.data_node: IvyData;
+	import webtank.ivy.service_mixin: IvyServiceMixin, ViewServiceURIPageRoute;
+	import std.json: JSONValue;
+	import std.exception: enforce;
+
 	mixin ServiceConfigImpl;
 	mixin IvyServiceMixin;
 protected:
-	import std.json: JSONValue;
 
 	string _serviceName;
 	HTTPRouter _rootRouter;
@@ -106,6 +104,7 @@ public:
 
 	private void _subscribeRoutingEvents()
 	{
+		import webtank.net.utils: makeErrorMsg;
 		_pageRouter.onError.join( (Exception ex, HTTPContext context)
 		{
 			auto messages = makeErrorMsg(ex);
@@ -113,17 +112,17 @@ public:
 			renderResult(IvyData(messages.userError), context);
 			context.response.headers[`status-code`] = `500`;
 			context.response.headers[`reason-phrase`] = `Internal Server Error`;
-			return true;
+			return true; // Ошибка обработана
 		});
 	}
 
 	IAccessController accessController() @property {
-		assert( _accessController, `View service access controller is not initialized!` );
+		enforce(_accessController !is null, `View service access controller is not initialized!`);
 		return _accessController;
 	}
 
 	override IRightController rightController() @property {
-		assert( _rights, `View service rights controller is not initialized!` );
+		enforce(_rights !is null, `View service rights controller is not initialized!`);
 		return _rights;
 	}
 

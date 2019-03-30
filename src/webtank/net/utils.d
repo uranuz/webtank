@@ -107,7 +107,7 @@ auto makeErrorMsg(Throwable error)
 	import std.typecons: Tuple;
 	import std.conv: text;
 	Tuple!(string, "userError", string, "details") res;
-	
+
 	string debugInfo = "\r\nIn module " ~ error.file ~ ":" ~ error.line.text ~ ". Traceback:\r\n" ~ error.info.text;
 	res.details = error.msg ~ debugInfo;
 	debug res.userError = res.details;
@@ -115,3 +115,44 @@ auto makeErrorMsg(Throwable error)
 
 	return res;
 }
+
+auto errorToJSON(Throwable ex)
+{
+	import std.json: JSONValue;
+	import std.array: appender;
+
+	JSONValue jErr = [
+		"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
+		"message": JSONValue(ex.msg),
+		"data": JSONValue([
+			"file": JSONValue(ex.file),
+			"line": JSONValue(ex.line)
+		])
+	];
+	
+	auto backTrace = appender!(string[])();
+	foreach( inf; ex.info )
+		backTrace ~= inf.idup;
+	jErr["data"]["backtrace"] = JSONValue(backTrace.data);
+	return jErr;
+}
+
+import std.typecons: Tuple;
+Tuple!(string, "mimeType", string, "key", string, "value")
+parseContentType(string contentType)
+{
+	import std.algorithm: findSplit;
+	import std.uni: toLower;
+
+	typeof(return) res;
+	auto splitCT = contentType.findSplit("; ");
+	res.mimeType = splitCT[0]; // Получаем MIME-тип содержимого
+
+	string charsetOrBoundary = splitCT[2];
+	auto charsetSpl = charsetOrBoundary.findSplit("=");
+	res.key = charsetSpl[0]; // Здесь может быть charset или boundary
+	res.value = charsetSpl[1]; // Кодировка или значение для boundary
+	return res;
+}
+
+

@@ -130,7 +130,7 @@ private:
 
 import webtank.net.http.context: HTTPContext;
 import ivy.interpreter.data_node: IvyData;
-import webtank.net.http.handler: IHTTPHandler, HTTPHandlingResult;
+import webtank.net.http.handler.iface: IHTTPHandler, HTTPHandlingResult;
 class ViewServiceURIPageRoute: IHTTPHandler
 {
 	import webtank.net.service.config: RoutingConfigEntry;
@@ -177,13 +177,13 @@ public:
 				return HTTPHandlingResult.mismatched;
 		}
 
-		auto pageURIData = _uriPattern.match(context.request.uri.path);
-		if( !pageURIData.isMatched )
+		auto uriMatchData = _uriPattern.match(context.request.uri.path);
+		if( !uriMatchData.isMatched )
 			return HTTPHandlingResult.mismatched;
 
 		IIvyServiceMixin ivyService = cast(IIvyServiceMixin) context.service;
 		enforce(ivyService, `ViewServiceURIPageRoute can only work with IIvyServiceMixin instances`);
-		context.request.requestURIMatch = pageURIData;
+		context.request.requestURIMatch = uriMatchData;
 
 		IvyData methodParams;
 		bool isError = false;

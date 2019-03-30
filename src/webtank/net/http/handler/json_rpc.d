@@ -1,8 +1,4 @@
-module webtank.net.http.json_rpc_handler;
-
-import std.string, std.conv, std.traits, std.typecons, std.json, std.functional;
-
-import webtank.net.http.handler, webtank.common.std_json, webtank.net.http.context, webtank.net.uri_pattern;
+module webtank.net.http.handler.json_rpc;
 
 ///Класс исключения для удалённого вызова процедур
 class JSON_RPC_Exception : Exception
@@ -12,56 +8,50 @@ class JSON_RPC_Exception : Exception
 	}
 }
 
+import webtank.net.http.handler.iface: IHTTPHandler;
+
 class JSON_RPC_Router: IHTTPHandler
 {
+	import webtank.net.http.handler.mixins: EventBasedHTTPHandlerImpl;
+	import webtank.net.http.context: HTTPContext;
+	import webtank.net.http.handler.iface: HTTPHandlingResult;
+	import webtank.net.uri_pattern: URIPattern, URIMatchingData;
+
+	import std.json: JSONValue, toJSON, JSON_TYPE, parseJSON, JSONOptions;
+
 	mixin EventBasedHTTPHandlerImpl;
 
-	this( string URIPatternStr, string[string] regExprs, string[string] defaults )
-	{	_uriPattern = new URIPattern(URIPatternStr, regExprs, defaults);
+public:
+	this(string URIPatternStr, string[string] regExprs, string[string] defaults) {
+		_uriPattern = new URIPattern(URIPatternStr, regExprs, defaults);
 	}
 
-	this( string URIPatternStr, string[string] defaults = null )
-	{	this(URIPatternStr, null, defaults);
+	this( string URIPatternStr, string[string] defaults = null ) {
+		this(URIPatternStr, null, defaults);
 	}
 
-	alias JSONValue delegate( ref const(JSONValue), HTTPContext ) JSON_RPC_WrapperMethod;
+	alias JSONValue delegate(ref const(JSONValue), HTTPContext) JSON_RPC_WrapperMethod;
 
 	HTTPHandlingResult customProcessRequest(HTTPContext context)
 	{
+		import std.uni: toLower;
 		JSONValue jResponse;
-		try {
-			//-----Опрос обработчика запроса-----
-			auto uriData = _uriPattern.match(context.request.uri.path);
-			if( uriData.isMatched )
-				context.request.requestURIMatch = uriData;
+		//-----Опрос обработчика запроса-----
+		auto uriMatchData = _uriPattern.match(context.request.uri.path);
+		if( uriMatchData.isMatched )
+			context.request.requestURIMatch = uriMatchData;
 
-			bool isRequestMatched =
-				uriData.isMatched &&
-				toLower(context.request.headers.get("method", null)) == "post";
+		bool isRequestMatched =
+			uriMatchData.isMatched &&
+			toLower(context.request.headers.get("method", null)) == "post";
 
-			//-----Конец опроса обработчика события-----
-			onPostPoll.fire(context, isRequestMatched);
-			if( !isRequestMatched )
-				return HTTPHandlingResult.mismatched;
+		//-----Конец опроса обработчика события-----
+		onPostPoll.fire(context, isRequestMatched);
+		if( !isRequestMatched )
+			return HTTPHandlingResult.mismatched;
+		context.response.headers["content-type"] = "application/json";
 
-			_processRequestInternal(context, jResponse);
-		} catch(Throwable ex) {
-			jResponse["error"] = [
-				"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
-				"message": JSONValue(ex.msg),
-				"data": JSONValue([
-					"file": JSONValue(ex.file),
-					"line": JSONValue(ex.line)
-				])
-			];
-			debug {
-				import std.array: appender;
-				auto backTrace = appender!(string[])();
-				foreach( inf; ex.info ) backTrace ~= inf.idup;
-				jResponse["error"]["data"]["backtrace"] = JSONValue(backTrace.data);
-			}
-			onError.fire(ex, context); // Just notify error handler about error for now
-		}
+		_processRequestInternal(context, jResponse);
 		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
 
 		return HTTPHandlingResult.handled;
@@ -126,6 +116,8 @@ class JSON_RPC_Router: IHTTPHandler
 		jResponse["result"] = method(jMessageBody["params"], context); // Вызов метода
 	}
 
+	import std.traits: isSomeFunction, fullyQualifiedName;
+	import std.functional: toDelegate;
 	JSON_RPC_Router join(alias Method)(string methodName = null)
 		if( isSomeFunction!(Method) )
 	{
@@ -147,7 +139,15 @@ protected:
 
 template callJSON_RPC_Method(alias Method)
 {
-	import std.traits, std.json, std.conv, std.typecons;
+	import webtank.net.http.context: HTTPContext;
+	import webtank.common.std_json.from: fromStdJSON;
+	import webtank.common.std_json.to: toStdJSON;
+
+	import std.traits: Parameters, ReturnType, ParameterIdentifierTuple, ParameterDefaults;
+	import std.json: JSONValue, JSON_TYPE;
+	import std.conv: to;
+	import std.typecons: Tuple;
+
 	alias ParamTypes = Parameters!(Method);
 	alias ResultType = ReturnType!(Method);
 	alias ParamNames = ParameterIdentifierTuple!(Method);

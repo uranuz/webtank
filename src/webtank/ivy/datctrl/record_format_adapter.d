@@ -49,7 +49,7 @@ public:
 			}
 
 			IvyData front() {
-				return _fmt[i];
+				return _fmt[IvyData(i)];
 			}
 
 			void popFront() {
@@ -65,20 +65,25 @@ public:
 		}
 
 		IClassNode opSlice(size_t, size_t) {
-			assert(false, `opSlice for RecordFormatAdapter is not implemented yet`);
+			throw new Exception(`opSlice for RecordFormatAdapter is not implemented yet`);
 		}
 
-		IvyData opIndex(size_t index)
+		IvyData opIndex(IvyData index)
 		{
 			import std.conv: text;
-			enforce(index < _rawFormat.length, `Record format column with index ` ~ index.text ~ ` is not found!`);
-			return _rawFormat[index];
-		}
-
-		IvyData opIndex(string key)
-		{
-			enforce(key in _namesMapping, `Record format column with name "` ~ key ~ `" is not found!`);
-			return _rawFormat[ _namesMapping[key] ];
+			switch( index.type )
+			{
+				case IvyDataType.Integer: {
+					enforce(index.integer < _rawFormat.length, `Record format column with index ` ~ index.integer.text ~ ` is not found!`);
+					return _rawFormat[index.integer];
+				}
+				case IvyDataType.String: {
+					enforce(index.str in _namesMapping, `Record format column with name "` ~ index.str ~ `" is not found!`);
+					return _rawFormat[ _namesMapping[index.str] ];
+				}
+				default: break;
+			}
+			throw new Exception(`Unexpected kind of index argument: ` ~ index.type.text);
 		}
 
 		IvyData __getAttr__(string attrName)

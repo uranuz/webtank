@@ -1,10 +1,6 @@
 module webtank.datctrl.record_set;
 
-import webtank.datctrl.iface.data_field;
-import webtank.datctrl.iface.record;
-import webtank.datctrl.iface.record_set;
-import webtank.datctrl.record_set_slice;
-
+import webtank.datctrl.iface.record_set: IBaseRecordSet, IBaseWriteableRecordSet;
 
 /++
 $(LANG_EN Class implements work with record set)
@@ -112,11 +108,15 @@ public:
 mixin template RecordSetImpl(bool isWriteableFlag)
 {
 protected:
-	import std.range.interfaces: InputRange;
 	import std.exception: enforce;
+
+	import webtank.datctrl.iface.record: IBaseRecord;
 	static if( isWriteableFlag )
 	{
 		import webtank.datctrl.cursor_record: WriteableCursorRecord;
+		import webtank.datctrl.iface.record: IBaseWriteableRecord;
+		import webtank.datctrl.iface.data_field: IBaseWriteableDataField;
+		import webtank.datctrl.iface.record_set: IWriteableRecordSetRange;
 		alias RecordSetIface = IBaseWriteableRecordSet;
 		alias DataFieldIface = IBaseWriteableDataField;
 		alias RangeIface = IWriteableRecordSetRange;
@@ -126,9 +126,11 @@ protected:
 	else
 	{
 		import webtank.datctrl.cursor_record: CursorRecord;
+		import webtank.datctrl.iface.data_field: IBaseDataField;
+		import webtank.datctrl.iface.record_set: IRecordSetRange;
 		alias RecordSetIface = IBaseRecordSet;
 		alias DataFieldIface = IBaseDataField;
-		alias RangeIface = InputRange!IBaseRecord;
+		alias RangeIface = IRecordSetRange;
 		alias RecordIface = IBaseRecord;
 		alias RecordType = CursorRecord;
 	}
@@ -155,6 +157,7 @@ protected:
 	{
 		DataFieldIface keyField = _dataFields[_keyFieldIndex];
 		_recordIndexes.clear();
+		_cursorIndexes.clear();
 		foreach( i; 0 .. keyField.length )
 		{
 			auto keyValue = keyField.getStr(i);
@@ -203,10 +206,10 @@ public:
 		}
 
 		RecordIface opIndex(size_t recordIndex) {
-			return getRecord(recordIndex);
+			return getRecordAt(recordIndex);
 		}
 
-		RecordIface getRecord(size_t recordIndex)
+		RecordIface getRecordAt(size_t recordIndex)
 		{
 			import std.exception: enforce;
 			enforce(recordIndex < _cursors.length, `No record with specified index in record set`);
@@ -238,11 +241,11 @@ public:
 			return getField(fieldName).isWriteable;
 		}
 
-		size_t length() @property {
+		size_t length() @property inout {
 			return ( _dataFields.length > 0 )? _dataFields[0].length : 0;
 		}
 
-		size_t fieldCount() @property {
+		size_t fieldCount() @property inout {
 			return _dataFields.length;
 		}
 
@@ -255,7 +258,9 @@ public:
 			return new Range(this);
 		}
 
-		IBaseRecordSet opSlice(size_t begin, size_t end) {
+		IBaseRecordSet opSlice(size_t begin, size_t end)
+		{
+			import webtank.datctrl.record_set_slice: RecordSetSlice;
 			return new RecordSetSlice(this, begin, end);
 		}
 

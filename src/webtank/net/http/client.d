@@ -1,6 +1,8 @@
 module webtank.net.http.client;
 
-import webtank.net.http.input, webtank.net.http.output, webtank.net.uri;
+import webtank.net.http.input: HTTPInput, readHTTPInputFromSocket;
+import webtank.net.http.output: HTTPOutput;
+import webtank.net.uri: URI;
 
 /// Осуществляет блокирующий запрос к удалённому HTTP-серверу
 /// На вход нужно передать экземпляр HTTPOutput, где как минимум должны быть заполнены

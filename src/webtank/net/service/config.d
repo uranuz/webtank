@@ -334,6 +334,14 @@ RoutingConfigEntry[] getPageRoutingConfig(JSONValue jsonCurrService)
 
 mixin template ServiceConfigImpl()
 {
+	import webtank.net.service.config:
+		defaultServicesConfigFile,
+		getServiceConfig,
+		getServiceFileSystemPaths,
+		getServiceDatabases,
+		getPageRoutingConfig,
+		getServicesConfig,
+		getServiceVirtualPaths;
 protected:
 	JSONValue _allConfig;
 

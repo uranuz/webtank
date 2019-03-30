@@ -1,12 +1,14 @@
 module webtank.net.http.output;
 
-import std.array;
-
-import webtank.net.http.cookie, webtank.net.uri, webtank.net.http.headers;
-
 ///Класс для формирования ответа от HTTP-сервера, либо запроса от HTTP-клиента
 class HTTPOutput
 {
+	import webtank.net.http.cookie: CookieCollection;
+	import webtank.net.uri: URI;
+	import webtank.net.http.headers: HTTPHeaders;
+
+	import std.array: Appender, appender;
+
 protected:
 	HTTPHeaders _headers;
 	Appender!string _messageBody;
@@ -104,12 +106,31 @@ public:
 	}
 
 protected:
+	private void _assureContentType()
+	{
+		import std.uni: toLower;
+		import webtank.net.utils: parseContentType;
+		auto res = parseContentType(_headers.get("content-type", null));
+		if( res.mimeType.length == 0 ) {
+			res.mimeType = "text/html"; // По дефолту text/html
+		}
+
+		if( res.key.length == 0 ) {
+			res.key = "charset";
+		}
+
+		if( res.key.toLower() == "charset" && res.value.length == 0 ) {
+			res.value = "utf-8";
+		}
+
+		_headers["content-type"] = res.mimeType ~ "; " ~ res.key ~ "=" ~ res.value;
+	}
+
 	string _getResponseHeadersStr()
 	{
 		import std.conv: to;
 		_headers["content-length"] = _messageBody.data.length.to!string;
-		if( "content-type" !in headers )
-			_headers["content-type"] = "text/html; charset=\"utf-8\"";
+		_assureContentType();
 
 		return
 			_headers.getStatusLine()
@@ -121,8 +142,7 @@ protected:
 	{
 		import std.conv: to;
 		_headers["content-length"] = _messageBody.data.length.to!string;
-		if( "content-type" !in headers )
-			_headers["content-type"] = "text/html; charset=\"utf-8\"";
+		_assureContentType();
 
 		return
 			_headers.getRequestLine()

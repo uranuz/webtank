@@ -15,7 +15,6 @@ class DatabaseField(FormatT) : IDataField!( FormatT )
 {
 	alias FormatType = FormatT;
 	alias ValueType = DataFieldValueType!(FormatType);
-	//pragma(msg, ValueType);
 
 protected: ///ВНУТРЕННИЕ ПОЛЯ КЛАССА
 	IDBQueryResult _queryResult;
@@ -44,7 +43,7 @@ public:
 		}
 
 		///Возвращает формат значения перечислимого типа
-		override FormatType enumFormat() {
+		override inout(FormatType) enumFormat() inout {
 			return _enumFormat;
 		}
 	}
@@ -65,26 +64,26 @@ public:
 		//{	return FieldT; }
 
 		///Возвращает количество записей для поля
-		size_t length() @property {
+		size_t length() @property inout {
 			return _queryResult.recordCount;
 		}
 
-		string name() @property {
+		string name() @property inout {
 			return _name;
 		}
 
 		///Возвращает true, если поле может быть пустым и false - иначе
-		bool isNullable() @property {
+		bool isNullable() @property inout {
 			return _isNullable;
 		}
 
 		///Возвращает false, поскольку поле не записываемое
-		bool isWriteable() @property {
+		bool isWriteable() @property inout {
 			return false; //Поле только для чтения из БД
 		}
 
 		///Возвращает true, если поле пустое или false - иначе
-		bool isNull(size_t index)
+		bool isNull(size_t index) inout
 		{
 			import std.conv;
 			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
@@ -100,31 +99,33 @@ public:
 		mixin GetStdJSONFieldValueImpl;
 
 		///Получение данных из поля по порядковому номеру index
-		ValueType get(size_t index)
+		inout(ValueType) get(size_t index) inout
 		{
-			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
-				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
+			import std.conv: text;
+			enforce( index < _queryResult.recordCount, "Field index '" ~ index.text
+				~ "' is out of bounds, because record count is '" ~ _queryResult.recordCount.text ~ "'!!!" );
 			try {
-				return _queryResult.get(_fieldIndex, index).conv!ValueType;
+				return cast(inout) _queryResult.get(_fieldIndex, index).conv!ValueType;
 			} catch(ConvException ex) {
 				throw new ConvException(
 					`Exception during parsing value for field with name "` ~ name
-					~ `" at index: ` ~ index.to!string ~ `. Error msg:` ~ ex.to!string);
+					~ `" at index: ` ~ index.text ~ `. Error msg:` ~ ex.to!string);
 			}
 		}
 
 		///Получение данных из поля по порядковому номеру index
 		///Возвращает defaultValue, если значение поля пустое
-		ValueType get(size_t index, ValueType defaultValue)
+		inout(ValueType) get(size_t index, ValueType defaultValue) inout
 		{
-			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
-				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
+			import std.conv: to;
+			enforce( index < _queryResult.recordCount, "Field index '" ~ index.text
+				~ "' is out of bounds, because record count is '" ~ _queryResult.recordCount.text ~ "'!!!" );
 			try {
-				return ( isNull(index) ? defaultValue: _queryResult.get(_fieldIndex, index).conv!ValueType );
+				return cast(inout)( isNull(index) ? defaultValue: _queryResult.get(_fieldIndex, index).conv!ValueType );
 			} catch(ConvException ex) {
 				throw new ConvException(
 					`Exception during parsing value for field with name "` ~ name
-					~ `" at index: ` ~ index.to!string ~ `. Error msg:` ~ ex.to!string);
+					~ `" at index: ` ~ index.text ~ `. Error msg:` ~ ex.to!string);
 			}
 		}
 

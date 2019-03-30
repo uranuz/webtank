@@ -124,7 +124,6 @@ JSONValue toStdJSON(T)(T dValue)
 		} else static if(
 			is(T == struct)
 			&& __traits(hasMember, T, "toStdJSON") // Проверка, что это собственный метод структуры
-			&& __traits(compiles, { auto test = dValue.toStdJSON(); })
 		) {
 			return dValue.toStdJSON();
 		}
@@ -160,7 +159,6 @@ JSONValue toStdJSON(T)(T dValue)
 		else static if(
 			(is(T == class) || is(T == interface))
 			&& __traits(hasMember, T, "toStdJSON") // Проверка, что это собственный метод класса
-			&& __traits(compiles, { auto test = dValue.toStdJSON(); })
 		) {
 			if( dValue is null ) {
 				return JSONValue();

@@ -47,7 +47,7 @@ public:
 	this(RecordSetIface recordSet)
 	{
 		import std.exception: enforce;
-		enforce(recordSet !is null, `Expected record set, but got null!`);
+		enforce(recordSet !is null, `Expected record set, but got null 1!`);
 		_recordSet = recordSet;
 	}
 

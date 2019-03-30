@@ -3,7 +3,7 @@ module webtank.datctrl.common;
 mixin template GetStdJSONFormatImpl()
 {
 	import std.json: JSONValue;
-	JSONValue getStdJSONFormat()
+	JSONValue getStdJSONFormat() inout
 	{
 		JSONValue jValues;
 		jValues["kfi"] = _keyFieldIndex; // Номер ключевого поля
@@ -25,7 +25,7 @@ mixin template GetStdJSONFormatImpl()
 mixin template GetStdJSONDataImpl()
 {
 	import std.json: JSONValue;
-	JSONValue getStdJSONData(size_t index)
+	JSONValue getStdJSONData(size_t index) inout
 	{
 		JSONValue[] recJSON;
 		recJSON.length = _dataFields.length;
@@ -39,7 +39,7 @@ mixin template GetStdJSONDataImpl()
 mixin template RecordSetToStdJSONImpl()
 {
 	import std.json: JSONValue;
-	JSONValue toStdJSON()
+	JSONValue toStdJSON() inout
 	{
 		auto jValues = this.getStdJSONFormat();
 
@@ -59,34 +59,43 @@ mixin template RecordSetToStdJSONImpl()
 
 mixin template GetStdJSONFieldFormatImpl()
 {
+
 	import std.json: JSONValue;
 	/// Сериализации формата поля в std.json
-	JSONValue getStdJSONFormat()
+	JSONValue getStdJSONFormat() inout
 	{
-		import std.traits: isIntegral, isFloatingPoint;
-		JSONValue[string] jArray;
-
-		jArray["n"] = _name; // Вывод имени поля
-		jArray["t"] = getFieldTypeString!ValueType; // Вывод типа поля
-		jArray["dt"] = ValueType.stringof; // D-шный тип поля
-
-		static if( isIntegral!(ValueType) || isFloatingPoint!(ValueType) ) {
-			jArray["sz"] = ValueType.sizeof; // Размер чисел в байтах
-		}
+		JSONValue res;
 
 		static if( isEnumFormat!(FormatType) ) {
-			//Сериализуем формат для перечислимого типа (выбираем все поля формата)
-			jArray["enum"] = _enumFormat.toStdJSON();
-		}
+			res = _enumFormat.toStdJSON();
+		} else {
+			import std.traits: isIntegral, isFloatingPoint, isArray, isAssociativeArray;
+			res["t"] = getFieldTypeString!ValueType; // Вывод типа поля
+			res["dt"] = ValueType.stringof; // D-шный тип поля
 
-		return JSONValue(jArray);
+			static if( isIntegral!(ValueType) || isFloatingPoint!(ValueType) ) {
+				res["sz"] = ValueType.sizeof; // Размер чисел в байтах
+			}
+
+			static if( isArray!(ValueType) ) {
+				import std.range: ElementType;
+				res["vt"] = getFieldTypeString!(ElementType!ValueType);
+			} else static if( isAssociativeArray!(ValueType) ) {
+				import std.traits: TKeyType = KeyType, TValueType = ValueType;
+				res["vt"] = getFieldTypeString!(TValueType!ValueType);
+				res["kt"] = getFieldTypeString!(TKeyType!ValueType);
+			}
+		}
+		res["n"] = _name; // Вывод имени поля
+
+		return res;
 	}
 }
 
 mixin template GetStdJSONFieldValueImpl()
 {
 	import std.json: JSONValue;
-	JSONValue getStdJSONValue(size_t index)
+	JSONValue getStdJSONValue(size_t index) inout
 	{
 		import webtank.common.std_json: toStdJSON;
 		if( !isNull(index) ) {
