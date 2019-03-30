@@ -1,6 +1,12 @@
 module webtank.common.conv;
 
-enum bool isStdDateOrTime(T) = is(T : Date) || is(T : DateTime) || is(T : TimeOfDay) || is(T : SysTime);
+import std.traits: Unqual;
+
+enum bool isStdDateOrTime(T) =
+	is(Unqual!T == Date)
+	|| is(Unqual!T == DateTime)
+	|| is(Unqual!T == TimeOfDay)
+	|| is(Unqual!T == SysTime);
 
 // Набор костылей для std.conv для преобразования типов данных так как нужно "нам"
 // Основная проблема функции, что этой реализации, что она не работает рекурсивно
@@ -251,19 +257,19 @@ auto fromPGTimestamp(T)(const(char)[] value)
 	auto spl = value.splitter!( (ch) { return ch == 'T' || ch == ' '; } );
 	assert( !spl.empty, `Splitted date or time string is empty!` );
 
-	static if( is(T == DateTime) || is(T == SysTime) )
+	static if( is(Unqual!T == DateTime) || is(Unqual!T == SysTime) )
 	{
 		assert( spl.front.length == 10 );
 		auto tmp = spl.front;
 		spl.popFront();
 		assert( spl.front.length >= 8 );
-		static if( is(T == DateTime) ) {
+		static if( is(Unqual!T == DateTime) ) {
 			tmp ~= "T" ~ spl.front[0..8]; // Trim the rest of string (milliseconds and timezone). Is it correct?
 		} else {
 			tmp ~= "T" ~ spl.front;
 		}
 	}
-	else static if( is(T == TimeOfDay) )
+	else static if( is(Unqual!T == TimeOfDay) )
 	{
 		auto tmp = spl.front; // Maybe it has date part and we will skip it
 		spl.popFront();
@@ -273,7 +279,7 @@ auto fromPGTimestamp(T)(const(char)[] value)
 		assert( tmp.length >= 8 );
 		tmp = tmp[0..8];
 	}
-	else static if( is(T == Date) )
+	else static if( is(Unqual!T == Date) )
 	{
 		assert( spl.front.length == 10 );
 		auto tmp = spl.front;

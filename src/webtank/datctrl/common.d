@@ -124,9 +124,9 @@ string getFieldTypeString(T)()
 		return "array";
 	} else static if( isAssociativeArray!(T) ) {
 		return "assocArray";
-	} else static if( is( T: SysTime ) || is( T: DateTime) ) {
+	} else static if( is( Unqual!T == SysTime ) || is( Unqual!T == DateTime) ) {
 		return "dateTime";
-	} else static if( is( T: Date ) ) {
+	} else static if( is( Unqual!T == Date ) ) {
 		return "date";
 	} else {
 		return "<unknown>";

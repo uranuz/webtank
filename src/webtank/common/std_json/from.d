@@ -18,8 +18,9 @@ T fromStdJSON(T)(JSONValue jValue)
 	import webtank.common.optional: Optional, isOptional, OptionalValueType;
 	import std.datetime: Date, DateTime, TimeOfDay, SysTime;
 	import webtank.common.std_json.exception;
+	import webtank.common.conv: isStdDateOrTime;
 
-	static if( is( T == JSONValue ) ) {
+	static if( is( Unqual!T == JSONValue ) ) {
 		return jValue; //Raw JSONValue given
 	}
 	else static if( isBoolean!T )
@@ -179,7 +180,7 @@ T fromStdJSON(T)(JSONValue jValue)
 					}
 				}
 			} else if( jValue.type == JSON_TYPE.STRING ) {
-				static if( is( T == Date ) || is( T == DateTime ) || is( T == TimeOfDay ) || is( T == SysTime ) ) {
+				static if( isStdDateOrTime!T ) {
 					// Явно говорим, что из строки будем получать дату или время в формате ISO
 					result = T.fromISOExtString(jValue.str);
 				} else {

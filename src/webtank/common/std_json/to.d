@@ -17,7 +17,9 @@ $(LANG_RU
 JSONValue toStdJSON(T)(T dValue)
 {
 	import std.datetime: Date, DateTime, TimeOfDay, SysTime;
-	static if( is(T == JSONValue) ) {
+	import webtank.common.conv: isStdDateOrTime;
+	import std.traits: Unqual;
+	static if( is(Unqual!T == JSONValue) ) {
 		return dValue;
 	}
 	else
@@ -112,13 +114,13 @@ JSONValue toStdJSON(T)(T dValue)
 		} else static if( isOptional!T ) {
 			// Здесь нам не удастся различить состояние isUndef и isNull для Undefable
 			return dValue.isSet? toStdJSON(dValue.value): JSONValue(null);
-		} else static if( is( T == OptionalDate ) ) {
+		} else static if( is( Unqual!T == OptionalDate ) ) {
 			return JSONValue([
 				"day": toStdJSON(dValue.day),
 				"month": toStdJSON(dValue.month),
 				"year": toStdJSON(dValue.year)
 			]);
-		} else static if( is(T == Date) || is(T == DateTime) || is(T == TimeOfDay) || is(T == SysTime) ) {
+		} else static if( isStdDateOrTime!(T) ) {
 			// Строковый формат для дат и времени более компактен и привычен, поэтому выводим в нём вместо объекта JSON
 			return JSONValue(dValue.toISOExtString());
 		} else static if(
