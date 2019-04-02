@@ -186,7 +186,7 @@ public:
 		context.request.requestURIMatch = uriMatchData;
 
 		IvyData methodParams;
-		bool isError = false;
+		Exception callError = null;
 		if( !_entry.apiURI.empty )
 		{
 			URI apiURI = URI(_entry.apiURI);
@@ -231,29 +231,28 @@ public:
 			try {
 				methodParams = remoteCallWebForm!IvyData(callInfo, HTTPMethod, context.request.messageBody);
 			} catch( Exception ex ) {
-				// Нужно передать ошибку в шаблон
-				isError = true;
-				methodParams = IvyData([
-					`errorMsg`: ex.msg
-				]);
+				// Сохраняем информацию об ошибке
+				callError = ex;
 			}
-			
 		}
 
-		void renderResult(IvyData res) {
-			ivyService.renderResult(res, context);
+		import ivy.interpreter.data_node: errorToIvyData;
+		if( callError !is null && _entry.ivyModuleError.empty && _entry.ivyMethodError.empty )
+		{
+			// Обработчик ошибки не задан ни в каком виде.
+			// Поэтому считаем, что ее забыли обработать, и нужно пробросить ошибку дальше...
+			throw callError;
 		}
-
-		void renderError(Throwable error) {
-			import ivy.interpreter.data_node: errorToIvyData;
-			ivyService.renderResult(errorToIvyData(error), context);
-			throw error;
+		else
+		{
+			// Передаем сообщеньице, если указан обработчик ошибки
+			methodParams = errorToIvyData(callError);
 		}
 
 		// Если ошибка и есть спец. Ivy модуль/ метод для обработки в конфигурации, то используем его
 		// Если же нет спец. модуля/ метода, то передаем в общий модуль/ метод
-		string ivyModule = (isError && !_entry.ivyModuleError.empty)? _entry.ivyModuleError: _entry.ivyModule;
-		string ivyMethod = (isError && !_entry.ivyMethodError.empty)? _entry.ivyMethodError: _entry.ivyMethod;
+		string ivyModule = (callError !is null && !_entry.ivyModuleError.empty)? _entry.ivyModuleError: _entry.ivyModule;
+		string ivyMethod = (callError !is null && !_entry.ivyMethodError.empty)? _entry.ivyMethodError: _entry.ivyMethod;
 
 		// Добавляем некотрые параметры по умолчанию
 		import std.algorithm: canFind;
@@ -269,6 +268,15 @@ public:
 					continue; // Не перезаписываем поля переданные нам backend-сервером
 				methodParams[parName] = *parValPtr;
 			}
+		}
+
+		void renderResult(IvyData res) {
+			ivyService.renderResult(res, context);
+		}
+
+		void renderError(Throwable error) {
+			ivyService.renderResult(errorToIvyData(error), context);
+			throw error;
 		}
 
 		if( !ivyModule.empty )
