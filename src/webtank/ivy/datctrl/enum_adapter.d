@@ -19,12 +19,17 @@ public:
 		_fmt = new EnumFormatAdapter(rawEnum);
 		auto valPtr = "d" in rawEnum;
 		enforce(valPtr, `Expected field "d" as enum value`);
-		_value = _fmt[*valPtr]["value"]; // Just for validation
+		enforce(_fmt.hasValue(*valPtr), `There is such no value in enum`);
+		_value = *valPtr; // Just for validation
 	}
 
-	this(EnumFormatAdapter fmt, IvyData val) {
+	this(EnumFormatAdapter fmt, IvyData val)
+	{
+		enforce(fmt !is null, `Enum format is null`);
+		enforce(fmt.hasValue(val), `There is such no value in enum`);
+
 		_fmt = fmt;
-		_value = _fmt[val]["value"]; // Just for validation
+		_value = val;
 	}
 
 	override {
@@ -46,7 +51,7 @@ public:
 			{
 				case "format": return IvyData(_fmt);
 				case "value": return _value;
-				case "name": return _fmt[_value]["name"];
+				case "name": return _fmt.names[_value];
 				default: break;
 			}
 			throw new Exception(`Unexpected EnumAdapter property`);
@@ -56,7 +61,8 @@ public:
 			throw new Exception(`Not attributes setting is yet supported by EnumAdapter`);
 		}
 
-		IvyData __serialize__() {
+		IvyData __serialize__()
+		{
 			IvyData res = _fmt.__serialize__();
 			res["d"] = _value;
 			return res;

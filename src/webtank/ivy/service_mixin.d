@@ -243,7 +243,7 @@ public:
 			// Поэтому считаем, что ее забыли обработать, и нужно пробросить ошибку дальше...
 			throw callError;
 		}
-		else
+		else if( callError !is null )
 		{
 			// Передаем сообщеньице, если указан обработчик ошибки
 			methodParams = errorToIvyData(callError);

@@ -9,12 +9,16 @@ class EnumFormatAdapter: IClassNode
 {
 private:
 	IvyData _rawEnum;
+	NameByValue _names;
+	ValueByName _values;
 
 public:
 	this(IvyData rawEnum)
 	{
 		_rawEnum = rawEnum;
 		_ensureEnum();
+		_names = new NameByValue(this);
+		_values = new ValueByName(this);
 	}
 
 	void _ensureEnum()
@@ -30,6 +34,27 @@ public:
 
 	IvyData _rawItems() @property {
 		return _rawEnum["enum"];
+	}
+
+	NameByValue names() @property {
+		return _names;
+	}
+
+	ValueByName values() @property {
+		return _values;
+	}
+
+	bool hasValue(IvyData index)
+	{
+		foreach( item; _rawItems.array )
+		{
+			enforce(item.type == IvyDataType.Array, `Raw enum item data is not assoc array`);
+			enforce(item.array.length > 0, `Expected at least 1 element in enum item`);
+			if( item.array[0] == index ) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	static class Range: IvyNodeRange
@@ -56,15 +81,101 @@ public:
 				enforce(item.type == IvyDataType.Array, `Raw enum item data is not array`);
 				enforce(item.array.length > 0, `Expected at least 1 elements in enum item`);
 				IvyData res;
-				res["value"] = item[0];
+				res["value"] = item.array[0];
 				if( item.array.length > 1 ) {
-					res["name"] = item[1];
+					res["name"] = item.array[1];
 				}
 				return res;
 			}
 
 			void popFront() {
 				++i;
+			}
+		}
+	}
+
+	static class NameByValue: IClassNode
+	{
+		protected EnumFormatAdapter _fmt;
+
+		this(EnumFormatAdapter fmt) {
+			_fmt = fmt;
+		}
+		
+		override {
+			IvyNodeRange opSlice() {
+				throw new Exception(`opSlice for EnumFormatAdapter.NameByValue is not implemented yet`);
+			}
+			IClassNode opSlice(size_t, size_t) {
+				throw new Exception(`opSlice for EnumFormatAdapter.NameByValue is not implemented yet`);
+			}
+			IvyData opIndex(IvyData index)
+			{
+				import std.conv: text;
+				foreach( item; _fmt._rawItems.array )
+				{
+					enforce(item.type == IvyDataType.Array, `Raw enum item data is not assoc array`);
+					enforce(item.array.length > 1, `Expected at least 2 elements in enum item`);
+					if( item.array[0] == index ) {
+						return item.array[1];
+					}
+				}
+				throw new Exception(`There is no item with value: "` ~ index.toString() ~ `" in enum`);
+			}
+			IvyData __getAttr__(string) {
+				throw new Exception(`__getAttr__ for EnumFormatAdapter.NameByValue is not implemented yet`);
+			}
+			void __setAttr__(IvyData, string) {
+				throw new Exception(`__setAttr__ for EnumFormatAdapter.NameByValue is not implemented yet`);
+			}
+			IvyData __serialize__() {
+				throw new Exception(`__serialize__ for EnumFormatAdapter.NameByValue is not implemented yet`);
+			}
+			size_t length() @property {
+				throw new Exception(`length for EnumFormatAdapter.NameByValue is not implemented yet`);
+			}
+		}
+	}
+
+	static class ValueByName: IClassNode
+	{
+		protected EnumFormatAdapter _fmt;
+
+		this(EnumFormatAdapter fmt) {
+			_fmt = fmt;
+		}
+		
+		override {
+			IvyNodeRange opSlice() {
+				throw new Exception(`opSlice for EnumFormatAdapter.ValueByName is not implemented yet`);
+			}
+			IClassNode opSlice(size_t, size_t) {
+				throw new Exception(`opSlice for EnumFormatAdapter.ValueByName is not implemented yet`);
+			}
+			IvyData opIndex(IvyData index)
+			{
+				import std.conv: text;
+				foreach( item; _fmt._rawItems.array )
+				{
+					enforce(item.type == IvyDataType.Array, `Raw enum item data is not assoc array`);
+					enforce(item.array.length > 1, `Expected at least 2 elements in enum item`);
+					if( item.array[1] == index ) {
+						return item.array[0];
+					}
+				}
+				throw new Exception(`There is no item with value: "` ~ index.toString() ~ `" in enum`);
+			}
+			IvyData __getAttr__(string) {
+				throw new Exception(`__getAttr__ for EnumFormatAdapter.ValueByName is not implemented yet`);
+			}
+			void __setAttr__(IvyData, string) {
+				throw new Exception(`__setAttr__ for EnumFormatAdapter.ValueByName is not implemented yet`);
+			}
+			IvyData __serialize__() {
+				throw new Exception(`__serialize__ for EnumFormatAdapter.ValueByName is not implemented yet`);
+			}
+			size_t length() @property {
+				throw new Exception(`length for EnumFormatAdapter.ValueByName is not implemented yet`);
 			}
 		}
 	}
@@ -80,20 +191,21 @@ public:
 
 		IvyData opIndex(IvyData index)
 		{
-			import std.conv: text;
-			foreach( item; _rawItems.array )
-			{
-				enforce(item.type == IvyDataType.AssocArray, `Raw enum item data is not assoc array`);
-				enforce(item.array.length > 1, `Expected at least 2 elements in enum item`);
-				if( item.array[0] == index ) {
-					return item.array[1];
-				}
-			}
-			throw new Exception(`There is no item with value: "` ~ index.toString() ~ `" in enum`);
+			enforce(index.type == IvyDataType.Integer, `Expected integer as index`);
+			return _rawItems.array[index.integer];
 		}
 
-		IvyData __getAttr__(string attrName) {
-			throw new Exception(`Not attributes getting is yet supported by EnumFormatAdapter`);
+		IvyData __getAttr__(string attrName)
+		{
+			switch( attrName )
+			{
+				case "names":
+					return IvyData(_names);
+				case "values":
+					return IvyData(_values);
+				default: break;
+			}
+			throw new Exception(`Unexpected attribute for EnumFormatAdapter`);
 		}
 
 		void __setAttr__(IvyData value, string attrName) {
@@ -110,6 +222,4 @@ public:
 			return _rawItems.length;
 		}
 	}
-
-	
 }

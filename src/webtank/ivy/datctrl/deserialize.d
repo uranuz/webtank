@@ -10,8 +10,17 @@ void _deserializeFieldInplace(ref IvyData fieldData, IvyData format)
 {
 	import std.datetime: SysTime, Date;
 	import std.exception: enforce;
+	import std.conv: to;
 	if( fieldData.type == IvyDataType.Undef || fieldData.type == IvyDataType.Null ) {
 		return; // Dont try to deserialize Null or Undef and return as is
+	}
+
+	if( format.type == IvyDataType.ClassNode ) {
+		EnumFormatAdapter fmt = cast(EnumFormatAdapter) format.classNode;
+		if( fmt !is null ) {
+			fieldData = new EnumAdapter(fmt, fieldData);
+		}
+		return; // Unexpected types leave as is
 	}
 
 	switch(format["t"].str)
@@ -27,13 +36,6 @@ void _deserializeFieldInplace(ref IvyData fieldData, IvyData format)
 				enforce(fieldData.type == IvyDataType.DateTime, `Node is node convertible to dateTime`);
 			}
 			break;
-		case "enum": {
-			enforce(format.type == IvyDataType.ClassNode, `Expected enum format ClassNode`);
-			EnumFormatAdapter fmt = cast(EnumFormatAdapter) format.classNode;
-			enforce(fmt !is null, `Expected EnumFormat adapter`);
-			fieldData = new EnumAdapter(fmt, fieldData);
-			break;
-		}
 		default:
 			break;
 	}
@@ -73,7 +75,6 @@ IvyData tryExtractLvlContainers(IvyData srcNode)
 	}
 
 	foreach( key, item; srcNode.assocArray ) {
-		srcNode.assocArray[key] = item.tryExtractContainer();
 		srcNode.assocArray[key] = item.tryExtractLvlContainers();
 	}
 	return srcNode;

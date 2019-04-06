@@ -14,21 +14,22 @@ private:
 	RecordFormatAdapter _fmt;
 
 public:
-	this(IvyData rawRec, RecordFormatAdapter fmt)
-	{
-		_rawRec = rawRec;
-		_ensureRecord();
-		_fmt = fmt;
-		enforce(_rawData.length == _fmt.length, `Raw record field count must match format field count`);
-		_deserializeInplace();
-	}
-
 	this(IvyData rawRec)
 	{
 		_rawRec = rawRec;
 		_ensureRecord();
 		_fmt = new RecordFormatAdapter(rawRec);
 		_deserializeInplace();
+	}
+
+
+	this(IvyData rawRec, RecordFormatAdapter fmt)
+	{
+		_rawRec = rawRec;
+		_ensureRecord();
+		_fmt = fmt;
+		enforce(_rawData.length == _fmt.length, `Raw record field count must match format field count`);
+		// There we expect that record data is already deserialized
 	}
 
 	void _ensureRecord()
