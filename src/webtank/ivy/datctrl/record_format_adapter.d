@@ -4,6 +4,7 @@ import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.
 
 import std.exception: enforce;
 import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
+import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
 
 class RecordFormatAdapter: IClassNode
 {
@@ -20,11 +21,13 @@ public:
 
 		foreach( i, fmt; _rawFormat.array )
 		{
-			enforce("n" in fmt, `Expected name field "n" in raw record format`);
-			enforce("t" in fmt, `Expected type field "t" in raw record format`);
+			enforce("n" in fmt, `Expected name field "n" for field in raw record format`);
+			enforce("t" in fmt, `Expected type field "t" for field in raw record format`);
 			_namesMapping[ fmt["n"].str ] = i;
 			if( fmt["t"].str == "enum" ) {
 				_rawFormat[i] = new EnumFormatAdapter(fmt);
+			} else {
+				_rawFormat[i] = new FieldFormatAdapter(fmt);
 			}
 		}
 	}

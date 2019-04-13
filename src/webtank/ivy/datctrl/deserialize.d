@@ -5,6 +5,7 @@ import webtank.ivy.datctrl.record_adapter;
 import webtank.ivy.datctrl.recordset_adapter;
 import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
 import webtank.ivy.datctrl.enum_adapter: EnumAdapter;
+import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
 
 void _deserializeFieldInplace(ref IvyData fieldData, IvyData format)
 {
@@ -15,20 +16,21 @@ void _deserializeFieldInplace(ref IvyData fieldData, IvyData format)
 		return; // Dont try to deserialize Null or Undef and return as is
 	}
 
-	if( format.type == IvyDataType.ClassNode ) {
-		EnumFormatAdapter fmt = cast(EnumFormatAdapter) format.classNode;
-		if( fmt !is null ) {
-			fieldData = new EnumAdapter(fmt, fieldData);
-		}
-		return; // Unexpected types leave as is
+	enforce(format.type == IvyDataType.ClassNode, `Expected field format class node`);
+	if( auto fmt = cast(EnumFormatAdapter) format.classNode ) {
+		// Enum format is the special case for now
+		fieldData = new EnumAdapter(fmt, fieldData);
+		return;
 	}
+	FieldFormatAdapter fmt = cast(FieldFormatAdapter) format.classNode;
+	enforce(fmt !is null, `Expected field format`);
 
-	switch(format["t"].str)
+	switch(fmt.typeStr)
 	{
 		case "date", "dateTime":
 			if( fieldData.type == IvyDataType.String ) {
 				fieldData = IvyData(
-					format["t"].str == "date"?
+					fmt.typeStr == "date"?
 					SysTime(Date.fromISOExtString(fieldData.str)):
 					SysTime.fromISOExtString(fieldData.str)
 				);
