@@ -1,57 +1,56 @@
 module webtank.ivy.datctrl.record_adapter;
 
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
-import webtank.ivy.datctrl.deserialize;
 
 import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
+import webtank.ivy.datctrl.enum_adapter: EnumAdapter;
 
 import std.exception: enforce;
 
 class RecordAdapter: IClassNode
 {
 private:
-	IvyData _rawRec;
+	IvyData[] _items;
 	RecordFormatAdapter _fmt;
 
 public:
 	this(IvyData rawRec)
 	{
-		_rawRec = rawRec;
-		_ensureRecord();
+		_ensureRecord(rawRec);
 		_fmt = new RecordFormatAdapter(rawRec);
-		_deserializeInplace();
+		_items = _deserialize(rawRec);
 	}
 
 
-	this(IvyData rawRec, RecordFormatAdapter fmt)
+	this(RecordFormatAdapter fmt, IvyData[] items)
 	{
-		_rawRec = rawRec;
-		_ensureRecord();
+		enforce(fmt !is null, `Expected record format adapter`);
+		enforce(items.length == fmt.length, `Number of field in record format must match number of items in record data`);
 		_fmt = fmt;
-		enforce(_rawData.length == _fmt.length, `Raw record field count must match format field count`);
-		// There we expect that record data is already deserialized
+		_items = items;
 	}
 
-	void _ensureRecord()
+	static void _ensureRecord(IvyData rawRec)
 	{
-		enforce("t" in _rawRec, `Expected type field "t" in record raw data!`);
-		enforce("d" in _rawRec, `Expected data field "d" in record raw data!`);
-		enforce("f" in _rawRec, `Expected format field "f" in record raw data!`);
+		enforce("t" in rawRec, `Expected type field "t" in record raw data!`);
+		enforce("d" in rawRec, `Expected data field "d" in record raw data!`);
+		enforce(rawRec["d"].type == IvyDataType.Array, `Data field "d" expected to be array`);
+		enforce("f" in rawRec, `Expected format field "f" in record raw data!`);
 		enforce(
-			_rawRec["t"].type == IvyDataType.String && _rawRec["t"].str == "record",
+			rawRec["t"].type == IvyDataType.String && rawRec["t"].str == "record",
 			`Expected "record" value in "t" field`
 		);
 	}
 
-	void _deserializeInplace()
+	IvyData[] _deserialize(IvyData rawRec)
 	{
-		foreach( i, ref fieldData; _rawData.array ) {
-			_deserializeFieldInplace(fieldData, _fmt[IvyData(i)]);
+		import webtank.ivy.datctrl.deserialize: _deserializeRecordData;
+		IvyData rawItems = rawRec["d"];
+		IvyData[] res;
+		foreach( i, ref fieldData; rawItems.array ) {
+			res ~= _deserializeRecordData(fieldData, _fmt[IvyData(i)]);
 		}
-	}
-
-	IvyData _rawData() @property {
-		return _rawRec["d"];
+		return res;
 	}
 
 	static class Range: IvyNodeRange
@@ -69,11 +68,11 @@ public:
 			bool empty() @property
 			{
 				import std.range: empty;
-				return i >= _rec._rawData.length;
+				return i >= _rec._items.length;
 			}
 
 			IvyData front() {
-				return _rec._rawData[i];
+				return _rec._items[i];
 			}
 
 			void popFront() {
@@ -97,12 +96,12 @@ public:
 			switch( index.type )
 			{
 				case IvyDataType.Integer: {
-					enforce(index.integer < _rawData.array.length, `Record column with index ` ~ index.integer.text ~ ` is not found!`);
-					return _rawData[index.integer];
+					enforce(index.integer < _items.length, `Record column with index ` ~ index.integer.text ~ ` is not found!`);
+					return _items[index.integer];
 				}
 				case IvyDataType.String: {
 					enforce(index.str in _fmt.namesMapping, `Record column with name "` ~ index.str ~ `" is not found!`);
-					return _rawData[ _fmt.namesMapping[index.str] ];
+					return _items[ _fmt.namesMapping[index.str] ];
 				}
 				default: break;
 			}
@@ -123,10 +122,13 @@ public:
 			enforce(false, `Not attributes setting is yet supported by RecordAdapter`);
 		}
 
-		IvyData __serialize__() {
-			// Maybe we should make deep copy of it there, but because of productivity
-			// we shall not do it now. Just say for now that nobody should modifiy serialized data
-			return _rawRec;
+		IvyData __serialize__()
+		{
+			IvyData res = _fmt.__serialize__();
+			res["d"] = _serializeData();
+			res["t"] = "record";
+
+			return res;
 		}
 
 		size_t length() @property {
@@ -134,5 +136,23 @@ public:
 		}
 	}
 
-	
+	IvyData _serializeData()
+	{
+		IvyData[] data;
+		foreach( value; _items ) {
+			if( value.type == IvyDataType.ClassNode ) {
+				if( value.classNode is null ) {
+					data ~= IvyData(null);
+				} else if ( EnumAdapter maybeEnum = cast(EnumAdapter) value.classNode ) {
+					data ~= maybeEnum.__getAttr__("value");
+				} else {
+					data ~= value.classNode.__serialize__();
+				}
+			} else {
+				data ~= value;
+			}
+		}
+
+		return IvyData(data);
+	}
 }

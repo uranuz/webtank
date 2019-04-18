@@ -7,21 +7,21 @@ import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
 import webtank.ivy.datctrl.enum_adapter: EnumAdapter;
 import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
 
-void _deserializeFieldInplace(ref IvyData fieldData, IvyData format)
+IvyData _deserializeRecordData(ref IvyData fieldData, IvyData format)
 {
 	import std.datetime: SysTime, Date;
 	import std.exception: enforce;
-	import std.conv: to;
-	if( fieldData.type == IvyDataType.Undef || fieldData.type == IvyDataType.Null ) {
-		return; // Dont try to deserialize Null or Undef and return as is
-	}
 
 	enforce(format.type == IvyDataType.ClassNode, `Expected field format class node`);
 	if( auto fmt = cast(EnumFormatAdapter) format.classNode ) {
 		// Enum format is the special case for now
-		fieldData = new EnumAdapter(fmt, fieldData);
-		return;
+		return IvyData(new EnumAdapter(fmt, fieldData));
 	}
+
+	if( fieldData.type == IvyDataType.Undef || fieldData.type == IvyDataType.Null ) {
+		return fieldData; // Dont try to deserialize Null or Undef and return as is
+	}
+
 	FieldFormatAdapter fmt = cast(FieldFormatAdapter) format.classNode;
 	enforce(fmt !is null, `Expected field format`);
 
@@ -29,7 +29,7 @@ void _deserializeFieldInplace(ref IvyData fieldData, IvyData format)
 	{
 		case "date", "dateTime":
 			if( fieldData.type == IvyDataType.String ) {
-				fieldData = IvyData(
+				return IvyData(
 					fmt.typeStr == "date"?
 					SysTime(Date.fromISOExtString(fieldData.str)):
 					SysTime.fromISOExtString(fieldData.str)
@@ -41,6 +41,7 @@ void _deserializeFieldInplace(ref IvyData fieldData, IvyData format)
 		default:
 			break;
 	}
+	return fieldData;
 }
 
 bool _isContainerRawData(ref IvyData srcNode) {

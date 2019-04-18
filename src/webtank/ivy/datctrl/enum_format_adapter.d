@@ -112,6 +112,7 @@ public:
 			IvyData opIndex(IvyData index)
 			{
 				import std.conv: text;
+				import std.algorithm: canFind;
 				foreach( item; _fmt._rawItems.array )
 				{
 					enforce(item.type == IvyDataType.Array, `Raw enum item data is not assoc array`);
@@ -119,6 +120,9 @@ public:
 					if( item.array[0] == index ) {
 						return item.array[1];
 					}
+				}
+				if( [IvyDataType.Undef, IvyDataType.Null].canFind(index.type) ) {
+					return index;
 				}
 				throw new Exception(`There is no item with value: "` ~ index.toString() ~ `" in enum`);
 			}
@@ -155,6 +159,7 @@ public:
 			IvyData opIndex(IvyData index)
 			{
 				import std.conv: text;
+				import std.algorithm: canFind;
 				foreach( item; _fmt._rawItems.array )
 				{
 					enforce(item.type == IvyDataType.Array, `Raw enum item data is not assoc array`);
@@ -162,6 +167,9 @@ public:
 					if( item.array[1] == index ) {
 						return item.array[0];
 					}
+				}
+				if( [IvyDataType.Undef, IvyDataType.Null].canFind(index.type) ) {
+					return index;
 				}
 				throw new Exception(`There is no item with value: "` ~ index.toString() ~ `" in enum`);
 			}
@@ -191,7 +199,8 @@ public:
 
 		IvyData opIndex(IvyData index)
 		{
-			enforce(index.type == IvyDataType.Integer, `Expected integer as index`);
+			import std.conv: to;
+			enforce(index.type == IvyDataType.Integer, `Expected integer as index, but got: ` ~ index.to!string);
 			return _rawItems.array[index.integer];
 		}
 

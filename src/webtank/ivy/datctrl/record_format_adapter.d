@@ -9,31 +9,35 @@ import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
 class RecordFormatAdapter: IClassNode
 {
 private:
-	IvyData _rawData;
+	IClassNode[] _items;
 	size_t[string] _namesMapping;
+	size_t _keyFieldIndex = 0;
 
 public:
 	this(IvyData rawData)
 	{
-		_rawData = rawData;
-		enforce(_rawData.type == IvyDataType.AssocArray, `Record format raw data must be object`);
-		enforce("f" in _rawData, `Expected format field "f" in record raw data!`);
+		enforce(rawData.type == IvyDataType.AssocArray, `Record format raw data must be object`);
+		enforce("f" in rawData, `Expected format field "f" in record raw data!`);
+		enforce(rawData["f"].type == IvyDataType.Array, `Format field "d" expected to be array`);
 
-		foreach( i, fmt; _rawFormat.array )
+		IvyData rawItems = rawData["f"];
+		foreach( i, fmt; rawItems.array )
 		{
+			enforce(fmt.type == IvyDataType.AssocArray, `Expected assoc array as field format raw data`);
 			enforce("n" in fmt, `Expected name field "n" for field in raw record format`);
 			enforce("t" in fmt, `Expected type field "t" for field in raw record format`);
 			_namesMapping[ fmt["n"].str ] = i;
 			if( fmt["t"].str == "enum" ) {
-				_rawFormat[i] = new EnumFormatAdapter(fmt);
+				_items ~= new EnumFormatAdapter(fmt);
 			} else {
-				_rawFormat[i] = new FieldFormatAdapter(fmt);
+				_items ~= new FieldFormatAdapter(fmt);
 			}
 		}
-	}
-
-	IvyData _rawFormat() @property {
-		return _rawData["f"];
+		if( auto keyFieldIndexPtr = "kfi" in rawData.assocArray )
+		{
+			enforce(keyFieldIndexPtr.type == IvyDataType.Integer, `Key field index field expected to be integer`);
+			_keyFieldIndex = keyFieldIndexPtr.integer;
+		}
 	}
 
 	size_t[string] namesMapping() @property {
@@ -82,12 +86,12 @@ public:
 			switch( index.type )
 			{
 				case IvyDataType.Integer: {
-					enforce(index.integer < _rawFormat.length, `Record format column with index ` ~ index.integer.text ~ ` is not found!`);
-					return _rawFormat[index.integer];
+					enforce(index.integer < _items.length, `Record format column with index ` ~ index.integer.text ~ ` is not found!`);
+					return IvyData(_items[index.integer]);
 				}
 				case IvyDataType.String: {
 					enforce(index.str in _namesMapping, `Record format column with name "` ~ index.str ~ `" is not found!`);
-					return _rawFormat[ _namesMapping[index.str] ];
+					return IvyData(_items[ _namesMapping[index.str] ]);
 				}
 				default: break;
 			}
@@ -103,14 +107,21 @@ public:
 			enforce(false, `No attributes setting is yet supported by RecordFormatAdapter`);
 		}
 
-		IvyData __serialize__() {
-			// Maybe we should make deep copy of it there, but because of productivity
-			// we shall not do it now. Just say for now that nobody should modifiy serialized data
-			return _rawData;
+		IvyData __serialize__()
+		{
+			IvyData[] formats;
+			foreach( fmt; _items ) {
+				formats ~= fmt.__serialize__();
+			}
+
+			return IvyData([
+				"f": IvyData(formats),
+				"kfi": IvyData(_keyFieldIndex)
+			]);
 		}
 
 		size_t length() @property {
-			return _rawFormat.length;
+			return _items.length;
 		}
 	}
 }

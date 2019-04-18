@@ -16,20 +16,27 @@ private:
 public:
 	this(IvyData rawEnum)
 	{
+		
 		_fmt = new EnumFormatAdapter(rawEnum);
 		auto valPtr = "d" in rawEnum;
 		enforce(valPtr, `Expected field "d" as enum value`);
-		enforce(_fmt.hasValue(*valPtr), `There is such no value in enum`);
+		enforce(hasValueOrEmpty(*valPtr), `There is such no value in enum`);
 		_value = *valPtr; // Just for validation
 	}
 
 	this(EnumFormatAdapter fmt, IvyData val)
 	{
-		enforce(fmt !is null, `Enum format is null`);
-		enforce(fmt.hasValue(val), `There is such no value in enum`);
-
 		_fmt = fmt;
+
+		enforce(fmt !is null, `Enum format is null`);
+		enforce(hasValueOrEmpty(val), `There is such no value in enum`);
 		_value = val;
+	}
+
+	bool hasValueOrEmpty(IvyData val)
+	{
+		import std.algorithm: canFind;
+		return _fmt.hasValue(val) || [IvyDataType.Undef, IvyDataType.Null].canFind(val.type);
 	}
 
 	override {

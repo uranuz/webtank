@@ -3,7 +3,6 @@ module webtank.ivy.datctrl.recordset_adapter;
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
 import webtank.ivy.datctrl.record_adapter;
 import webtank.ivy.datctrl.recordset_adapter_slice;
-import webtank.ivy.datctrl.deserialize;
 
 import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
 
@@ -12,37 +11,37 @@ import std.exception: enforce;
 class RecordSetAdapter: IClassNode
 {
 private:
-	IvyData _rawRS;
+	RecordAdapter[] _items;
 	RecordFormatAdapter _fmt;
 
 public:
 	this(IvyData rawRS)
 	{
-		_rawRS = rawRS;
-		_ensureRecordSet();
+		_ensureRecordSet(rawRS);
 		_fmt = new RecordFormatAdapter(rawRS);
 
-		foreach( i, ref recData; _rawData.array )
+		import webtank.ivy.datctrl.deserialize: _deserializeRecordData;
+		IvyData rawItems = rawRS["d"];
+		foreach( i, ref recData; rawItems.array )
 		{
+			IvyData[] recordData;
 			foreach( j, ref fieldData; recData.array ) {
-				_deserializeFieldInplace(fieldData, _fmt[IvyData(j)]);
+				recordData ~= _deserializeRecordData(fieldData, _fmt[IvyData(j)]);
 			}
+			_items ~= new RecordAdapter(_fmt, recordData);
 		}
 	}
 
-	void _ensureRecordSet()
+	void _ensureRecordSet(IvyData rawRS)
 	{
-		enforce("t" in _rawRS, `Expected type field "t" in recordset raw data!`);
-		enforce("d" in _rawRS, `Expected data field "d" in recordset raw data!`);
-		enforce("f" in _rawRS, `Expected format field "f" in recordset raw data!`);
+		enforce("t" in rawRS, `Expected type field "t" in recordset raw data!`);
+		enforce("d" in rawRS, `Expected data field "d" in recordset raw data!`);
+		enforce(rawRS["d"].type == IvyDataType.Array, `Data field "d" expected to be array`);
+		enforce("f" in rawRS, `Expected format field "f" in recordset raw data!`);
 		enforce(
-			_rawRS["t"].type == IvyDataType.String && _rawRS["t"].str == "recordset",
+			rawRS["t"].type == IvyDataType.String && rawRS["t"].str == "recordset",
 			`Expected "recordset" value in "t" field`
 		);
-	}
-
-	IvyData _rawData() @property {
-		return _rawRS["d"];
 	}
 
 	static class Range: IvyNodeRange
@@ -60,11 +59,11 @@ public:
 			bool empty() @property
 			{
 				import std.range: empty;
-				return i >= _rs._rawData.array.length;
+				return i >= _rs._items.length;
 			}
 
 			IvyData front() {
-				return _rs._makeRecord(i);
+				return IvyData(_rs._getRecord(i));
 			}
 
 			void popFront() {
@@ -73,18 +72,11 @@ public:
 		}
 	}
 
-	private IvyData _makeRecord(size_t index)
+	private RecordAdapter _getRecord(size_t index)
 	{
 		import std.conv: text;
-		enforce(index < _rawData.array.length, `No record with index ` ~ index.text ~ ` in record set!`);
-		return IvyData(new RecordAdapter(
-			IvyData([
-				"d": _rawData.array[index],
-				"f": _rawRS["f"],
-				"t": IvyData("record")
-			]),
-			_fmt
-		));
+		enforce(index < _items.length, `No record with index ` ~ index.text ~ ` in record set!`);
+		return _items[index];
 	}
 
 	override {
@@ -102,7 +94,7 @@ public:
 			switch( index.type )
 			{
 				case IvyDataType.Integer: {
-					return _makeRecord(index.integer);
+					return IvyData(_getRecord(index.integer));
 				}
 				default: break;
 			}
@@ -123,30 +115,36 @@ public:
 			throw new Exception(`Not attributes setting is yet supported by RecordSetAdapter`);
 		}
 
-		IvyData __serialize__() {
-			// Maybe we should make deep copy of it there, but because of productivity
-			// we shall not do it now. Just say for now that nobody should modifiy serialized data
-			return _rawRS;
+		IvyData __serialize__()
+		{
+			IvyData res = _fmt.__serialize__();
+			res["t"] = "recordset";
+
+			IvyData[] itemsData;
+			foreach( record; _items ) {
+				itemsData ~= record._serializeData();
+			}
+			res["d"] = itemsData;
+			
+			return res;
 		}
 
 		size_t length() @property {
-			return _rawData.length;
+			return _items.length;
 		}
 	}
 
 	IvyData serializeSlice(size_t begin, size_t end)
 	{
-		IvyData result;
-		
-		if( _rawRS.type == IvyDataType.AssocArray )
-		foreach( string key, IvyData val; _rawRS.assocArray )
-		{
-			if( key != "d" ) {
-				result[key] = val;
-			} else if( val.type == IvyDataType.Array ) {
-				result[key] = val.array[begin..end];
-			}
+		IvyData res = _fmt.__serialize__();
+		res["t"] = "recordset";
+
+		IvyData[] itemsData;
+		foreach( record; _items[begin..end] ) {
+			itemsData ~= record._serializeData();
 		}
-		return result;
+		res["d"] = itemsData;
+		
+		return res;
 	}
 }
