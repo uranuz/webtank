@@ -119,11 +119,6 @@ protected:
 		}
 	}
 
-	private immutable ExecStatusType[] goodStatuses = [
-		ExecStatusType.PGRES_EMPTY_QUERY,
-		ExecStatusType.PGRES_COMMAND_OK,
-		ExecStatusType.PGRES_TUPLES_OK
-	];
 
 public:
 	//Конструктор объекта, принимает строку подключения как параметр
@@ -171,12 +166,6 @@ public:
 
 			//Выполняем запрос
 			PGresult* res = PQexec(_conn, toStringz(queryStr));
-			if( !goodStatuses.canFind(PQresultStatus(res)) )
-			{
-				string errorMsg = this.lastErrorMessage;
-				_errorMsg(errorMsg);
-				throw new DBException(errorMsg);
-			}
 
 			return new PostgreSQLQueryResult(this, res);
 		}
@@ -218,6 +207,12 @@ public:
 
 }
 
+private immutable ExecStatusType[] goodStatuses = [
+	ExecStatusType.PGRES_EMPTY_QUERY,
+	ExecStatusType.PGRES_COMMAND_OK,
+	ExecStatusType.PGRES_TUPLES_OK
+];
+
 ///Результат запроса для СУБД PostgreSQL
 class PostgreSQLQueryResult: IDBQueryResult
 {
@@ -230,15 +225,25 @@ public:
 	{
 		_queryResult = result;
 		_database = db;
+		enforce(db !is null, `Expected DBPostgreSQL instance`);
+
+		_testPostgresRes();
+	}
+
+	private void _testPostgresRes()
+	{
+		import std.algorithm: canFind;
+
+		if( !goodStatuses.canFind(PQresultStatus(_queryResult)) )
+		{
+			string errorMsg = _database.lastErrorMessage;
+			_database._errorMsg(errorMsg);
+			throw new DBException(errorMsg);
+		}
 	}
 
 	///ПЕРЕОПРЕДЕЛЕНИЕ ИНТЕРФЕЙСНЫХ ФУНКЦИЙ
 	override {
-		//Получение типа СУБД
-// 		DBMSType type() @property
-// 		{	return _database.type; }
-
-
 		//Количество записей
 		size_t recordCount() @property inout
 		{
@@ -323,46 +328,72 @@ public:
 	}
 }
 
-//PGconn* conn, const(char*) command, int nParams  , const(uint*) paramTypes, const(char**) paramValues, const(int*) paramLengths, const(int*) paramFormats , int resultFormat
-//PGconn* conn, char* command       , ulong nParams, typeof(null) paramTypes, const(char)* paramValues , int* paramLengths       , typeof(null) paramFormats, int resultFormat
-
-import std.traits, std.datetime, std.conv;
-import std.range: ElementType;
 
 ///Функция преобразования параметров в строковое представление для PostgreSQL
 string toPGString(T)(T value)
-{	static if( isSomeString!(T) )
-	{	return value.to!string;
+{
+	import std.traits: isNumeric, isSomeString, isArray;
+	import std.datetime: DateTime, SysTime;
+	import std.conv: to;
+	import std.range: ElementType;
+	import webtank.common.optional: isOptional;
+
+	static if( is(T == typeof(null)) )
+	{
+		return `null`;
 	}
-	static if( is( T == SysTime ) || is( T == DateTime ) )
-	{	return value.toISOExtString();
+	else static if( isOptional!T )
+	{
+		return value.isSet? toPGString(value.value): `null`;
+	}
+	else static if( is(T == bool) || isNumeric!(T) )
+	{
+		return value.to!string;
+	}
+	else static if( isSomeString!(T) )
+	{
+		return value.to!string;
+	}
+	else static if( is(T == SysTime) || is(T == DateTime) )
+	{
+		return value.toISOExtString();
 	}
 	else static if( isArray!(T) )
-	{	alias ElementType!T ElemType;
-		string arrayData = "ARRAY[";
+	{
+		alias ElemType = ElementType!T;
+		string arrayData;
 		foreach( i, elem; value )
-		{	arrayData ~=
-				"'" ~ toPGString(elem) ~ "'"
-				~ ( i == value.length-1 ? "" : "," );
+		{
+			if( arrayData.length > 0 ) {
+				arrayData ~= ",";
+			}
+			arrayData ~= toPGString(elem);
 		}
-		arrayData ~= "]";
-		return arrayData;
+		return "ARRAY[" ~ arrayData ~ "]";
 	}
-	else
-	{	return value.to!string;
-	}
+	else static assert(false, `Unexpected type of parameter to safely represent in PostgreSQL query`);
 }
 
 ///Реализация запроса параметризованного кортежем для PostgreSQL
-PostgreSQLQueryResult execQueryTupleImpl(TL...)( DBPostgreSQL database, string expression, TL params )
-	//if( is( DB == DBPostgreSQL ) )
-{	int[] paramLengths;
+PostgreSQLQueryResult queryParamsPostgreSQL(TL...)(DBPostgreSQL database, string expression, ref TL params)
+{
+	import std.string: toStringz;
+	import std.conv: to;
+	import std.exception: enforce;
+	enforce!DBException(database !is null, `Expected DBPostgreSQL instance!`);
+
 	const(char*)[] cParams;
+	int[] paramLengths;
 
 	foreach( param; params )
-	{	cParams ~= param.toPGString().toStringz();
-		paramLengths ~= params.length;
+	{
+		string strParam = param.toPGString(); // Assure that there is zero symbol
+		cParams ~= strParam.toStringz();
+		paramLengths ~= strParam.length.to!int; // Documentation says that PG ignores it, but still pass it
 	}
+
+	database._logMsg(expression);
+	database._checkConnection();
 
 	PGresult* pgResult = PQexecParams(
 		database.rawPGConn,
@@ -377,79 +408,3 @@ PostgreSQLQueryResult execQueryTupleImpl(TL...)( DBPostgreSQL database, string e
 
 	return new PostgreSQLQueryResult(database, pgResult);
 }
-
-///Реализация параметризованного запроса к БД PostgreSQL
-struct PostgreSQLQuery
-{
-	this( DBPostgreSQL database, string expression = null )
-	{	_dbase = database;
-		_expr = expression;
-	}
-
-	ref PostgreSQLQuery setParamTuple(TL...)(TL params)
-	{	_params.length = params.length;
-		foreach( i, param; params )
-		{	_params[i] = param.toPGString();
-		}
-		return this;
-	}
-
-	ref PostgreSQLQuery setParam(T)( uint index, TL param )
-	{
-		import std.exception: enforce;
-		if( index >= _params.length  )
-			_params.length = index;
-
-		enforce(index > 0, "Index of parameter must be greather than 0!!!" );
-		_params[index-1] = param.toPGString();
-	}
-
-	ref PostgreSQLQuery setExpr(string expression) @property
-	{	_expr = expression;
-		return this;
-	}
-
-	IDBQueryResult exec()
-	{	return _dbase.execParamQueryImpl( _expr, _params );
-	}
-
-	ref PostgreSQLQuery clearParams()
-	{	_params = null;
-		return this;
-	}
-
-protected:
-	DBPostgreSQL _dbase;
-	string _expr;
-	string[] _params;
-}
-
-///Реализация выполнения запроса, параметризованного массивом, для Постгреса
-IDBQueryResult execParamQueryImpl(
-	DBPostgreSQL dbase, const(char)[] queryStr,
-	string[] params
-)
-{	const(char*) query = toStringz(queryStr);
-	const(char*)[] cParams;
-
-	int[] paramLengths;
-
-	foreach( param; params )
-	{	cParams ~= toStringz(param);
-		paramLengths ~= param.length.to!int;
-	}
-
-	PGresult* pgResult = PQexecParams(
-		dbase.rawPGConn,
-		query,
-		cParams.length.to!int,
-		null, //paramTypes: auto
-		cParams.ptr,
-		paramLengths.ptr,
-		null, //paramFormats: text
-		0 //resultFormat: text
-	);
-
-	return new PostgreSQLQueryResult(dbase, pgResult);
-}
-

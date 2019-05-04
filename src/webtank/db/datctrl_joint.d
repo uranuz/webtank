@@ -17,7 +17,59 @@ auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT forma
 	return TypedRecordSet!(RecordFormatT, IBaseRecordSet)(
 		new RecordSet(
 			makePostgreSQLDataFields(queryResult, format),
-			RecordFormatT.getKeyFieldIndex!()
-		)
-	);
+			RecordFormatT.getKeyFieldIndex!()));
 }
+
+auto getRecord(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT format)
+{
+	import std.exception: enforce;
+	auto rs = queryResult.getRecordSet(format);
+	enforce(
+		rs !is null && rs.length == 1,
+		`Expected exactly one record when using queryScalar`);
+	return rs[0];
+}
+
+auto getScalar(T)(IDBQueryResult queryResult)
+{
+	import std.exception: enforce;
+	import webtank.common.conv: conv;
+	enforce(
+		queryResult !is null && queryResult.fieldCount == 1 && queryResult.recordCount == 1,
+		`Expected exactly one record and one field when using queryScalar`);
+	enforce(
+		!queryResult.isNull(0, 0),
+		`Query scalar result expected to be non null`);
+	return queryResult.get(0, 0).conv!T();
+}
+
+/**
+auto queryRecordSet(RecordFormatT)(IDatabase db, RecordFormatT format, string queryStr)
+{
+	return db.query(queryStr).getRecordSet(format);
+}
+
+auto queryRecord(RecordFormatT)(IDatabase db, RecordFormatT format, string queryStr)
+{
+	import std.exception: enforce;
+	auto rs = db.query(queryStr).getRecordSet(format);
+	enforce(
+		rs !is null && rs.length == 1,
+		`Expected exactly one record when using queryScalar`);
+	return rs[0];
+}
+
+auto queryScalar(T)(IDatabase db, string queryStr)
+{
+	import std.exception: enforce;
+	import webtank.common.conv: conv;
+	auto queryRes = db.query(queryStr);
+	enforce(
+		queryRes !is null && queryRes.fieldCount == 1 && queryRes.recordCount == 1,
+		`Expected exactly one record and one field when using queryScalar`);
+	enforce(
+		!queryRes.isNull(0, 0),
+		`Query scalar result expected to be non null`);
+	return queryRes.get(0, 0).conv!T();
+}
+*/
