@@ -20,13 +20,20 @@ auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT forma
 			RecordFormatT.getKeyFieldIndex!()));
 }
 
-auto getRecord(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT format)
+auto getRecord(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT format, bool allowEmpty=false)
 {
 	import std.exception: enforce;
 	auto rs = queryResult.getRecordSet(format);
+	if( allowEmpty ) {
+		enforce(
+			rs !is null && rs.length < 2,
+			`Expected one or zero records when using queryRecord (with allowEmpty=true)`);
+		return rs.length == 1? rs[0]: typeof(rs[0])();
+	}
+	// else...
 	enforce(
 		rs !is null && rs.length == 1,
-		`Expected exactly one record when using queryScalar`);
+		`Expected exactly one record when using queryRecord`);
 	return rs[0];
 }
 

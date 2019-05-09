@@ -186,6 +186,13 @@ public:
 
 IBaseDataField[] makePostgreSQLDataFields(RecordFormatType)(IDBQueryResult queryResult, RecordFormatType format)
 {
+	import std.exception: enforce;
+	import std.conv: text;
+	enforce(queryResult !is null, `Expectes instance of IDBQueryResult`);
+	enforce(
+		RecordFormatType.tupleOfNames.length <= queryResult.fieldCount,
+		`Expected at least ` ~ RecordFormatType.tupleOfNames.length.text
+		~ ` fields in database query result, but got ` ~ queryResult.fieldCount.text);
 	IBaseDataField[] dataFields;
 	foreach( fieldName; RecordFormatType.tupleOfNames )
 	{

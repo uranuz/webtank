@@ -189,7 +189,7 @@ class DBException : Exception {
 
 
 ///Функция выполнения параметризованного запроса по кортежу параметров
-IDBQueryResult queryParams(TL...)(IDatabase database, string expression, ref TL params)
+IDBQueryResult queryParams(TL...)(IDatabase database, string expression, TL params)
 {
 	import webtank.db.postgresql: queryParamsPostgreSQL, DBPostgreSQL;
 	import std.exception: enforce;
