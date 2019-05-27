@@ -65,6 +65,8 @@ interface IDatabase
 	IDBQueryResult query(const(char)[] queryStr);
 	//DBStatus getStatus() @property; //Подробнее узнать как дела у базы
 
+	IDBQueryResult queryParamsArray(const(char)[] queryStr, string[] params);
+
 	/++
 	$(LANG_EN
 		Property returns last error message when executing query. Returns
@@ -191,7 +193,7 @@ class DBException : Exception {
 ///Функция выполнения параметризованного запроса по кортежу параметров
 IDBQueryResult queryParams(TL...)(IDatabase database, string expression, TL params)
 {
-	import webtank.db.postgresql: queryParamsPostgreSQL, DBPostgreSQL;
+	import webtank.db.postgresql: DBPostgreSQL, toPGString;
 	import std.exception: enforce;
 	import std.conv: to;
 
@@ -200,8 +202,12 @@ IDBQueryResult queryParams(TL...)(IDatabase database, string expression, TL para
 		case DBMSType.PostgreSQL: {
 			auto dbase = cast(DBPostgreSQL) database;
 			enforce!DBException(dbase !is null, "Database connection object is null!!!");
+			string[] strParams;
+			foreach( param; params ) {
+				strParams ~= param.toPGString(); // Assure that there is zero symbol
+			}
 
-			return queryParamsPostgreSQL(dbase, expression, params);
+			return dbase.queryParamsArray(expression, strParams);
 		}
 		default: break;
 	}

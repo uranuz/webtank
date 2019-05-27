@@ -50,7 +50,7 @@ auto convertPlainType(T)(string value)
 
 void setOfMaybeNull(string fieldName, StrucBase, T)(ref StrucBase result, ref T value)
 {
-	static if( isOptional!StrucBase && OptionalIsUndefable!StrucBase ) {
+	static if( isUndefable!StrucBase ) {
 		// Если сюда попали, то какие-то поля структуры уже должны присутствовать, но они все могут быть null
 		// для Undefable в этому случае нужно явно установить в null
 		if( result.isUndef ) {
@@ -58,11 +58,11 @@ void setOfMaybeNull(string fieldName, StrucBase, T)(ref StrucBase result, ref T 
 		}
 	}
 
-	static if( isOptional!T && !OptionalIsUndefable!T ) {
-		if( value.isNull )
-			return;
-	} else static if( isOptional!T && OptionalIsUndefable!T ) {
+	static if( isUndefable!T ) {
 		if( value.isUndef )
+			return;
+	} else static if( isOptional!T ) {
+		if( value.isNull )
 			return;
 	}
 
@@ -172,7 +172,7 @@ void formDataToStruct(ResultBaseType, DictType, string subFieldDelim = "__", str
 
 				if( thisLvlKeys.canFind(structFieldName) ) {
 					// Принудительно делаем Optional, либо Undefable, чтобы не получить значение по умолчанию вместо null
-					static if( isOptional!BaseFieldType && OptionalIsUndefable!BaseFieldType ) {
+					static if( isUndefable!BaseFieldType ) {
 						Undefable!FieldType innerStruct;
 					} else {
 						Optional!FieldType innerStruct;

@@ -78,7 +78,7 @@ JSONValue toStdJSON(T)(T dValue)
 					{
 						bool isUndef = false;
 						// Не будем выводить свойства которые имеют тип Undefable с состоянием isUndef
-						static if( isOptional!(ValueType!T) && OptionalIsUndefable!(ValueType!T) ) {
+						static if( isUndefable!(ValueType!T) ) {
 							isUndef = val.isUndef;
 						}
 						if( !isUndef ) {
@@ -140,7 +140,7 @@ JSONValue toStdJSON(T)(T dValue)
 					alias FieldType = typeof(__traits(getMember, dValue, name));
 					bool isUndef = false;
 					// Не будем выводить свойства которые имеют тип Undefable с состоянием isUndef
-					static if( isOptional!FieldType && OptionalIsUndefable!FieldType ) {
+					static if( isUndefable!FieldType ) {
 						isUndef = __traits(getMember, dValue, name).isUndef;
 					}
 					if( !isUndef ) {

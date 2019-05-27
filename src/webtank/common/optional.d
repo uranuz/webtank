@@ -48,6 +48,15 @@ template isOptional(O)
 	enum bool isOptional = is( Unqual!O == Optional!Rest, Rest... );
 }
 
+template isUndefable(O)
+{
+	import std.traits: Unqual;
+	static if( is( Unqual!O == Optional!(T, Rest), T, Rest... ) )
+		enum bool isUndefable = Rest[0];
+	else
+		enum bool isUndefable = false;
+}
+
 template OptionalValueType(O)
 {
 	import std.traits: fullyQualifiedName;
@@ -57,13 +66,7 @@ template OptionalValueType(O)
 		static assert(false, `Type ` ~ fullyQualifiedName!(O) ~ ` is not an instance of Optional!!!` );
 }
 
-template OptionalIsUndefable(O) {
-	import std.traits: fullyQualifiedName, Unqual;
-	static if( is( Unqual!O == Optional!(T, Rest), T, Rest... ) )
-		enum bool OptionalIsUndefable = Rest[0];
-	else
-		static assert(false, `Type ` ~ fullyQualifiedName!(O) ~ ` is not an instance of Optional!!!` );
-}
+
 
 unittest
 {	
@@ -135,10 +138,10 @@ unittest {
 	assert(isOptional!(Undefable!string));
 	assert(isOptional!(Undefable!Exception));
 
-	assert(OptionalIsUndefable!(Undefable!int));
-	assert(OptionalIsUndefable!(Undefable!(int*)));
-	assert(OptionalIsUndefable!(Undefable!string));
-	assert(OptionalIsUndefable!(Undefable!Exception));
+	assert(isUndefable!(Undefable!int));
+	assert(isUndefable!(Undefable!(int*)));
+	assert(isUndefable!(Undefable!string));
+	assert(isUndefable!(Undefable!Exception));
 }
 
 Optional!(T) optional(T)(auto ref inout(T) value) 
@@ -151,13 +154,13 @@ private enum OptState: ubyte { Undef, Null, Set };
 
 ///Шаблон для представления типов, имеющих выделенное пустое,
 ///или неинициализированное состояние
-struct Optional(T, bool isUndefable = false)
+struct Optional(T, bool isUndefOpt = false)
 {
 	import std.conv: to;
 
 	private T _value;
-	static if( !isUnsafelyNullable!T || isUndefable ) {
-		private OptState _state = isUndefable? OptState.Undef: OptState.Null;
+	static if( !isUnsafelyNullable!T || isUndefOpt ) {
+		private OptState _state = isUndefOpt? OptState.Undef: OptState.Null;
 	}
 
 /**
@@ -190,7 +193,7 @@ Constructor binding $(D this) with $(D value).
 		pure @safe nothrow
 	{
 		_value = typeof(_value).init;
-		static if( !isUnsafelyNullable!T || isUndefable ) {
+		static if( !isUnsafelyNullable!T || isUndefOpt ) {
 			_state = OptState.Null;
 		}
 	}
@@ -200,7 +203,7 @@ Constructor binding $(D this) with $(D value).
 		if( !isOptional!RHS && !is(RHS == typeof(null)) )
 	{
 		_value = rhs;
-		static if( isUnsafelyNullable!RHS && isUndefable ) {
+		static if( isUnsafelyNullable!RHS && isUndefOpt ) {
 			_state = rhs is null? OptState.Null: OptState.Set;
 		} else static if( !isUnsafelyNullable!RHS ) {
 			_state = OptState.Set;
@@ -222,9 +225,9 @@ Constructor binding $(D this) with $(D value).
 			}
 		}
 
-		static if( !isUnsafelyNullable!T || isUndefable )
+		static if( !isUnsafelyNullable!T || isUndefOpt )
 		{
-			static if( !isUnsafelyNullable!rhsT || OptionalIsUndefable!RHS ) {
+			static if( !isUnsafelyNullable!rhsT || isUndefable!RHS ) {
 				_state = rhs._state;
 			} else {
 				_state = rhs.isSet? OptState.Set: OptState.Null;
@@ -238,7 +241,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 	bool isNull() @property
 		inout pure @safe nothrow
 	{
-		static if( isUnsafelyNullable!T && !isUndefable ) {
+		static if( isUnsafelyNullable!T && !isUndefOpt ) {
 			return _value is null;
 		} else static if( isUnsafelyNullable!T ) {
 			return _state == OptState.Null || (_value is null && _state != OptState.Undef);
@@ -247,7 +250,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 		}
 	}
 
-	static if( isUndefable ) {
+	static if( isUndefOpt ) {
 		bool isUndef() @property
 			inout pure @safe nothrow
 		{
@@ -258,7 +261,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 	bool isSet() @property
 		inout pure @safe nothrow
 	{
-		static if( isUnsafelyNullable!T && !isUndefable ) {
+		static if( isUnsafelyNullable!T && !isUndefOpt ) {
 			return _value !is null;
 		} else static if( isUnsafelyNullable!T ) {
 			return _state == OptState.Set && _value !is null;
@@ -273,7 +276,7 @@ Returns $(D true) if and only if $(D this) is in the null state.
 		static if( is( RHS == typeof(null) ) ) {
 			return isNull;
 		} else static if( isOptional!RHS ) {
-			static if( isUndefable ) {
+			static if( isUndefOpt ) {
 				if( isNull && rhs.isNull || isUndef && rhs.isUndef )
 					return true;
 			} else {

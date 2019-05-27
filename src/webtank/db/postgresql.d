@@ -170,6 +170,37 @@ public:
 			return new PostgreSQLQueryResult(this, res);
 		}
 
+		IDBQueryResult queryParamsArray(const(char)[] queryStr, string[] params)
+		{
+			import std.string: toStringz;
+			import std.conv: to;
+
+			const(char*)[] cParams;
+			int[] paramLengths;
+
+			foreach( param; params )
+			{
+				cParams ~= param is null? null: param.toStringz();
+				paramLengths ~= param.length.to!int; // Documentation says that PG ignores it, but still pass it
+			}
+
+			_logMsg(cast(string) queryStr);
+			_checkConnection();
+
+			PGresult* pgResult = PQexecParams(
+				_conn,
+				toStringz(queryStr),
+				cParams.length.to!int,
+				null, //paramTypes: auto
+				cParams.ptr,
+				paramLengths.ptr,
+				null, //paramFormats: text
+				0 //resultFormat: text
+			);
+
+			return new PostgreSQLQueryResult(this, pgResult);
+		}
+
 		//Получение строки с недавней ошибкой
 		string lastErrorMessage() {
 			return PQerrorMessage(_conn).to!string;
@@ -333,18 +364,18 @@ public:
 string toPGString(T)(T value)
 {
 	import std.traits: isNumeric, isSomeString, isArray;
-	import std.datetime: DateTime, SysTime;
+	import std.datetime: DateTime, SysTime, Date;
 	import std.conv: to;
 	import std.range: ElementType;
 	import webtank.common.optional: isOptional;
 
 	static if( is(T == typeof(null)) )
 	{
-		return `null`;
+		return null;
 	}
 	else static if( isOptional!T )
 	{
-		return value.isSet? toPGString(value.value): `null`;
+		return value.isSet? toPGString(value.value): null;
 	}
 	else static if( is(T == bool) || isNumeric!(T) )
 	{
@@ -352,59 +383,36 @@ string toPGString(T)(T value)
 	}
 	else static if( isSomeString!(T) )
 	{
-		return value.to!string;
+		return value is null? null: value.to!string;
 	}
-	else static if( is(T == SysTime) || is(T == DateTime) )
+	else static if( is(T == SysTime) || is(T == DateTime) || is(T == Date) )
 	{
 		return value.toISOExtString();
 	}
 	else static if( isArray!(T) )
 	{
 		alias ElemType = ElementType!T;
+		if( value is null ) {
+			return null;
+		}
+
 		string arrayData;
 		foreach( i, elem; value )
 		{
 			if( arrayData.length > 0 ) {
-				arrayData ~= ",";
+				arrayData ~= ", ";
 			}
-			arrayData ~= toPGString(elem);
+			string item = toPGString(elem);
+			if( item is null ) {
+				arrayData ~= `null`;
+				continue;
+			}
+			static if( isSomeString!(ElemType) ) {
+				item = `"` ~ item.replace(`"`, `\"`) ~ `"`;
+			}
+			arrayData ~= item;
 		}
-		return "ARRAY[" ~ arrayData ~ "]";
+		return "{" ~ arrayData ~ "}";
 	}
 	else static assert(false, `Unexpected type of parameter to safely represent in PostgreSQL query`);
-}
-
-///Реализация запроса параметризованного кортежем для PostgreSQL
-PostgreSQLQueryResult queryParamsPostgreSQL(TL...)(DBPostgreSQL database, string expression, ref TL params)
-{
-	import std.string: toStringz;
-	import std.conv: to;
-	import std.exception: enforce;
-	enforce!DBException(database !is null, `Expected DBPostgreSQL instance!`);
-
-	const(char*)[] cParams;
-	int[] paramLengths;
-
-	foreach( param; params )
-	{
-		string strParam = param.toPGString(); // Assure that there is zero symbol
-		cParams ~= strParam.toStringz();
-		paramLengths ~= strParam.length.to!int; // Documentation says that PG ignores it, but still pass it
-	}
-
-	database._logMsg(expression);
-	database._checkConnection();
-
-	PGresult* pgResult = PQexecParams(
-		database.rawPGConn,
-		toStringz(expression),
-		cParams.length.to!int,
-		null, //paramTypes: auto
-		cParams.ptr,
-		paramLengths.ptr,
-		null, //paramFormats: text
-		0 //resultFormat: text
-	);
-
-	return new PostgreSQLQueryResult(database, pgResult);
 }

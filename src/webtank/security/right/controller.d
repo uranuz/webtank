@@ -66,21 +66,38 @@ private:
 	import webtank.security.right.composite_rule: CompositeAccessRule, RulesRelation;
 	import std.typecons: Tuple;
 
+	// Элемент таблицы правил доступа. Хранит правило доступа, признак его наследуемости, а также расстояние
 	alias RuleWithFlag = Tuple!(
 		IAccessRule, "rule",
 		bool, "inheritance",
 		size_t, "distance"
 	);
 
+	// Фабрика правил доступа выдает реализации правил по имени
 	IAccessRuleFactory _ruleFactory;
+
+	// Источник данных о правах. Выдает информацию об объектах, группах объектов, ролях, правилах и правах доступа
 	IRightDataSource _dataSource;
+
+	// Хранит соответствие идентификатора правила собственно реализации правила
 	IAccessRule[size_t] _allRules;
+
+	// Хранит соответствие идентифкатора объекта самому объекту доступа
 	AccessObject[size_t] _allObjects;
+
+	// Хранит соответствие идентификатора роли ее названию
 	string[size_t] _allRoles;
+
+	// Позволяет по совокупоности: (ид. роли, ид. объекта, тип доступа) получить соответствующее правило доступа
 	RuleWithFlag[AccessRightKey] _rulesByRightKey;
 
+	// Индекс для получения ид. объекта по полному имени
 	size_t[string] _objectNumByFullName;
+
+	// Индекс для получения ид. роли по имени
 	size_t[string] _roleNumByName;
+
+	// Позволяет по ид. группы получить список относящихся к ней объектов
 	size_t[][size_t] _groupObjKeys;
 
 public:
@@ -148,7 +165,8 @@ public:
 				accessKind: (accessKind.length? accessKind: null)
 			};
 			// First of all try to find and apply rule exactly specialized for this object
-			if( auto item = rightKey in _rulesByRightKey ) {
+			if( auto item = rightKey in _rulesByRightKey )
+			{
 				if( item.rule.hasRight(user, data) )
 					return true;
 				continue; // Do not search in parent object if have specialized right
@@ -158,7 +176,8 @@ public:
 			foreach( parentObjNum; parentObjects )
 			{
 				rightKey.objectNum = parentObjNum;
-				if( auto item = rightKey in _rulesByRightKey ) {
+				if( auto item = rightKey in _rulesByRightKey )
+				{
 					if( !item.inheritance ) {
 						continue parents_loop;
 					} else if( item.rule.hasRight(user, data) ) {
@@ -205,6 +224,7 @@ public:
 	void loadAccessRules()
 	{
 		auto ruleRS = _dataSource.getRules();
+
 		_allRules.clear();
 		foreach( ruleRec; ruleRS ) {
 			_loadRuleWithChildren(ruleRec, ruleRS);
@@ -250,15 +270,10 @@ public:
 		size_t[][size_t] childKeys;
 		foreach( objRec; objRS )
 		{
-			if( objRec.isNull("parent_num") ) {
+			if( objRec.isNull("parent_num") || objRec.isNull("num") )
 				continue;
-			}
 
-			if( auto currChilds = objRec.get!"parent_num" in childKeys ) {
-				*currChilds ~= objRec.get!"num";
-			} else {
-				childKeys[objRec.get!"parent_num"] = [objRec.get!"num"];
-			}
+			childKeys.require(objRec.get!"parent_num", []) ~= objRec.get!"num";
 		}
 
 		_allObjects.clear();
@@ -328,15 +343,25 @@ public:
 
 	void loadAccessRoles()
 	{
+		import std.exception: enforce;
+		import std.conv: text;
+		
 		auto roleRS = _dataSource.getRoles();
 
 		_allRoles.clear();
 		_roleNumByName.clear();
 		foreach( roleRec; roleRS )
 		{
+			if( roleRec.isNull("num") )
+				continue;
+			enforce(
+				roleRec.get!"num" !in _allRoles,
+				`Duplicated role with id: ` ~ roleRec.get!"num".text);
 			_allRoles[roleRec.get!"num"] = roleRec.getStr!"name";
-			import std.exception: enforce;
-			enforce( roleRec.getStr!"name" !in _roleNumByName, `Duplicated role with name: ` ~ roleRec.getStr!"name" );
+
+			enforce(
+				roleRec.getStr!"name" !in _roleNumByName,
+				`Duplicated role with name: ` ~ roleRec.getStr!"name");
 			_roleNumByName[roleRec.getStr!"name"] = roleRec.get!"num";
 		}
 	}
@@ -400,7 +425,7 @@ public:
 				|| rulePtr.distance < distance
 				// Overwrite rule if existing rule at the same level doesn't have inheritance,
 				// because inherited has more permissions and should override
-				|| rulePtr.distance == distance && !rulePtr.inheritance
+				|| (rulePtr.distance == distance && !rulePtr.inheritance)
 			) {
 				_rulesByRightKey[rightKey] = RuleWithFlag(
 					rule,
@@ -418,14 +443,10 @@ public:
 		_groupObjKeys.clear();
 		foreach( groupObj; groupObjRS )
 		{
+			// Игнорируем битые записи
 			if( groupObj.isNull(`group_num`) || groupObj.isNull(`object_num`) )
 				continue;
-
-			if( auto it = groupObj.get!"group_num" in _groupObjKeys ) {
-				(*it) ~= groupObj.get!"object_num";
-			} else {
-				_groupObjKeys[groupObj.get!"group_num"] = [groupObj.get!"object_num"];
-			}
+			_groupObjKeys.require(groupObj.get!"group_num", []) ~= groupObj.get!"object_num";
 		}
 	}
 
