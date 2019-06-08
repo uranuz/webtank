@@ -45,3 +45,39 @@ version(Have_ivy)
 }
 
 alias RightDataVariant = Algebraic!(RightDataTypes);
+
+
+import webtank.net.http.context: HTTPContext;
+private void _checkItemRights(DataStruct, string fieldName)(HTTPContext ctx, string accessKind)
+{
+	import mkk.security.common.exception: SecurityException;
+	import webtank.security.right.common: GetSymbolAccessObject;
+	import std.exception: enforce;
+	string accessObj = GetSymbolAccessObject!(DataStruct, fieldName)();
+	enforce!SecurityException(
+		ctx.rights.hasRight(accessObj, accessKind),
+		`Недостаточно прав для редактирования поля: ` ~ fieldName);
+}
+
+void checkStructEditRights(DataStruct)(auto ref DataStruct record, HTTPContext ctx, string accessKind = `edit`)
+{
+	import mkk.security.common.exception: SecurityException;
+	import webtank.security.right.common: RightObjAttr;
+	import std.meta: AliasSeq;
+	import std.traits: getUDAs;
+	import webtank.common.optional: isUndefable;
+	foreach( fieldName; AliasSeq!(__traits(allMembers, DataStruct)) )
+	{
+		alias FieldType = typeof(__traits(getMember, record, fieldName));
+		alias RightObjAttrs = getUDAs!(__traits(getMember, record, fieldName), RightObjAttr);
+		static if( isUndefable!FieldType )
+		{
+			auto field = __traits(getMember, record, fieldName);
+			if( field.isUndef )
+				continue; // Если поле не изменилось, то права на него не проверяем
+			_checkItemRights!(DataStruct, fieldName)(ctx, accessKind);
+		} else static if( RightObjAttrs.length > 0 ) {
+			_checkItemRights!(DataStruct, fieldName)(ctx, accessKind);
+		}
+	}
+}
