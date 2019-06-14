@@ -156,22 +156,6 @@ template callJSON_RPC_Method(alias Method)
 	JSONValue callJSON_RPC_Method(ref const(JSONValue) jParams, HTTPContext context)
 	{
 		JSONValue result = null; // По-умолчанию в качестве результата null
-		size_t expectedParamsCount = 0; // Ожидаемое число параметров в jParams
-
-		//Считаем количество параметров, которые должны были быть переданы
-		foreach( type; ParamTypes )
-		{
-			static if( !is(type: HTTPContext) ) {
-				++expectedParamsCount;
-			}
-		}
-
-		if( expectedParamsCount > 0 && (jParams.type != JSON_TYPE.OBJECT || jParams.object.length != expectedParamsCount) ) {
-			throw new JSON_RPC_Exception(
-				`Expected JSON object with ` ~ expectedParamsCount.to!string ~ ` params in JSON-RPC call, but got: `
-				~ (jParams.type == JSON_TYPE.OBJECT ? jParams.object.length.to!string : jParams.type.to!string)
-			);
-		}
 
 		Tuple!(ParamTypes) argTuple;
 		foreach( i, type; ParamTypes )

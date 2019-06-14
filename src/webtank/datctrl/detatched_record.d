@@ -39,7 +39,8 @@ public:
 	override {
 		IBaseWriteableDataField getField(string fieldName)
 		{
-			assert(fieldName in _fieldIndexes);
+			import std.exception: enforce;
+			enforce(fieldName in _fieldIndexes, `There is no field with name "` ~ fieldName ~ `" in detatched record`);
 			return _dataFields[ _fieldIndexes[fieldName] ];
 		}
 
