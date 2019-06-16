@@ -184,7 +184,7 @@ T fromStdJSON(T)(JSONValue jValue)
 					// Явно говорим, что из строки будем получать дату или время в формате ISO
 					result = T.fromISOExtString(jValue.str);
 				} else {
-					// Пока для других типом преобразование из строки не доступно. Может позже... Но это не точно...
+					// Пока для других типов преобразование из строки не доступно. Может позже... Но это не точно...
 					throw new SerializationException("Deserialization from string to struct is only possible for date and time for now...");
 				}
 			} else if( jValue.type != JSON_TYPE.NULL ) {

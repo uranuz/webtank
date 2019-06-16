@@ -23,16 +23,6 @@ struct PrimaryKey(T) {
 
 /++
 $(LANG_EN
-	Returns true if $(D_PARAM FieldType) is key field type and false otherwise
-)
-$(LANG_RU
-	Возвращает true если $(D_PARAM FieldT) является типом ключевого поля или false в противном случае
-)
-+/
-alias isPrimaryKeyFormat(T...) =  isInstanceOf!(PrimaryKey, T[0]);
-
-/++
-$(LANG_EN
 	Template that returns real D language type of data field by enumerable value
 	$(D_PARAM FieldT) of semantic field type
 )
@@ -43,9 +33,7 @@ $(LANG_RU
 +/
 template DataFieldValueType(FormatType)
 {
-	static if( isPrimaryKeyFormat!(FormatType) ) {
-		alias DataFieldValueType = DataFieldValueType!(FormatType.BaseDecl);
-	} else static if( isEnumFormat!(FormatType) ) {
+	static if( isEnumFormat!(FormatType) ) {
 		alias DataFieldValueType = FormatType.ValueType;
 	}	else static if( is(FormatType) ) {
 		alias DataFieldValueType = FormatType;

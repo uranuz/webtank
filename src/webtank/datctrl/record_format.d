@@ -27,7 +27,16 @@ struct RecordFormat(Args...)
 	alias EnumFormatDecls = filterFieldFormatDecls!( EnumFormat );
 	alias EnumFieldSpecs = _filterFieldSpecs!(_fieldSpecs).ByTypes!(EnumFormat);
 
-	
+	// Результат разбора аргументов
+	alias _argsParseRes = _parseRecordFormatArgs!(0, Args);
+
+	//Внутреннее "хранилище" разобранной информации о полях записи
+	//Не использовать извне!!!
+	alias _fieldSpecs = _argsParseRes.FieldSpecs;
+
+	// Идентификатор поля первичного ключа в формате записи
+	enum size_t _keyFieldIndex = _argsParseRes.keyFieldIndex;
+
 	bool[string] nullableFlags;
 	Tuple!(EnumFormatDecls) enumFormats;
 
@@ -35,7 +44,7 @@ struct RecordFormat(Args...)
 	$(LANG_EN Returns true if format includes primary key field)
 	$(LANG_RU Возвращает true, если в формате есть поле первичного ключа)
 	+/
-	enum bool hasKeyField = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs).length > 0;
+	enum bool hasKeyField = _keyFieldIndex != size_t.max;
 
 
 	/++
@@ -97,10 +106,6 @@ struct RecordFormat(Args...)
 	static pure immutable(size_t[string]) indexes() @property {
 		return _indexes;
 	}
-
-	//Внутреннее "хранилище" разобранной информации о полях записи
-	//Не использовать извне!!!
-	alias _fieldSpecs = _parseRecordFormatArgs!Args;
 
 	//АХТУНГ!!! ДАЛЕЕ ИДУТ СТРАШНЫЕ ШАБЛОННЫЕ ЗАКЛИНАНИЯ!!!
 
@@ -169,36 +174,21 @@ struct RecordFormat(Args...)
 	alias getFieldIndex(string fieldName) = _getFieldIndex!(fieldName, 0, _fieldSpecs);
 
 	/++
-	$(LANG_EN Returns true if primary key field specification is passed as argument)
-	$(LANG_RU Возвращает true, если в качестве аргумента передана спецификация ключевого поля)
-	+/
-	alias isPrimaryKeyFieldSpec(alias FieldSpec) = isPrimaryKeyFormat!(FieldSpec.FormatDecl);
-
-	/++
 	$(LANG_EN Returns index of primary key field if it is present)
 	$(LANG_RU Возвращает номер поля первичного ключа, если оно присутствует)
 	+/
 	template getKeyFieldIndex()
 	{
-		alias PKFieldSpecs = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs);
-		static assert( PKFieldSpecs.length > 0, "Primary key is not set for record format!!!" );
-		static assert( PKFieldSpecs.length < 2, "Only one primary key allowed for record format!!!" );
+		static assert(_keyFieldIndex < _fieldSpecs.length, `No primary key field in record format`);
 
-		alias getKeyFieldIndex = _getFieldIndex!(PKFieldSpecs[0].name, 0, _fieldSpecs);
+		enum getKeyFieldIndex = _keyFieldIndex;
 	}
 
 	/++
 	$(LANG_EN Returns specification primary key field if it is present)
 	$(LANG_RU Возвращает спецификацию поля первичного ключа, если оно присутствует)
 	+/
-	template getKeyFieldSpec()
-	{
-		alias PKFieldSpecs = Filter!(isPrimaryKeyFieldSpec, _fieldSpecs);
-		static assert( PKFieldSpecs.length > 0, "Primary key is not set for record format!!!" );
-		static assert( PKFieldSpecs.length < 2, "Only one primary key allowed for record format!!!" );
-
-		alias getKeyFieldSpec = PKFieldSpecs[0];
-	}
+	alias getKeyFieldSpec() = _fieldSpecs[getKeyFieldIndex!()];
 
 	/++
 		$(LANG_EN Returns index of field with specified name in record format)
@@ -226,20 +216,43 @@ template _getHasField(string fieldName, FieldSpecs...)
 
 
 //Шаблон разбирает аргументы и находит соответсвие имен и типов полей
-//Результат: кортеж элементов FieldSpec
-template _parseRecordFormatArgs(Args...)
+//Результат: кортеж элементов FieldSpecKind
+template _parseRecordFormatArgs(size_t index, Args...)
 {
-	static if( Args.length == 0 ) {
-		alias _parseRecordFormatArgs = AliasSeq!() ;
-	}
-	else static if( is(Args[0]) || is( Args[0] == PrimaryKey!(T), T...) )
+	static if( Args.length == 0 )
 	{
-		static if( is( typeof( Args[1] ) : string ) )
-			alias _parseRecordFormatArgs = AliasSeq!(FieldSpec!(Args[0 .. 2]), _parseRecordFormatArgs!(Args[2 .. $]));
+		alias FieldSpecs = AliasSeq!();
+		enum size_t keyFieldIndex = size_t.max;
+	}
+	else
+	{
+		static if( Args.length > 1 && is(typeof( Args[1] ): string) )
+		{
+			enum string _fieldName = Args[1];
+			alias _RestArgs = Args[2 .. $];
+		}
 		else
-			alias _parseRecordFormatArgs = AliasSeq!(FieldSpec!(Args[0]), _parseRecordFormatArgs!(Args[1 .. $]));
-	} else {
-		static assert(0, "Attempted to instantiate Tuple with an invalid argument: " ~ Args[0].stringof);
+		{
+			enum string _fieldName = null;
+			alias _RestArgs = Args[1 .. $];
+		}
+
+		alias _Res = _parseRecordFormatArgs!(index + 1, _RestArgs);
+
+		static if( is( Args[0] == PrimaryKey!(T), T...) )
+		{
+			static assert(_Res.keyFieldIndex == size_t.max, `Multiple PrimaryKey field format specifiers detected!`);
+			alias _FormatDecl = Args[0].BaseDecl;
+			enum size_t keyFieldIndex = index;
+		} else {
+			alias _FormatDecl = Args[0];
+			enum size_t keyFieldIndex = _Res.keyFieldIndex;
+		}
+
+		alias FieldSpecs = AliasSeq!(
+			FieldSpec!(_FormatDecl, _fieldName),
+			_Res.FieldSpecs
+		);
 	}
 }
 
