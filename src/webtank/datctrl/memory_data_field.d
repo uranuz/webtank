@@ -189,18 +189,16 @@ struct RecordSetFieldAccessor(ValueType)
 
 	this(JSONValue dat, size_t fi)
 	{
-		enforce(jData.type == JSON_TYPE.ARRAY, `Expected JSON array as record set data`);
+		enforce(dat.type == JSON_TYPE.ARRAY, `Expected JSON array as record set data`);
 		jData = dat;
 		fieldIndex = fi;
 	}
 
 	Optional!ValueType front() @property
 	{
-		import std.traits: isIntegral, isFloatingPoint, isSomeString, isDynamicArray;
-		import std.conv: to;
-		import std.algorithm: canFind;
-		import std.datetime: Date, DateTime;
-		import std.range: ElementType;
+		import std.exception: enforce;
+
+		import webtank.common.std_json.from: fromStdJSON;
 
 		enforce(!this.empty, `RecordSetFieldAccessor is empty`);
 
@@ -209,76 +207,7 @@ struct RecordSetFieldAccessor(ValueType)
 		enforce(fieldIndex < jRec.array.length, `Field index is out of bounds of JSON record`);
 		JSONValue jVal = jRec.array[fieldIndex];
 
-		Optional!ValueType res;
-		if( jVal.type == JSON_TYPE.NULL ) {
-			return res;
-		}
-
-		static if( is(ValueType: bool) )
-		{
-			enforce([JSON_TYPE.TRUE, JSON_TYPE.FALSE].canFind(jVal.type), `Expected boolean`);
-			res = jVal.boolean;
-		}
-		else static if( isIntegral!ValueType )
-		{
-			enforce([JSON_TYPE.INTEGER, JSON_TYPE.UINTEGER].canFind(jVal.type), `Expected integer`);
-			res = jVal.type == JSON_TYPE.INTEGER? jVal.integer.to!ValueType: jVal.uinteger.to!ValueType;
-		}
-		else static if( isFloatingPoint!ValueType )
-		{
-			enforce(jVal.type == JSON_TYPE.FLOAT, `Expected floating point`);
-			res = jVal.floating.to!ValueType;
-		}
-		else static if( isSomeString!ValueType )
-		{
-			enforce(jVal.type == JSON_TYPE.STRING, `Expected string`);
-			res = jVal.str.to!ValueType;
-		}
-		else static if( isDynamicArray!ValueType )
-		{
-			alias Elem = ElementType!ValueType;
-			enforce(jVal.type == JSON_TYPE.ARRAY, `Expected array`);
-			ValueType items;
-			foreach( JSONValue arrElem; jVal.array )
-			{
-				static if( is(Elem : bool) )
-				{
-					enforce([JSON_TYPE.TRUE, JSON_TYPE.FALSE].canFind(arrElem.type), `Expected bool array element`);
-					items ~= arrElem.boolean;
-				}
-				else static if( isIntegral!Elem )
-				{
-					enforce([JSON_TYPE.INTEGER, JSON_TYPE.UINTEGER].canFind(arrElem.type), `Expected integer array element`);
-					items ~= arrElem.type == JSON_TYPE.INTEGER? arrElem.integer.to!Elem: arrElem.uinteger.to!Elem;
-				}
-				else static if( isFloatingPoint!Elem )
-				{
-					enforce(jVal.type == JSON_TYPE.FLOAT, `Expected floating point array element`);
-					items ~= arrElem.floating.to!Elem;
-				}
-				else static if( isSomeString!Elem )
-				{
-					enforce(jVal.type == JSON_TYPE.STRING, `Expected string point array element`);
-					items ~= arrElem.str.to!Elem;
-				}
-				else
-					static assert(false, `Unexpected array element type`);
-			}
-			res = items;
-		}
-		else static if( is(ValueType : Date) )
-		{
-			enforce(jVal.type == JSON_TYPE.ARRAY, `Expected date string`);
-			res = Date.fromISOExtString(jVal.str);
-		}
-		else static if( is(ValueType : DateTime) )
-		{
-			enforce(jVal.type == JSON_TYPE.ARRAY, `Expected date and time string`);
-			res = DateTime.fromISOExtString(jVal.str);
-		}
-		else
-			static assert(false, `Unexpected ValueType`);
-		return res;
+		return fromStdJSON!(Optional!ValueType)(jVal);
 	}
 
 	void popFront() {
@@ -286,7 +215,7 @@ struct RecordSetFieldAccessor(ValueType)
 	}
 
 	bool empty() @property {
-		return recordIndex < jData.array.length;
+		return recordIndex >= jData.array.length;
 	}
 }
 
@@ -298,6 +227,7 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 	import std.array: array;
 	import std.datetime: DateTime, Date;
 	import std.meta: AliasSeq;
+	import std.conv: to;
 
 	enforce(jFormat.type == JSON_TYPE.ARRAY, `Expected JSON array of field formats`);
 	enforce(jData.type == JSON_TYPE.ARRAY, `Expected JSON array of record or record set data`);
@@ -318,8 +248,14 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 		string fieldName = jNamePtr.str;
 		Optional!size_t theSize;
 		if( auto jSizePtr = `sz` in jField ) {
-			enforce(jSizePtr.type == JSON_TYPE.UINTEGER, `Expected integer as "sz" field`);
-			theSize = jSizePtr.uinteger;
+			enforce(
+				[JSON_TYPE.UINTEGER, JSON_TYPE.INTEGER].canFind(jSizePtr.type),
+				`Expected integer as "sz" field`);
+			theSize = (
+				jSizePtr.type == JSON_TYPE.UINTEGER?
+				jSizePtr.uinteger.to!size_t:
+				jSizePtr.integer.to!size_t
+			);
 		}
 
 		switch( typeStr )
@@ -333,15 +269,16 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 				if( theSize.isNull ) {
 					theSize = int.sizeof;
 				}
+				int_size_switch:
 				switch( theSize.value )
 				{
-					foreach( IntType; AliasSeq!(byte, int, long) ) {
+					static foreach( IntType; AliasSeq!(byte, short, int, long) ) {
 						case IntType.sizeof: {
 							_addField!IntType(fields, fieldName, fieldIndex, jData);
-							break;
+							break int_size_switch;
 						}
 					}
-					default: enforce(false, `Unsupported size of integer field`);
+					default: enforce(false, `Unsupported size of integer field: ` ~ theSize.value.to!string);
 				}
 				break;
 			}
@@ -350,15 +287,16 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 				if( theSize.isNull ) {
 					theSize = double.sizeof;
 				}
+				float_size_switch:
 				switch( theSize.value )
 				{
-					foreach( FloatType; AliasSeq!(float, double, real) ) {
+					static foreach( FloatType; AliasSeq!(float, double, real) ) {
 						case FloatType.sizeof: {
 							_addField!FloatType(fields, fieldName, fieldIndex, jData);
-							break;
+							break float_size_switch;
 						}
 					}
-					default: enforce(false, `Unsupported size of float field`);
+					default: enforce(false, `Unsupported size of float field: ` ~ theSize.value.to!string);
 				}
 				break;
 			}
@@ -421,18 +359,8 @@ private void _addField(FieldType)(
 ) {
 	import std.array: array;
 	auto valRange = RecordSetFieldAccessor!FieldType(jData, fieldIndex);
-	fields ~= new MemoryDataField!(FieldType)(name, valRange.array);
+	fields ~= new MemoryDataField!FieldType(name, valRange.array);
 }
-
-private JSONValue _getArrayItem(JSONValue jData, size_t index)
-{
-	import std.exception: enforce;
-	enforce(jData.type == JSON_TYPE.ARRAY, `Expected JSON array of record or record set data`);
-	enforce(index < jData.array.length, `Index of JSON array is out of bounds`);
-	return jData[index];
-}
-
-
 
 unittest
 {

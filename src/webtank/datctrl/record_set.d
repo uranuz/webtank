@@ -54,19 +54,33 @@ public:
 		}
 	}
 
-	import std.json: JSONValue, JSON_TYPE;
-	static WriteableRecordSet fromStdJSONByFormat(RecordFormatT)(JSONValue jRecordSet)
+	static void _extractFromJSON(JSONValue jRecordSet, ref JSONValue jFormat, ref JSONValue jData)
 	{
 		import std.exception: enforce;
+
 		enforce(jRecordSet.type == JSON_TYPE.OBJECT, `Expected JSON object as RecordSet serialized data!!!`);
 		enforce(`t` in jRecordSet, `Expected "t" field in RecordSet serialized data!!!`);
 		enforce(`d` in jRecordSet, `Expected "d" field in RecordSet serialized data!!!`);
 		enforce(`f` in jRecordSet, `Expected "f" field in RecordSet serialized data!!!`);
-		JSONValue jFormat = jRecordSet[`f`];
-		JSONValue jData = jRecordSet[`d`];
+
+		jFormat = jRecordSet[`f`];
+		jData = jRecordSet[`d`];
+
 		enforce(jData.type == JSON_TYPE.ARRAY, `RecordSet serialized data field "d" must be JSON array!!!`);
 		enforce(jFormat.type == JSON_TYPE.ARRAY, `RecordSet serialized data field "f" must be JSON array!!!`);
-		
+	}
+
+	import std.json: JSONValue, JSON_TYPE;
+	static WriteableRecordSet fromStdJSONByFormat(RecordFormatT)(JSONValue jRecordSet)
+	{
+		import std.exception: enforce;
+		import std.conv: text;
+		import webtank.datctrl.memory_data_field: makeMemoryDataFields;
+
+		JSONValue jFormat;
+		JSONValue jData;
+
+		_extractFromJSON(jRecordSet, jFormat, jData);
 
 		size_t[string] fieldToIndex;
 		foreach( size_t index, JSONValue jField; jFormat )
@@ -79,14 +93,13 @@ public:
 			fieldToIndex[fieldName] = index;
 		}
 
-		import webtank.datctrl.memory_data_field: makeMemoryDataFields;
 		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init); // Fill with init format for now
 
 		auto newRS = new WriteableRecordSet(dataFields, RecordFormatT.getKeyFieldIndex!());
 		newRS.addItems(jData.array.length); // Expand fields to desired size
 
 		enum size_t expectedFieldCount = RecordFormatT.tupleOfNames.length;
-		import std.conv: text;
+
 		foreach( size_t recIndex, JSONValue jRecord; jData )
 		{
 			enforce(jRecord.type == JSON_TYPE.ARRAY, `Record serialized data expected to be JSON array!!!`);
@@ -102,6 +115,38 @@ public:
 		newRS._reindexFields();
 		newRS._reindexRecords();
 		return newRS; // Hope we have done there
+	}
+
+	static WriteableRecordSet fromStdJSON(JSONValue jRecordSet)
+	{
+		import std.algorithm: canFind;
+		import std.conv: to;
+
+		import webtank.datctrl.memory_data_field: makeMemoryDataFieldsDyn;
+
+		JSONValue jFormat;
+		JSONValue jData;
+
+		_extractFromJSON(jRecordSet, jFormat, jData);
+
+		auto jKfiPtr = `kfi` in jRecordSet;
+		enforce(jKfiPtr !is null, `Expected "kfi" field in RecordSet JSON`);
+		enforce(
+			[JSON_TYPE.UINTEGER, JSON_TYPE.INTEGER].canFind(jKfiPtr.type),
+			`Expected integer as "kfi" field in RecordSet JSON`);
+
+		size_t keyFieldIndex = (
+			jKfiPtr.type == JSON_TYPE.UINTEGER?
+			jKfiPtr.uinteger.to!size_t:
+			jKfiPtr.integer.to!size_t
+		);
+
+		IBaseWriteableDataField[] dataFields = makeMemoryDataFieldsDyn(jFormat, jData);
+		auto newRS = new WriteableRecordSet(dataFields, keyFieldIndex);
+
+		newRS._reindexFields();
+		newRS._reindexRecords();
+		return newRS;
 	}
 }
 

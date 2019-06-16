@@ -69,7 +69,7 @@ mixin template GetStdJSONFieldFormatImpl()
 		static if( isEnumFormat!(FormatType) ) {
 			res = _enumFormat.toStdJSON();
 		} else {
-			import std.traits: isIntegral, isFloatingPoint, isArray, isAssociativeArray;
+			import std.traits: isIntegral, isFloatingPoint, isArray, isAssociativeArray, isSomeString;
 			res["t"] = getFieldTypeString!ValueType; // Вывод типа поля
 			res["dt"] = ValueType.stringof; // D-шный тип поля
 
@@ -77,7 +77,7 @@ mixin template GetStdJSONFieldFormatImpl()
 				res["sz"] = ValueType.sizeof; // Размер чисел в байтах
 			}
 
-			static if( isArray!(ValueType) ) {
+			static if( isArray!ValueType && !isSomeString!ValueType ) {
 				import std.range: ElementType;
 				res["vt"] = getFieldTypeString!(ElementType!ValueType);
 			} else static if( isAssociativeArray!(ValueType) ) {
