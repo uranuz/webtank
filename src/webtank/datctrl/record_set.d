@@ -54,62 +54,33 @@ public:
 		}
 	}
 
-	static void _extractFromJSON(JSONValue jRecordSet, ref JSONValue jFormat, ref JSONValue jData)
-	{
-		import std.exception: enforce;
-
-		enforce(jRecordSet.type == JSON_TYPE.OBJECT, `Expected JSON object as RecordSet serialized data!!!`);
-		enforce(`t` in jRecordSet, `Expected "t" field in RecordSet serialized data!!!`);
-		enforce(`d` in jRecordSet, `Expected "d" field in RecordSet serialized data!!!`);
-		enforce(`f` in jRecordSet, `Expected "f" field in RecordSet serialized data!!!`);
-
-		jFormat = jRecordSet[`f`];
-		jData = jRecordSet[`d`];
-
-		enforce(jData.type == JSON_TYPE.ARRAY, `RecordSet serialized data field "d" must be JSON array!!!`);
-		enforce(jFormat.type == JSON_TYPE.ARRAY, `RecordSet serialized data field "f" must be JSON array!!!`);
-	}
-
 	import std.json: JSONValue, JSON_TYPE;
 	static WriteableRecordSet fromStdJSONByFormat(RecordFormatT)(JSONValue jRecordSet)
 	{
 		import std.exception: enforce;
 		import std.conv: text;
 		import webtank.datctrl.memory_data_field: makeMemoryDataFields;
+		import webtank.datctrl.common: _makeRecordFieldIndex, _extractFromJSON, _fillDataIntoRec;
+		import webtank.common.optional: Optional;
 
 		JSONValue jFormat;
 		JSONValue jData;
+		string type;
+		Optional!size_t kfi;
 
-		_extractFromJSON(jRecordSet, jFormat, jData);
+		_extractFromJSON(jRecordSet, jFormat, jData, type, kfi);
+		enforce(type == `recordset`, `Expected recordset type`);
 
-		size_t[string] fieldToIndex;
-		foreach( size_t index, JSONValue jField; jFormat )
-		{
-			enforce(jField.type == JSON_TYPE.OBJECT, `RecordSet serialized field format must be object!!!`);
-			enforce(`n` in jField, `RecordSet serialized field format must have "n" field`);
-			enforce(jField[`n`].type == JSON_TYPE.STRING, `RecordSet serialized field name must be JSON string!!!`);
-			string fieldName = jField[`n`].str;
-			enforce(fieldName !in fieldToIndex, `RecordSet field name must be unique!!!`);
-			fieldToIndex[fieldName] = index;
-		}
+		size_t[string] fieldToIndex = _makeRecordFieldIndex(jFormat);
 
-		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init); // Fill with init format for now
+		// Fill with init format for now
+		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init);
 
 		auto newRS = new WriteableRecordSet(dataFields, RecordFormatT.getKeyFieldIndex!());
 		newRS.addItems(jData.array.length); // Expand fields to desired size
 
-		enum size_t expectedFieldCount = RecordFormatT.tupleOfNames.length;
-
-		foreach( size_t recIndex, JSONValue jRecord; jData )
-		{
-			enforce(jRecord.type == JSON_TYPE.ARRAY, `Record serialized data expected to be JSON array!!!`);
-			enforce(jRecord.array.length >= expectedFieldCount,
-				`Not enough items in serialized Record. Expected ` ~ expectedFieldCount.text ~ ` got ` ~ jRecord.array.length.text);
-			foreach( formatFieldIndex, name; RecordFormatT.names )
-			{
-				enforce(name in fieldToIndex, `Expected field in recordset with name: ` ~ name);
-				dataFields[formatFieldIndex].fromStdJSONValue(jRecord[fieldToIndex[name]], recIndex);
-			}
+		foreach( size_t recIndex, JSONValue jRecord; jData ) {
+			_fillDataIntoRec!(RecordFormatT)(dataFields, jRecord, recIndex, fieldToIndex);
 		}
 
 		newRS._reindexFields();
@@ -123,26 +94,21 @@ public:
 		import std.conv: to;
 
 		import webtank.datctrl.memory_data_field: makeMemoryDataFieldsDyn;
+		import webtank.datctrl.common: _extractFromJSON;
+		import webtank.common.optional: Optional;
 
 		JSONValue jFormat;
 		JSONValue jData;
+		string type;
+		Optional!size_t kfi;
 
-		_extractFromJSON(jRecordSet, jFormat, jData);
+		_extractFromJSON(jRecordSet, jFormat, jData, type, kfi);
 
-		auto jKfiPtr = `kfi` in jRecordSet;
-		enforce(jKfiPtr !is null, `Expected "kfi" field in RecordSet JSON`);
-		enforce(
-			[JSON_TYPE.UINTEGER, JSON_TYPE.INTEGER].canFind(jKfiPtr.type),
-			`Expected integer as "kfi" field in RecordSet JSON`);
-
-		size_t keyFieldIndex = (
-			jKfiPtr.type == JSON_TYPE.UINTEGER?
-			jKfiPtr.uinteger.to!size_t:
-			jKfiPtr.integer.to!size_t
-		);
+		enforce(kfi.isSet, `Expected key field index`);
+		enforce(type == `recordset`, `Expected recordset type`);
 
 		IBaseWriteableDataField[] dataFields = makeMemoryDataFieldsDyn(jFormat, jData);
-		auto newRS = new WriteableRecordSet(dataFields, keyFieldIndex);
+		auto newRS = new WriteableRecordSet(dataFields, kfi.value);
 
 		newRS._reindexFields();
 		newRS._reindexRecords();

@@ -80,7 +80,6 @@ public:
 			getField(fieldName).isNullable = value;
 		}
 
-		import std.json: JSONValue;
 		JSONValue toStdJSON()
 		{
 			auto jValues = this.getStdJSONFormat();
@@ -93,6 +92,60 @@ public:
 			return _keyFieldIndex;
 		}
 	} // override
+
+	import std.json: JSONValue, JSON_TYPE;
+	static DetatchedRecord fromStdJSONByFormat(RecordFormatT)(JSONValue jRecord)
+	{
+		import webtank.datctrl.memory_data_field: makeMemoryDataFields;
+		import webtank.datctrl.common: _extractFromJSON, _makeRecordFieldIndex;
+
+		JSONValue jFormat;
+		JSONValue jData;
+		string type;
+		Optional!size_t kfi;
+
+		_extractFromJSON(jRecord, jFormat, jData, type, kfi);
+
+		enforce(type == `record`, `Expected record type`);
+
+		// Fill with init format for now
+		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init);
+
+		auto newRec = new DetatchedRecord(dataFields, RecordFormatT.getKeyFieldIndex!());
+		newRS.addItems(1); // Add exactly on field
+
+		size_t[string] fieldToIndex = _makeRecordFieldIndex(jFormat);
+
+		_fillDataIntoRec!(RecordFormatT)(dataFields, jRecord, 0, fieldToIndex);
+
+		return newRec; // Hope we have done there
+	}
+
+	static DetatchedRecord fromStdJSON(JSONValue jRecord)
+	{
+		import std.algorithm: canFind;
+		import std.exception: enforce;
+		import std.conv: to;
+
+		import webtank.datctrl.memory_data_field: makeMemoryDataFieldsDyn;
+		import webtank.datctrl.common: _extractFromJSON;
+		import webtank.common.optional: Optional;
+
+		JSONValue jFormat;
+		JSONValue jData;
+		string type;
+		Optional!size_t kfi;
+
+		_extractFromJSON(jRecord, jFormat, jData, type, kfi);
+
+		enforce(kfi.isSet, `Expected key field index`);
+		enforce(type == `record`, `Expected recordset type`);
+
+		IBaseWriteableDataField[] dataFields = makeMemoryDataFieldsDyn(jFormat, JSONValue([jData]));
+		auto newRec = new DetatchedRecord(dataFields, kfi.value);
+
+		return newRec;
+	}
 }
 
 auto makeMemoryRecord(RecordFormatT)(RecordFormatT format)

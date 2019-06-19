@@ -9,6 +9,7 @@ struct TypedRecord(RecordFormatT, RecordType)
 {
 	// Тип формата для записи
 	alias FormatType = RecordFormatT;
+	alias ThisRecordSet = TypedRecord!(FormatType, RecordType);
 	private RecordType _record;
 
 	this(RecordType record)
@@ -106,6 +107,11 @@ struct TypedRecord(RecordFormatT, RecordType)
 
 	public auto record() @property {
 		return _record;
+	}
+
+	import std.json: JSONValue;
+	static auto fromStdJSON()(JSONValue jRecord) {
+		return ThisRecordSet(RecordType.fromStdJSONByFormat!FormatType(jRecord));
 	}
 
 	alias record this;

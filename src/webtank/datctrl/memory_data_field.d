@@ -226,7 +226,7 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 	import std.algorithm: map, canFind;
 	import std.array: array;
 	import std.datetime: DateTime, Date;
-	import std.meta: AliasSeq;
+	import std.typecons: tuple;
 	import std.conv: to;
 
 	enforce(jFormat.type == JSON_TYPE.ARRAY, `Expected JSON array of field formats`);
@@ -247,7 +247,8 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 		string typeStr = jTypePtr.str;
 		string fieldName = jNamePtr.str;
 		Optional!size_t theSize;
-		if( auto jSizePtr = `sz` in jField ) {
+		if( auto jSizePtr = `sz` in jField )
+		{
 			enforce(
 				[JSON_TYPE.UINTEGER, JSON_TYPE.INTEGER].canFind(jSizePtr.type),
 				`Expected integer as "sz" field`);
@@ -258,50 +259,27 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 			);
 		}
 
+		import std.meta: AliasSeq;
+		alias fArgs = AliasSeq!(fields, fieldName, fieldIndex, jData);
+
 		switch( typeStr )
 		{
 			case `bool`: {
-				_addField!bool(fields, fieldName, fieldIndex, jData);
+				_addField!bool(fArgs);
 				break;
 			}
 			case `int`:
 			{
-				if( theSize.isNull ) {
-					theSize = int.sizeof;
-				}
-				int_size_switch:
-				switch( theSize.value )
-				{
-					static foreach( IntType; AliasSeq!(byte, short, int, long) ) {
-						case IntType.sizeof: {
-							_addField!IntType(fields, fieldName, fieldIndex, jData);
-							break int_size_switch;
-						}
-					}
-					default: enforce(false, `Unsupported size of integer field: ` ~ theSize.value.to!string);
-				}
+				_addSizedField!(int, byte, short, long)(fArgs, theSize);
 				break;
 			}
 			case `float`:
 			{
-				if( theSize.isNull ) {
-					theSize = double.sizeof;
-				}
-				float_size_switch:
-				switch( theSize.value )
-				{
-					static foreach( FloatType; AliasSeq!(float, double, real) ) {
-						case FloatType.sizeof: {
-							_addField!FloatType(fields, fieldName, fieldIndex, jData);
-							break float_size_switch;
-						}
-					}
-					default: enforce(false, `Unsupported size of float field: ` ~ theSize.value.to!string);
-				}
+				_addSizedField!(double, float, real)(fArgs, theSize);
 				break;
 			}
 			case `str`: {
-				_addField!string(fields, fieldName, fieldIndex, jData);
+				_addField!string(fArgs);
 				break;
 			}
 			case `array`:
@@ -314,19 +292,20 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 				switch( arrayKind )
 				{
 					case `bool`: {
-						_addField!(bool[])(fields, fieldName, fieldIndex, jData);
+						_addField!(bool[])(fArgs);
 						break;
 					}
-					case `int`: {
-						_addField!(int[])(fields, fieldName, fieldIndex, jData);
+					case `int`:
+					{
+						_addSizedField!(int[], byte[], short[], long[])(fArgs, theSize);
 						break;
 					}
 					case `float`: {
-						_addField!(float[])(fields, fieldName, fieldIndex, jData);
+						_addSizedField!(double[], float[], real[])(fArgs, theSize);
 						break;
 					}
 					case `str`: {
-						_addField!(string[])(fields, fieldName, fieldIndex, jData);
+						_addField!(string[])(fArgs);
 						break;
 					}
 					default: enforce(false, `Unsupported kind of array field`);
@@ -338,17 +317,62 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 				break;
 			}
 			case `dateTime`: {
-				_addField!DateTime(fields, fieldName, fieldIndex, jData);
+				_addField!DateTime(fArgs);
 				break;
 			}
 			case `date`: {
-				_addField!Date(fields, fieldName, fieldIndex, jData);
+				_addField!Date(fArgs);
 				break;
 			}
 			default: enforce(false, `Unsupported type of field`);
 		}
 	}
 	return fields;
+}
+
+private template GetBaseSizedType(SizedType)
+{
+	import std.traits: isArray;
+	import std.range: ElementType;
+
+	static if( isArray!(SizedType) ) {
+		alias GetBaseSizedType = ElementType!(SizedType);
+	} else {
+		alias GetBaseSizedType = SizedType;
+	}
+}
+
+private void _addSizedField(SizedTypes...)(
+	IBaseWriteableDataField[] fields,
+	string fieldName,
+	size_t fieldIndex,
+	JSONValue jData,
+	Optional!size_t theSize
+) {
+	import std.exception: enforce;
+	import std.conv: to;
+
+	// Берем первый тип из списка как тип по умолчанию
+	alias DefaultType = GetBaseSizedType!(SizedTypes[0]);
+
+	if( theSize.isNull )
+	{
+		// Ничо не сказано - берем тип по дефолту
+		theSize = DefaultType.sizeof;
+	}
+	size_switch:
+	switch( theSize.value )
+	{
+		static foreach( SizedType; SizedTypes )
+		{
+			case GetBaseSizedType!(SizedType).sizeof:
+			{
+				_addField!SizedType(fields, fieldName, fieldIndex, jData);
+				break size_switch;
+			}
+		}
+		default: enforce(false, `Expected type from list: ` ~ SizedTypes.stringof ~ `, but got: ` ~ theSize.value.to!string);
+	}
 }
 
 private void _addField(FieldType)(

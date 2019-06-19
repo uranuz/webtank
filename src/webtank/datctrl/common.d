@@ -132,3 +132,84 @@ string getFieldTypeString(T)()
 		return "<unknown>";
 	}
 }
+
+import std.json: JSONValue, JSON_TYPE;
+import webtank.common.optional: Optional;
+
+void _extractFromJSON(
+	ref JSONValue jContainer,
+	ref JSONValue jFormat,
+	ref JSONValue jData,
+	ref string type,
+	ref Optional!size_t kfi
+) {
+	import std.exception: enforce;
+	import std.algorithm: canFind;
+	import std.conv: to;
+
+	enforce(jContainer.type == JSON_TYPE.OBJECT, `Expected JSON object as container serialized data!!!`);
+	auto jFormatPtr = `f` in jContainer;
+	auto jDataPtr = `d` in jContainer;
+	auto jTypePtr = `t` in jContainer;
+	auto jKfiPtr = `kfi` in jContainer;
+
+	enforce(jFormatPtr, `Expected "f" field in container serialized data!!!`);
+	enforce(jDataPtr, `Expected "d" field in container serialized data!!!`);
+	enforce(jTypePtr, `Expected "t" field in container serialized data!!!`);
+	enforce(jKfiPtr, `Expected "kfi" field in container serialized data!!!`);
+
+	enforce(jFormatPtr.type == JSON_TYPE.ARRAY, `Format field "f" must be JSON array!!!`);
+	enforce(jDataPtr.type == JSON_TYPE.ARRAY, `Data field "d" must be JSON array!!!`);
+	enforce(jTypePtr.type == JSON_TYPE.STRING, `Type field "t" must be JSON string!!!`);
+	enforce(
+		[JSON_TYPE.UINTEGER, JSON_TYPE.INTEGER].canFind(jKfiPtr.type),
+		`Expected integer as "kfi" field in container JSON`);
+
+	jFormat = (*jFormatPtr);
+	jData = (*jDataPtr);
+	type = jTypePtr.str;
+	kfi = (
+		jKfiPtr.type == JSON_TYPE.UINTEGER?
+		jKfiPtr.uinteger.to!size_t:
+		jKfiPtr.integer.to!size_t
+	);
+}
+
+auto _makeRecordFieldIndex(JSONValue jFormat)
+{
+	import std.exception: enforce;
+
+	size_t[string] fieldToIndex;
+	foreach( size_t index, JSONValue jField; jFormat )
+	{
+		enforce(jField.type == JSON_TYPE.OBJECT, `RecordSet serialized field format must be object!!!`);
+		auto jNamePtr = `n` in jField;
+		enforce(jNamePtr !is null, `RecordSet serialized field format must have "n" field`);
+		enforce(jNamePtr.type == JSON_TYPE.STRING, `RecordSet serialized field name must be JSON string!!!`);
+		enforce(jNamePtr.str !in fieldToIndex, `RecordSet field name must be unique!!!`);
+		fieldToIndex[jNamePtr.str] = index;
+	}
+	return fieldToIndex;
+}
+
+import webtank.datctrl.iface.data_field: IBaseWriteableDataField;
+void _fillDataIntoRec(RecordFormatT)(
+	IBaseWriteableDataField[] dataFields,
+	JSONValue jRecord,
+	size_t recIndex,
+	size_t[string] fieldToIndex
+) {
+	import std.exception: enforce;
+	import std.conv: text;
+
+	enum size_t expectedFieldCount = RecordFormatT.tupleOfNames.length;
+
+	enforce(jRecord.type == JSON_TYPE.ARRAY, `Record serialized data expected to be JSON array!!!`);
+	enforce(jRecord.array.length >= expectedFieldCount,
+		`Not enough items in serialized Record. Expected ` ~ expectedFieldCount.text ~ ` got ` ~ jRecord.array.length.text);
+	foreach( formatFieldIndex, name; RecordFormatT.names )
+	{
+		enforce(name in fieldToIndex, `Expected field in record with name: ` ~ name);
+		dataFields[formatFieldIndex].fromStdJSONValue(jRecord[fieldToIndex[name]], recIndex);
+	}
+}
