@@ -129,7 +129,7 @@ private:
 }
 
 import webtank.net.http.context: HTTPContext;
-import ivy.interpreter.data_node: IvyData;
+import ivy.interpreter.data_node: IvyData, IvyDataType;
 import webtank.net.http.handler.iface: IHTTPHandler, HTTPHandlingResult;
 class ViewServiceURIPageRoute: IHTTPHandler
 {
@@ -138,6 +138,9 @@ class ViewServiceURIPageRoute: IHTTPHandler
 	import webtank.ivy.rpc_client: remoteCallWebForm;
 	import webtank.net.std_json_rpc_client: RemoteCallInfo, getAllowedRequestHeaders;
 	import webtank.net.uri: URI;
+
+	import std.exception: enforce;
+	import std.range: empty;
 protected:
 	RoutingConfigEntry _entry;
 	URIPattern _uriPattern;
@@ -163,6 +166,15 @@ public:
 		return backendName;
 	}
 
+	static IIvyServiceMixin _getServiceMixin(HTTPContext context)
+	{
+		IIvyServiceMixin ivyService = cast(IIvyServiceMixin) context.service;
+		enforce(ivyService, `ViewServiceURIPageRoute can only work with IIvyServiceMixin instances`);
+		return ivyService;
+	}
+
+	import ivy.interpreter.data_node: errorToIvyData;
+
 	override HTTPHandlingResult processRequest(HTTPContext context)
 	{
 		import std.exception: enforce;
@@ -181,124 +193,203 @@ public:
 		if( !uriMatchData.isMatched )
 			return HTTPHandlingResult.mismatched;
 
-		IIvyServiceMixin ivyService = cast(IIvyServiceMixin) context.service;
-		enforce(ivyService, `ViewServiceURIPageRoute can only work with IIvyServiceMixin instances`);
+		enforce(!_entry.ivyModule.empty, `Ivy module name required`);
+		enforce(!_entry.ivyMethod.empty, `Ivy method name required`);
+
 		context.request.requestURIMatch = uriMatchData;
+
+		import ivy.programme: ExecutableProgramme;
+		ExecutableProgramme ivyProg = _getServiceMixin(context).ivyEngine.getByModuleName(_entry.ivyModule);
+		auto modRes = ivyProg.runSaveState(IvyData(), prepareIvyGlobals(context));
+
+		modRes.asyncResult.then((IvyData) {
+			_onIvyModule_init(context, modRes.interp);
+		}, (Throwable error) {
+			// Модуль загрузить не удалось. Пичально
+			_getServiceMixin(context).renderResult(errorToIvyData(error), context);
+			throw error;
+		});
+
+		return HTTPHandlingResult.handled; // Запрос обработан
+	}
+
+	import ivy.interpreter.interpreter: Interpreter;
+
+	void _onIvyModule_init(HTTPContext context, Interpreter interp)
+	{
+		IvyData[string] defOpts = interp.getDirAttrDefaults(_entry.ivyMethod, [
+			`requestURI`,
+			`ivyModuleError`,
+			`ivyMethodError`
+		]);
+		auto callOpts = _getCallOpts(defOpts, context);
 
 		IvyData methodParams;
 		Exception callError = null;
-		if( !_entry.apiURI.empty )
+		if( !callOpts.address.empty )
 		{
-			URI apiURI = URI(_entry.apiURI);
-
-			if( apiURI.host.empty || apiURI.scheme.empty )
-			{
-				// If backend service name is specified in routing config then use it
-				// If it is not specified use default backend for current service
-				string service = _entry.service.empty? defaultBackend(context): _entry.service;
-
-				// If vpath name is specified the use it
-				// If it is not specified use default constant
-				string endpoint = _entry.endpoint.empty? `siteWebFormAPI`: _entry.endpoint;
-
-				// Get endpoint URI from service config using service name and vpath name
-				URI epURI = URI(context.service.endpoint(service, endpoint));
-
-				if( apiURI.host.empty ) {
-					apiURI.scheme = epURI.scheme;
-				}
-				if( apiURI.rawAuthority ) {
-					apiURI.rawAuthority = epURI.rawAuthority;
-				}
-
-				import std.path: buildNormalizedPath;
-				apiURI.path = buildNormalizedPath(epURI.path, apiURI.path);
-			}
-
-			if( apiURI.rawQuery.empty )
-			{
-				// Change response with what is passed by user
-				apiURI.rawQuery = context.request.requestURI.rawQuery;
-			}
-
-			enforce(!apiURI.scheme.empty, `Failed to determine scheme for request`);
-			enforce(!apiURI.host.empty, `Failed to determine remote host for request`);
-			enforce(apiURI.port != 0, `Failed to determine remote port for request`);
-
-			RemoteCallInfo callInfo = RemoteCallInfo(apiURI.toRawString(), getAllowedRequestHeaders(context));
-			string HTTPMethod = (!_entry.HTTPMethod.empty? _entry.HTTPMethod: context.request.method);
-
 			try {
-				methodParams = remoteCallWebForm!IvyData(callInfo, HTTPMethod, context.request.messageBody);
+				methodParams = remoteCallWebForm!IvyData(
+					callOpts.address,
+					callOpts.HTTPMethod,
+					callOpts.HTTPHeaders,
+					context.request.messageBody);
 			} catch( Exception ex ) {
 				// Сохраняем информацию об ошибке
 				callError = ex;
 			}
 		}
 
-		import ivy.interpreter.data_node: errorToIvyData;
-		if( callError !is null && _entry.ivyModuleError.empty && _entry.ivyMethodError.empty )
-		{
-			// Обработчик ошибки не задан ни в каком виде.
-			// Поэтому считаем, что ее забыли обработать, и нужно пробросить ошибку дальше...
-			throw callError;
-		}
-		else if( callError !is null )
-		{
-			// Передаем сообщеньице, если указан обработчик ошибки
-			methodParams = errorToIvyData(callError);
-		}
-
-		// Если ошибка и есть спец. Ivy модуль/ метод для обработки в конфигурации, то используем его
-		// Если же нет спец. модуля/ метода, то передаем в общий модуль/ метод
-		string ivyModule = (callError !is null && !_entry.ivyModuleError.empty)? _entry.ivyModuleError: _entry.ivyModule;
-		string ivyMethod = (callError !is null && !_entry.ivyMethodError.empty)? _entry.ivyMethodError: _entry.ivyMethod;
-
-		// Добавляем некотрые параметры по умолчанию
-		import std.algorithm: canFind;
-		if( !_entry.ivyParams.canFind(`instanceName`) ) {
-			_entry.ivyParams ~= `instanceName`;
-		}
-		
-		// Пробрасываем разрешенные параметры из web-формы в интерфейс
-		foreach( parName; _entry.ivyParams )
-		{
-			if( auto parValPtr = parName in context.request.form ) {
-				if( parName in methodParams )
-					continue; // Не перезаписываем поля переданные нам backend-сервером
-				methodParams[parName] = *parValPtr;
-			}
-		}
-
 		void renderResult(IvyData res) {
-			ivyService.renderResult(res, context);
+			_getServiceMixin(context).renderResult(res, context);
 		}
 
 		void renderError(Throwable error) {
-			ivyService.renderResult(errorToIvyData(error), context);
+			_getServiceMixin(context).renderResult(errorToIvyData(error), context);
 			throw error;
 		}
 
-		if( !ivyModule.empty )
+		if( callError is null )
 		{
-			import ivy.programme: ExecutableProgramme;
-			ExecutableProgramme ivyProg = ivyService.ivyEngine.getByModuleName(ivyModule);
-			if( !ivyMethod.empty )
+			_addViewParams(methodParams, context);
+			interp.runModuleDirective(_entry.ivyMethod, methodParams)
+				.then(&renderResult, &renderError);
+		}
+		else
+		{
+			// Есть ошибка вызова метода
+			auto errorOpts = _getErrorOpts(defOpts);
+			if( !errorOpts.ivyModuleError.empty && !errorOpts.ivyMethodError.empty )
 			{
-				ivyProg.runMethod(ivyMethod, methodParams, prepareIvyGlobals(context))
+				IvyData errorParams = errorToIvyData(callError);
+				_addViewParams(errorParams, context);
+				_getServiceMixin(context)
+					.ivyEngine
+					.getByModuleName(_entry.ivyModule)
+					.runMethod(_entry.ivyMethod, errorParams, prepareIvyGlobals(context))
 					.then(&renderResult, &renderError);
+			} else {
+				// Шаблон ошибки не задан, то вываливаем ошибку как есть
+				renderError(callError);
 			}
-			else
+		}
+	}
+
+	// Добавляем параметры, которые нужно передать напрямую в шаблон
+	void _addViewParams(ref IvyData params, HTTPContext context)
+	{
+		import std.range: chain;
+
+		auto paramsToPass = chain(_entry.ivyParams, [`instanceName`, `cssBaseClass`, `cssClass`]);
+		
+		// Пробрасываем разрешенные параметры из web-формы в интерфейс
+		foreach( parName; paramsToPass )
+		{
+			if( auto parValPtr = parName in context.request.form )
 			{
-				ivyProg.run(IvyData(), prepareIvyGlobals(context))
-					.then(&renderResult, &renderError);
+				if( parName in params )
+					continue; // Не перезаписываем поля переданные нам backend-сервером
+				params[parName] = *parValPtr;
 			}
+		}
+	}
+
+	import std.typecons: Tuple;
+
+	Tuple!(
+		string, `ivyModuleError`,
+		string, `ivyMethodError`
+	)
+	_getErrorOpts(IvyData[string] defOpts)
+	{
+		
+		typeof(return) res;
+		auto modErrorPtr = `ivyModuleError` in defOpts;
+		if( !_entry.ivyModuleError.empty ) {
+			res.ivyModuleError = _entry.ivyModuleError;
+		} else if( modErrorPtr !is null && modErrorPtr.type == IvyDataType.String && !modErrorPtr.str.empty ) {
+			res.ivyModuleError = modErrorPtr.str;
 		} else {
-			// Шаблон не указан - просто выводим сам результат вызова
-			ivyService.renderResult(methodParams, context);
+			res.ivyModuleError = _entry.ivyModuleError;
 		}
 
-		return HTTPHandlingResult.handled; // Запрос обработан
+		auto methErrorPtr = `ivyMethodError` in defOpts;
+		if( !_entry.ivyMethodError.empty ) {
+			res.ivyMethodError = _entry.ivyMethodError;
+		} else if( methErrorPtr !is null && methErrorPtr.type == IvyDataType.String && !methErrorPtr.str.empty ) {
+			res.ivyMethodError = methErrorPtr.str;
+		} else {
+			res.ivyMethodError = _entry.ivyMethodError;
+		}
+		return res;
+	}
+
+	Tuple!(
+		string, `address`,
+		string, `HTTPMethod`,
+		string[string], `HTTPHeaders`
+	)
+	_getCallOpts(IvyData[string] defOpts, HTTPContext context)
+	{
+		import std.algorithm: canFind;
+
+		string defaultRequestURI;
+		if( auto reqUriPtr = `requestUri` in defOpts )
+		{
+			enforce(
+				[IvyDataType.Undef, IvyDataType.Null, IvyDataType.String].canFind(reqUriPtr.type),
+				`Request URI attrubute expected to be string or empty`);
+			
+			if( reqUriPtr.type == IvyDataType.String ) {
+				defaultRequestURI = reqUriPtr.str;
+			}
+		}
+
+		string requestURIStr = _entry.requestURI.empty? defaultRequestURI: _entry.requestURI;
+		if( requestURIStr.empty ) {
+			return typeof(return)(); // Nowhere to request
+		}
+
+		URI requestURI = URI(requestURIStr);
+
+		if( requestURI.host.empty || requestURI.scheme.empty )
+		{
+			// If backend service name is specified in routing config then use it
+			// If it is not specified use default backend for current service
+			string service = _entry.service.empty? defaultBackend(context): _entry.service;
+
+			// If vpath name is specified the use it
+			// If it is not specified use default constant
+			string endpoint = _entry.endpoint.empty? `siteWebFormAPI`: _entry.endpoint;
+
+			// Get endpoint URI from service config using service name and vpath name
+			URI epURI = URI(context.service.endpoint(service, endpoint));
+
+			if( requestURI.host.empty ) {
+				requestURI.scheme = epURI.scheme;
+			}
+			if( requestURI.rawAuthority ) {
+				requestURI.rawAuthority = epURI.rawAuthority;
+			}
+
+			import std.path: buildNormalizedPath;
+			requestURI.path = buildNormalizedPath(epURI.path, requestURI.path);
+		}
+
+		if( requestURI.rawQuery.empty )
+		{
+			// Change query string part with what is passed by user
+			requestURI.rawQuery = context.request.requestURI.rawQuery;
+		}
+
+		string HTTPMethod = (!_entry.HTTPMethod.empty? _entry.HTTPMethod: context.request.method);
+
+		enforce(!requestURI.scheme.empty, `Failed to determine scheme for request`);
+		enforce(!requestURI.host.empty, `Failed to determine remote host for request`);
+		enforce(requestURI.port != 0, `Failed to determine remote port for request`);
+		enforce(!HTTPMethod.empty, `Failed to determine HTTP method for request`);
+
+		return typeof(return)(requestURI.toRawString(), HTTPMethod, getAllowedRequestHeaders(context));
 	}
 }
 

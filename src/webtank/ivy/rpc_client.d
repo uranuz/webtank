@@ -3,9 +3,9 @@ module webtank.ivy.rpc_client;
 import webtank.ivy.datctrl;
 import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
 
+import webtank.net.http.client: sendBlocking;
 import webtank.net.std_json_rpc_client:
 	remoteCallA = remoteCall,
-	remoteCallWebFormA = remoteCallWebForm,
 	RemoteCallInfo, getRemoteCallInfoURI;
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
@@ -119,10 +119,15 @@ IvyData remoteCall(Result, Address, T...)(Address address, string rpcMethod, aut
 	return ivyJSON["result"].tryExtractLvlContainers();
 }
 
-IvyData remoteCallWebForm(Result, Address, T...)(Address address, string HTTPMethod = `GET`, string params = null)
-	if( is(Result == IvyData) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
+IvyData remoteCallWebForm(Result)(
+	string address,
+	string HTTPMethod,
+	string[string] HTTPHeaders = null,
+	string params = null
+)
+	if( is(Result == IvyData) )
 {
-	auto response = remoteCallWebFormA!HTTPInput(address, HTTPMethod, params);
+	auto response = sendBlocking(address, HTTPMethod, HTTPHeaders, params);
 
 	IvyData ivyJSON = _tryParseResponse(address, response.messageBody);
 	_checkIvyJSON_RPCErrors(ivyJSON);

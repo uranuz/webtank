@@ -153,13 +153,3 @@ RemoteCallInfo endpoint(HTTPContext ctx, string serviceName, string endpointName
 		getAllowedRequestHeaders(ctx)
 	);
 }
-
-HTTPInput remoteCallWebForm(Result, Address)(Address addr, string HTTPMethod = `GET`, string payloadStr = null)
-	if( is(Result: HTTPInput) && (is(Address: string) || is(Address: RemoteCallInfo)) )
-{
-	static if( is(Address: RemoteCallInfo) ) {
-		return sendBlocking(addr.URI, HTTPMethod, addr.headers, payloadStr);
-	} else {
-		return sendBlocking(addr, HTTPMethod, payloadStr);
-	}
-}

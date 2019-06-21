@@ -45,8 +45,9 @@ class RemoteCallInterpreter: INativeDirectiveInterpreter
 		try
 		{
 			IvyData methodRes = remoteCallWebForm!IvyData(
-				RemoteCallInfo(uriNode.str, headers),
+				uriNode.str,
 				(methodNode.type == IvyDataType.String? methodNode.str: null),
+				headers,
 				(dataNode.type == IvyDataType.String? dataNode.str: null)
 			);
 			fResult.resolve(methodRes);
