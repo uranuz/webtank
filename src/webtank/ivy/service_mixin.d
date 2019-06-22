@@ -334,7 +334,7 @@ public:
 		import std.algorithm: canFind;
 
 		string defaultRequestURI;
-		if( auto reqUriPtr = `requestUri` in defOpts )
+		if( auto reqUriPtr = `requestURI` in defOpts )
 		{
 			enforce(
 				[IvyDataType.Undef, IvyDataType.Null, IvyDataType.String].canFind(reqUriPtr.type),
