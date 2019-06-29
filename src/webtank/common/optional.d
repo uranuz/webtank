@@ -364,10 +364,9 @@ This function is also called for the implicit conversion to $(D T).
 	ref inout(T) value() @property
 		inout pure /+@safe nothrow+/
 	{
-		import std.conv: to;
-		import std.traits: isArray, isAssociativeArray;
+		import std.traits: isDynamicArray, isAssociativeArray;
 		import std.exception: enforce;
-		static if( !isArray!T && !isAssociativeArray!T )
+		static if( !isDynamicArray!T && !isAssociativeArray!T )
 		{
 			// For dynamic array or associative array it's is safe to work with null, so allow getting null value,
 			// because it should be practical in most cases.
