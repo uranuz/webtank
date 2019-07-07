@@ -13,7 +13,7 @@ import ivy.json: toIvyJSON, toStdJSON;
 import std.meta: staticMap;
 import std.variant: Algebraic, visit;
 import std.exception: enforce;
-import std.json: JSONValue, JSON_TYPE;
+import std.json: JSONValue, JSONType;
 
 alias AddAccessRuleDelType(RightType) = bool delegate(IUserIdentity identity, RightType data);
 alias AccessRuleDelTypes = staticMap!(AddAccessRuleDelType, RightDataTypes);

@@ -93,7 +93,7 @@ public:
 		}
 	} // override
 
-	import std.json: JSONValue, JSON_TYPE;
+	import std.json: JSONValue, JSONType;
 	static DetatchedRecord fromStdJSONByFormat(RecordFormatT)(JSONValue jRecord)
 	{
 		import webtank.datctrl.memory_data_field: makeMemoryDataFields;

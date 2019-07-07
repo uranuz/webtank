@@ -1,6 +1,6 @@
 module webtank.common.std_json.from;
 
-import std.json: JSONValue, JSON_TYPE;
+import std.json: JSONValue, JSONType;
 
 /++
 $(LANG_EN
@@ -25,9 +25,9 @@ T fromStdJSON(T)(JSONValue jValue)
 	}
 	else static if( isBoolean!T )
 	{
-		if( jValue.type == JSON_TYPE.TRUE ) {
+		if( jValue.type == JSONType.true_ ) {
 			return true;
-		} else if( jValue.type == JSON_TYPE.FALSE ) {
+		} else if( jValue.type == JSONType.false_ ) {
 			return false;
 		} else {
 			throw new SerializationException("JSON value doesn't match boolean type!!!");
@@ -35,9 +35,9 @@ T fromStdJSON(T)(JSONValue jValue)
 	}
 	else static if( isIntegral!T )
 	{
-		if( jValue.type == JSON_TYPE.UINTEGER ) {
+		if( jValue.type == JSONType.uinteger ) {
 			return jValue.uinteger.to!T;
-		} else if( jValue.type == JSON_TYPE.INTEGER ) {
+		} else if( jValue.type == JSONType.integer ) {
 			return jValue.integer.to!T;
 		} else {
 			throw new SerializationException("JSON value doesn't match unsigned integer type!!!");
@@ -45,11 +45,11 @@ T fromStdJSON(T)(JSONValue jValue)
 	}
 	else static if( isFloatingPoint!T )
 	{
-		if( jValue.type == JSON_TYPE.FLOAT ) {
+		if( jValue.type == JSONType.float_ ) {
 			return jValue.floating.to!T;
-		} else if( jValue.type == JSON_TYPE.INTEGER ) {
+		} else if( jValue.type == JSONType.integer ) {
 			return jValue.integer.to!T;
-		} else if( jValue.type == JSON_TYPE.UINTEGER ) {
+		} else if( jValue.type == JSONType.uinteger ) {
 			return jValue.uinteger.to!T;
 		} else {
 			throw new SerializationException("JSON value doesn't match floating point type!!!");
@@ -57,9 +57,9 @@ T fromStdJSON(T)(JSONValue jValue)
 	}
 	else static if( isSomeString!T )
 	{
-		if( jValue.type == JSON_TYPE.STRING ) {
+		if( jValue.type == JSONType.string ) {
 			return jValue.str.to!T;
-		} else if( jValue.type == JSON_TYPE.NULL ) {
+		} else if( jValue.type == JSONType.null_ ) {
 			return null;
 		} else {
 			throw new SerializationException("JSON value doesn't match string type!!!");
@@ -70,14 +70,14 @@ T fromStdJSON(T)(JSONValue jValue)
 		alias  KeyType!T AAKeyType;
 		static assert( isSomeString!AAKeyType, "JSON object's key must be of string type!!!" );
 		alias ValueType!T AAValueType;
-		if( jValue.type == JSON_TYPE.OBJECT )
+		if( jValue.type == JSONType.object )
 		{
 			T result;
 			foreach( key, val; jValue.object ) {
 				result[key.to!AAKeyType] = fromStdJSON!(AAValueType)(val);
 			}
 			return result;
-		} else if( jValue.type == JSON_TYPE.NULL ) {
+		} else if( jValue.type == JSONType.null_ ) {
 			return null;
 		} else {
 			throw new SerializationException("JSON value doesn't match object type!!!");
@@ -88,14 +88,14 @@ T fromStdJSON(T)(JSONValue jValue)
 		import std.range;
 		alias ElementType!T AElementType;
 		
-		if( jValue.type == JSON_TYPE.ARRAY )
+		if( jValue.type == JSONType.array )
 		{
 			T array;
 			foreach( i, val; jValue.array ) {
 				array ~= fromStdJSON!(AElementType)(val);
 			}
 			return array;
-		} else if( jValue.type == JSON_TYPE.NULL ) {
+		} else if( jValue.type == JSONType.null_ ) {
 			return null;
 		} else {
 			throw new SerializationException("JSON value doesn't match array type!!!");
@@ -105,7 +105,7 @@ T fromStdJSON(T)(JSONValue jValue)
 	{
 		static if( T.length > 0 )
 		{
-			if( jValue.type == JSON_TYPE.ARRAY )
+			if( jValue.type == JSONType.array )
 			{
 				if( jValue.array.length != T.length ) {
 					throw new SerializationException("JSON array length " ~ T.length.to!string ~ " expected but " 
@@ -118,7 +118,7 @@ T fromStdJSON(T)(JSONValue jValue)
 				}
 				return result;
 			}
-			else if( jValue.type == JSON_TYPE.OBJECT )
+			else if( jValue.type == JSONType.object )
 			{
 				import std.exception: enforce;
 				enforce!SerializationException(
@@ -140,7 +140,7 @@ T fromStdJSON(T)(JSONValue jValue)
 		}
 		else
 		{
-			if( jValue.type == JSON_TYPE.NULL || (jValue.type == JSON_TYPE.ARRAY && jValue.array.length == 0) ) {
+			if( jValue.type == JSONType.null_ || (jValue.type == JSONType.array && jValue.array.length == 0) ) {
 				return Tuple!();
 			} else {
 				throw new SerializationException("Expected JSON null or array of zero length!!!");
@@ -151,7 +151,7 @@ T fromStdJSON(T)(JSONValue jValue)
 	{
 		alias BaseT = OptionalValueType!T;
 		T result;
-		if( jValue.type == JSON_TYPE.NULL ) {
+		if( jValue.type == JSONType.null_ ) {
 			result = null; // We need to set null explicitly, because of Undefable
 		} else {
 			result = fromStdJSON!(BaseT)(jValue);
@@ -164,7 +164,7 @@ T fromStdJSON(T)(JSONValue jValue)
 			return T.fromStdJSON(jValue);
 		} else {
 			T result;
-			if( jValue.type == JSON_TYPE.OBJECT )
+			if( jValue.type == JSONType.object )
 			{
 				foreach( name; __traits(allMembers, T) )
 				{
@@ -179,7 +179,7 @@ T fromStdJSON(T)(JSONValue jValue)
 						}
 					}
 				}
-			} else if( jValue.type == JSON_TYPE.STRING ) {
+			} else if( jValue.type == JSONType.string ) {
 				static if( isStdDateOrTime!T ) {
 					// Явно говорим, что из строки будем получать дату или время в формате ISO
 					result = T.fromISOExtString(jValue.str);
@@ -187,7 +187,7 @@ T fromStdJSON(T)(JSONValue jValue)
 					// Пока для других типов преобразование из строки не доступно. Может позже... Но это не точно...
 					throw new SerializationException("Deserialization from string to struct is only possible for date and time for now...");
 				}
-			} else if( jValue.type != JSON_TYPE.NULL ) {
+			} else if( jValue.type != JSONType.null_ ) {
 				throw new SerializationException("Expected JSON object or null to deserialize into structure of type: " ~ T.stringof ~ ", but got: " ~ jValue.type.text);
 			}
 			return result;

@@ -157,10 +157,10 @@ public:
 	static string defaultBackend(HTTPContext ctx) @property
 	{
 		import std.exception: enforce;
-		import std.json: JSON_TYPE;
+		import std.json: JSONType;
 		auto backendNamePtr = `backendService` in ctx.service.rawConfig;
 		enforce(backendNamePtr, `Expected default backend service name in config`);
-		enforce(backendNamePtr.type == JSON_TYPE.STRING, `Backend service name must be a string`);
+		enforce(backendNamePtr.type == JSONType.string, `Backend service name must be a string`);
 		string backendName = backendNamePtr.str;
 		enforce(backendName.length > 0, `Backend service name must not be empty`);
 		return backendName;

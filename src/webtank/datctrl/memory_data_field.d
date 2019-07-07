@@ -139,13 +139,13 @@ protected:
 			_values.insertInPlace(index, values.map!((it) => Optional!ValueType(it)));
 		}
 
-		import std.json: JSONValue, JSON_TYPE;
+		import std.json: JSONValue, JSONType;
 		void fromStdJSONValue(JSONValue jValue, size_t index)
 		{
 			enforce(index < _values.length, OUT_OF_BOUNDS);
 			
 			import webtank.common.std_json.from: fromStdJSON;
-			if( jValue.type == JSON_TYPE.NULL ) {
+			if( jValue.type == JSONType.null_ ) {
 				_values[index] = null;
 			} else {
 				_values[index] = fromStdJSON!ValueType(jValue);
@@ -176,7 +176,7 @@ IBaseWriteableDataField[] makeMemoryDataFields(RecordFormatT)(RecordFormatT form
 	return dataFields;
 }
 
-import std.json: JSONValue, JSON_TYPE;
+import std.json: JSONValue, JSONType;
 import webtank.common.optional: Optional;
 
 struct RecordSetFieldAccessor(ValueType)
@@ -189,7 +189,7 @@ struct RecordSetFieldAccessor(ValueType)
 
 	this(JSONValue dat, size_t fi)
 	{
-		enforce(dat.type == JSON_TYPE.ARRAY, `Expected JSON array as record set data`);
+		enforce(dat.type == JSONType.array, `Expected JSON array as record set data`);
 		jData = dat;
 		fieldIndex = fi;
 	}
@@ -203,7 +203,7 @@ struct RecordSetFieldAccessor(ValueType)
 		enforce(!this.empty, `RecordSetFieldAccessor is empty`);
 
 		JSONValue jRec = jData.array[recordIndex];
-		enforce(jRec.type == JSON_TYPE.ARRAY, `Expected JSON array as record data`);
+		enforce(jRec.type == JSONType.array, `Expected JSON array as record data`);
 		enforce(fieldIndex < jRec.array.length, `Field index is out of bounds of JSON record`);
 		JSONValue jVal = jRec.array[fieldIndex];
 
@@ -229,8 +229,8 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 	import std.typecons: tuple;
 	import std.conv: to;
 
-	enforce(jFormat.type == JSON_TYPE.ARRAY, `Expected JSON array of field formats`);
-	enforce(jData.type == JSON_TYPE.ARRAY, `Expected JSON array of record or record set data`);
+	enforce(jFormat.type == JSONType.array, `Expected JSON array of field formats`);
+	enforce(jData.type == JSONType.array, `Expected JSON array of record or record set data`);
 
 	IBaseWriteableDataField[] fields;
 	foreach( size_t fieldIndex, JSONValue jField; jFormat.array )
@@ -239,10 +239,10 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 		auto jNamePtr = `n` in jField;
 		
 		enforce(jTypePtr !is null, `Expected "t" field in field format JSON`);
-		enforce(jTypePtr.type == JSON_TYPE.STRING, `Field format field "t" expected to be a string`);
+		enforce(jTypePtr.type == JSONType.string, `Field format field "t" expected to be a string`);
 
 		enforce(jNamePtr !is null, `Expected "n" field in field format JSON`);
-		enforce(jNamePtr.type == JSON_TYPE.STRING, `Field format field "n" expected to be a string`);
+		enforce(jNamePtr.type == JSONType.string, `Field format field "n" expected to be a string`);
 
 		string typeStr = jTypePtr.str;
 		string fieldName = jNamePtr.str;
@@ -250,10 +250,10 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 		if( auto jSizePtr = `sz` in jField )
 		{
 			enforce(
-				[JSON_TYPE.UINTEGER, JSON_TYPE.INTEGER].canFind(jSizePtr.type),
+				[JSONType.uinteger, JSONType.integer].canFind(jSizePtr.type),
 				`Expected integer as "sz" field`);
 			theSize = (
-				jSizePtr.type == JSON_TYPE.UINTEGER?
+				jSizePtr.type == JSONType.uinteger?
 				jSizePtr.uinteger.to!size_t:
 				jSizePtr.integer.to!size_t
 			);
@@ -286,7 +286,7 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 			{
 				string arrayKind;
 				if( auto jArrayKindPtr = "vt" in jField ) {
-					enforce(jArrayKindPtr.type == JSON_TYPE.STRING, `Expected string as "vt" field`);
+					enforce(jArrayKindPtr.type == JSONType.string, `Expected string as "vt" field`);
 					arrayKind = jArrayKindPtr.str;
 				}
 				switch( arrayKind )

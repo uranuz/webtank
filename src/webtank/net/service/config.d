@@ -22,7 +22,7 @@ $(LANG_EN
 $(LANG_RU
 	Функция выполняет разрешение путей в конфигурации
 	Params:
-	jsonPaths = JSONValue значения типа JSON_TYPE.OBJECT, представляющие список путей
+	jsonPaths = JSONValue значения типа JSONType.object, представляющие список путей
 	в формате "названиеПути" : "путь"
 	defaultPaths = Набор путей по умолчанию на случай, если какие-то из требуемых
 		путей окажутся не задаными
@@ -40,18 +40,18 @@ string[string] resolveConfigPaths(bool shouldExpandTilde = false)(
 	string[string] result;
 
 	enforce(
-		[JSON_TYPE.OBJECT, JSON_TYPE.NULL].canFind(jsonPaths.type),
+		[JSONType.object, JSONType.null_].canFind(jsonPaths.type),
 		`Config paths JSON value must be an object or null!!!`);
 
 	string rootPath;
-	if( jsonPaths.type == JSON_TYPE.OBJECT )
+	if( jsonPaths.type == JSONType.object )
 	if( auto rootPathPtr = rootPathName in jsonPaths )
 	{
 		enforce(
-			[JSON_TYPE.STRING, JSON_TYPE.NULL].canFind(rootPathPtr.type),
+			[JSONType.string, JSONType.null_].canFind(rootPathPtr.type),
 			`Config path "` ~ rootPathName  ~ `" value must be string or null!!!`);
 
-		if( rootPathPtr.type == JSON_TYPE.STRING )
+		if( rootPathPtr.type == JSONType.string )
 		{
 			static if( shouldExpandTilde )
 				rootPath = rootPathPtr.str.expandTilde();
@@ -73,14 +73,14 @@ string[string] resolveConfigPaths(bool shouldExpandTilde = false)(
 		rootPath.length > 0 && isAbsolute(rootPath),
 		`Config path "` ~ rootPathName  ~ `" value must be absolute!!!`);
 
-	if( jsonPaths.type == JSON_TYPE.OBJECT )
+	if( jsonPaths.type == JSONType.object )
 	foreach( string pathName, jsonPath; jsonPaths )
 	{
 		if( pathName == rootPathName )
 			continue; //Ignore root path here
 
 		//Extracting only non-empty strings
-		if( jsonPath.type == JSON_TYPE.STRING && jsonPath.str.length > 0 )
+		if( jsonPath.type == JSONType.string && jsonPath.str.length > 0 )
 		{
 			static if( shouldExpandTilde )
 				result[pathName] = buildNormalPath( rootPath, jsonPath.str.expandTilde() );
@@ -118,10 +118,10 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 	string[string] result;
 
 	enforce(
-		[JSON_TYPE.OBJECT, JSON_TYPE.NULL].canFind(jsonDatabases.type),
+		[JSONType.object, JSONType.null_].canFind(jsonDatabases.type),
 		`Config section databases JSON value must be an object or null!!!`);
 
-	if( jsonDatabases.type == JSON_TYPE.OBJECT )
+	if( jsonDatabases.type == JSONType.object )
 	foreach( string dbCaption, jsonDb; jsonDatabases )
 	{
 		string connStr;
@@ -134,7 +134,7 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 			string value;
 			if( stringOnlyParams.canFind(param) )
 			{
-				if( jValue.type == JSON_TYPE.STRING ) {
+				if( jValue.type == JSONType.string ) {
 					value = jValue.str;
 				} else {
 					throw new Exception(`Expected string as value of database param: ` ~ param ~ ` for DB with id: ` ~ dbCaption);
@@ -145,9 +145,9 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 			{
 				switch(jValue.type)
 				{
-					case JSON_TYPE.STRING: value = jValue.str; break;
-					case JSON_TYPE.UINTEGER: value = jValue.uinteger.to!string; break;
-					case JSON_TYPE.INTEGER: value = jValue.integer.to!string; break;
+					case JSONType.string: value = jValue.str; break;
+					case JSONType.uinteger: value = jValue.uinteger.to!string; break;
+					case JSONType.integer: value = jValue.integer.to!string; break;
 					default:
 						throw new Exception(`Unexpected type of value for param: ` ~ param ~ ` for DB with id: ` ~ dbCaption);
 				}
@@ -187,12 +187,12 @@ RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
 	import std.traits: isDynamicArray;
 	import std.range: ElementType;
 	RoutingConfigEntry[] entries;
-	if( pageRouting.type != JSON_TYPE.ARRAY ) {
+	if( pageRouting.type != JSONType.array ) {
 		return entries;
 	}
 	foreach( JSONValue jEntry; pageRouting.array )
 	{
-		enforce(jEntry.type == JSON_TYPE.OBJECT, `Expected JSON object as page routing entry`);
+		enforce(jEntry.type == JSONType.object, `Expected JSON object as page routing entry`);
 		RoutingConfigEntry entry;
 
 		foreach( field; RoutingConfigEntry.fieldNames )
@@ -202,9 +202,9 @@ RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
 				static if( is( FieldType == string ) )
 				{
 					enforce(
-						[JSON_TYPE.STRING, JSON_TYPE.NULL].canFind(fieldValPtr.type),
+						[JSONType.string, JSONType.null_].canFind(fieldValPtr.type),
 						`Expected string or null for field "` ~ field ~ `" in routing config entry`);
-					if( fieldValPtr.type == JSON_TYPE.STRING ) {
+					if( fieldValPtr.type == JSONType.string ) {
 						__traits(getMember, entry, field) = fieldValPtr.str;
 					}
 					// If null then just do nothing
@@ -212,13 +212,13 @@ RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
 				else static if( isDynamicArray!FieldType && is( ElementType!FieldType == string ) )
 				{
 					enforce(
-						[JSON_TYPE.ARRAY, JSON_TYPE.NULL].canFind(fieldValPtr.type),
+						[JSONType.array, JSONType.null_].canFind(fieldValPtr.type),
 						`Expected string array or null for field "` ~ field ~ `" in routing config entry`);
-					if( fieldValPtr.type == JSON_TYPE.ARRAY )
+					if( fieldValPtr.type == JSONType.array )
 					{
 						foreach( val; fieldValPtr.array )
 						{
-							enforce(val.type == JSON_TYPE.STRING, `Expected string as item of field "` ~ field ~ `"`);
+							enforce(val.type == JSONType.string, `Expected string as item of field "` ~ field ~ `"`);
 							__traits(getMember, entry, field) ~= val.str;
 						}
 					}
@@ -236,11 +236,11 @@ RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
 JSONValue getServicesConfig(JSONValue jsonConfig)
 {
 	import std.exception: enforce;
-	enforce( jsonConfig.type == JSON_TYPE.OBJECT, `Config root JSON value must be object!!!` );
+	enforce( jsonConfig.type == JSONType.object, `Config root JSON value must be object!!!` );
 
 	enforce( "services" in jsonConfig, `Config must contain "services" object!!!` );
 	JSONValue jsonServices = jsonConfig["services"];
-	enforce( jsonServices.type == JSON_TYPE.OBJECT, `Config services JSON value must be object!!!` );
+	enforce( jsonServices.type == JSONType.object, `Config services JSON value must be object!!!` );
 	return jsonServices;
 }
 
@@ -251,7 +251,7 @@ JSONValue getServiceConfig(JSONValue jsonConfig, string serviceName)
 
 	enforce( serviceName in jsonServices, `Config section "services" must contain "` ~ serviceName ~ `" object!!!` );
 	JSONValue jsonCurrService = jsonServices[serviceName];
-	enforce( jsonCurrService.type == JSON_TYPE.OBJECT, `Config section "services.` ~ serviceName ~ `" must be object!!!` );
+	enforce( jsonCurrService.type == JSONType.object, `Config section "services.` ~ serviceName ~ `" must be object!!!` );
 
 	return jsonCurrService;
 }
@@ -396,7 +396,7 @@ public:
 	override string endpoint(string serviceName, string endpointName)
 	{
 		import std.exception: enforce;
-		import std.json: JSON_TYPE;
+		import std.json: JSONType;
 		import std.range: empty;
 		import webtank.net.uri: URI;
 		auto vPathsPtr = serviceName in _endpoints; 
@@ -408,7 +408,7 @@ public:
 
 		auto serviceURIPtr = `URI` in rawConfig;
 		enforce(serviceURIPtr, `No service URI in config`);
-		enforce(serviceURIPtr.type == JSON_TYPE.STRING, `Expected string as service URI in config`);
+		enforce(serviceURIPtr.type == JSONType.string, `Expected string as service URI in config`);
 		URI serviceURI = URI(serviceURIPtr.str);
 
 		// Схема и хост с портом берутся из адреса сервиса, если не заданы в точке доступа

@@ -49,17 +49,17 @@ HTTPInput remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto
 /// Проверяем, если произошла ошибка во время вызова и бросаем исключение, если так
 private void _checkJSON_RPCErrors(ref JSONValue response)
 {
-	if( response.type != JSON_TYPE.OBJECT )
+	if( response.type != JSONType.object )
 		throw new Exception(`Expected assoc array as JSON-RPC response`);
 	
 	if( "error" in response )
 	{
-		if( response["error"].type != JSON_TYPE.OBJECT ) {
+		if( response["error"].type != JSONType.object ) {
 			throw new Exception(`"error" field in JSON-RPC response must be an object`);
 		}
 		string errorMsg;
 		if( "message" in response["error"] ) {
-			errorMsg = response["error"]["message"].type == JSON_TYPE.STRING? response["error"]["message"].str: null;
+			errorMsg = response["error"]["message"].type == JSONType.string? response["error"]["message"].str: null;
 		}
 
 		if( "data" in response["error"] )
@@ -68,8 +68,8 @@ private void _checkJSON_RPCErrors(ref JSONValue response)
 			if(
 				"file" in errorData &&
 				"line" in errorData &&
-				errorData["file"].type == JSON_TYPE.STRING &&
-				errorData["line"].type == JSON_TYPE.UINTEGER
+				errorData["file"].type == JSONType.string &&
+				errorData["line"].type == JSONType.uinteger
 			) {
 				throw new Exception(errorMsg, errorData["file"].str, errorData["line"].uinteger);
 			}

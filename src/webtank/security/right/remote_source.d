@@ -72,7 +72,7 @@ public:
 		{
 			enforce(Meta.fieldName in jRightsData, `Expected ` ~ Meta.fieldName ~ ` RecordSet in rights data!!!`);
 			JSONValue jRightComponent = jRightsData[Meta.fieldName];
-			enforce(jRightComponent.type == JSONType.OBJECT, `Right component "` ~ Meta.fieldName ~ `" is not an object`);
+			enforce(jRightComponent.type == JSONType.object, `Right component "` ~ Meta.fieldName ~ `" is not an object`);
 			auto rightComponent = fromStdJSON!(TypedRecordSet!(typeof(Meta.recFormat), WriteableRecordSet))(jRightComponent);
 			enforce(rightComponent !is null, `Right data is null`);
 			__traits(getMember, this, `_` ~ Meta.fieldName) = TypedRecordSet!(typeof(Meta.recFormat), IBaseRecordSet)(rightComponent);

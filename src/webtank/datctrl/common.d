@@ -133,7 +133,7 @@ string getFieldTypeString(T)()
 	}
 }
 
-import std.json: JSONValue, JSON_TYPE;
+import std.json: JSONValue, JSONType;
 import webtank.common.optional: Optional;
 
 void _extractFromJSON(
@@ -147,7 +147,7 @@ void _extractFromJSON(
 	import std.algorithm: canFind;
 	import std.conv: to;
 
-	enforce(jContainer.type == JSON_TYPE.OBJECT, `Expected JSON object as container serialized data!!!`);
+	enforce(jContainer.type == JSONType.object, `Expected JSON object as container serialized data!!!`);
 	auto jFormatPtr = `f` in jContainer;
 	auto jDataPtr = `d` in jContainer;
 	auto jTypePtr = `t` in jContainer;
@@ -158,18 +158,18 @@ void _extractFromJSON(
 	enforce(jTypePtr, `Expected "t" field in container serialized data!!!`);
 	enforce(jKfiPtr, `Expected "kfi" field in container serialized data!!!`);
 
-	enforce(jFormatPtr.type == JSON_TYPE.ARRAY, `Format field "f" must be JSON array!!!`);
-	enforce(jDataPtr.type == JSON_TYPE.ARRAY, `Data field "d" must be JSON array!!!`);
-	enforce(jTypePtr.type == JSON_TYPE.STRING, `Type field "t" must be JSON string!!!`);
+	enforce(jFormatPtr.type == JSONType.array, `Format field "f" must be JSON array!!!`);
+	enforce(jDataPtr.type == JSONType.array, `Data field "d" must be JSON array!!!`);
+	enforce(jTypePtr.type == JSONType.string, `Type field "t" must be JSON string!!!`);
 	enforce(
-		[JSON_TYPE.UINTEGER, JSON_TYPE.INTEGER].canFind(jKfiPtr.type),
+		[JSONType.uinteger, JSONType.integer].canFind(jKfiPtr.type),
 		`Expected integer as "kfi" field in container JSON`);
 
 	jFormat = (*jFormatPtr);
 	jData = (*jDataPtr);
 	type = jTypePtr.str;
 	kfi = (
-		jKfiPtr.type == JSON_TYPE.UINTEGER?
+		jKfiPtr.type == JSONType.uinteger?
 		jKfiPtr.uinteger.to!size_t:
 		jKfiPtr.integer.to!size_t
 	);
@@ -182,10 +182,10 @@ auto _makeRecordFieldIndex(JSONValue jFormat)
 	size_t[string] fieldToIndex;
 	foreach( size_t index, JSONValue jField; jFormat )
 	{
-		enforce(jField.type == JSON_TYPE.OBJECT, `RecordSet serialized field format must be object!!!`);
+		enforce(jField.type == JSONType.object, `RecordSet serialized field format must be object!!!`);
 		auto jNamePtr = `n` in jField;
 		enforce(jNamePtr !is null, `RecordSet serialized field format must have "n" field`);
-		enforce(jNamePtr.type == JSON_TYPE.STRING, `RecordSet serialized field name must be JSON string!!!`);
+		enforce(jNamePtr.type == JSONType.string, `RecordSet serialized field name must be JSON string!!!`);
 		enforce(jNamePtr.str !in fieldToIndex, `RecordSet field name must be unique!!!`);
 		fieldToIndex[jNamePtr.str] = index;
 	}
@@ -204,7 +204,7 @@ void _fillDataIntoRec(RecordFormatT)(
 
 	enum size_t expectedFieldCount = RecordFormatT.tupleOfNames.length;
 
-	enforce(jRecord.type == JSON_TYPE.ARRAY, `Record serialized data expected to be JSON array!!!`);
+	enforce(jRecord.type == JSONType.array, `Record serialized data expected to be JSON array!!!`);
 	enforce(jRecord.array.length >= expectedFieldCount,
 		`Not enough items in serialized Record. Expected ` ~ expectedFieldCount.text ~ ` got ` ~ jRecord.array.length.text);
 	foreach( formatFieldIndex, name; RecordFormatT.names )

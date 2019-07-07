@@ -114,7 +114,7 @@ void formDataToStruct(ResultBaseType, DictType, string subFieldDelim = "__", str
 				foreach( ref item; formData.array(prefix) )
 				{
 					JSONValue jData = parseJSON(item).ifThrown!JSONException(JSONValue());
-					if( jData.type == JSON_TYPE.ARRAY ) {
+					if( jData.type == JSONType.array ) {
 						arrayResult ~= fromStdJSON!ResultType(jData);
 					} else {
 						alias Elem = ElementType!ResultType;

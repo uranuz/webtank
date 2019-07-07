@@ -17,7 +17,7 @@ class JSON_RPC_Router: IHTTPHandler
 	import webtank.net.http.handler.iface: HTTPHandlingResult;
 	import webtank.net.uri_pattern: URIPattern, URIMatchingData;
 
-	import std.json: JSONValue, toJSON, JSON_TYPE, parseJSON, JSONOptions;
+	import std.json: JSONValue, toJSON, JSONType, parseJSON, JSONOptions;
 
 	mixin EventBasedHTTPHandlerImpl;
 
@@ -61,13 +61,13 @@ public:
 	{
 		auto jMessageBody = context.request.messageBody.parseJSON();
 
-		if( jMessageBody.type != JSON_TYPE.OBJECT )
+		if( jMessageBody.type != JSONType.object )
 			throw new JSON_RPC_Exception(`JSON-RPC message body must be of object type!!!`);
 
 		string jsonrpc;
 		if( "jsonrpc" in jMessageBody )
 		{
-			if( jMessageBody["jsonrpc"].type == JSON_TYPE.STRING )
+			if( jMessageBody["jsonrpc"].type == JSONType.string )
 				jsonrpc = jMessageBody["jsonrpc"].str;
 		}
 
@@ -86,7 +86,7 @@ public:
 		string methodName;
 		if( "method" in jMessageBody )
 		{
-			if( jMessageBody["method"].type == JSON_TYPE.STRING )
+			if( jMessageBody["method"].type == JSONType.string )
 				methodName = jMessageBody["method"].str;
 		}
 
@@ -107,7 +107,7 @@ public:
 
 			//В текущей реализации принимаем либо объект (список поименованных параметров)
 			//либо null, символизирующий их отсутствие
-			if( paramsType != JSON_TYPE.OBJECT && paramsType != JSON_TYPE.NULL )
+			if( paramsType != JSONType.object && paramsType != JSONType.null_ )
 				throw new JSON_RPC_Exception(`JSON-RPC "params" property should be of null or object type!!!`);
 		}
 		else
@@ -144,7 +144,7 @@ template callJSON_RPC_Method(alias Method)
 	import webtank.common.std_json.to: toStdJSON;
 
 	import std.traits: Parameters, ReturnType, ParameterIdentifierTuple, ParameterDefaults;
-	import std.json: JSONValue, JSON_TYPE;
+	import std.json: JSONValue, JSONType;
 	import std.conv: to;
 	import std.typecons: Tuple;
 

@@ -54,7 +54,7 @@ public:
 		}
 	}
 
-	import std.json: JSONValue, JSON_TYPE;
+	import std.json: JSONValue, JSONType;
 	static WriteableRecordSet fromStdJSONByFormat(RecordFormatT)(JSONValue jRecordSet)
 	{
 		import std.exception: enforce;
