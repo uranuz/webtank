@@ -176,8 +176,7 @@ alias RoutingConfigEntry = Tuple!(
 	string, "ivyModule", // Имя модуля на языке Ivy для отображения результатов
 	string, "ivyMethod", // Имя метода для вызова, который находится на верхнем уровне внутри модуля ivyModule
 	string, "ivyModuleError", // То же что и ivyModule, но для обработки ошибок. Если не задан, то используется ivyModule
-	string, "ivyMethodError", // Как и ivyMethod, но для обработки ошибок. Если не задано, то используется имя ivyMethod
-	string[], "ivyParams" // Список полей web-формы, которые разрешено напрямую передавать в параметры ivyMethod (в виде строки)
+	string, "ivyMethodError" // Как и ivyMethod, но для обработки ошибок. Если не задано, то используется имя ivyMethod
 );
 
 RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)

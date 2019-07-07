@@ -136,6 +136,7 @@ class ViewServiceURIPageRoute: IHTTPHandler
 	import webtank.net.service.config: RoutingConfigEntry;
 	import webtank.net.uri_pattern;
 	import webtank.ivy.rpc_client: remoteCallWebForm;
+	import ivy.directive_stuff: DirValueAttr;
 	import webtank.net.std_json_rpc_client: RemoteCallInfo, getAllowedRequestHeaders;
 	import webtank.net.uri: URI;
 
@@ -217,12 +218,8 @@ public:
 
 	void _onIvyModule_init(HTTPContext context, Interpreter interp)
 	{
-		IvyData[string] defOpts = interp.getDirAttrDefaults(_entry.ivyMethod, [
-			`requestURI`,
-			`ivyModuleError`,
-			`ivyMethodError`
-		]);
-		auto callOpts = _getCallOpts(defOpts, context);
+		DirValueAttr[string] dirAttrs = interp.getDirAttrs(_entry.ivyMethod);
+		auto callOpts = _getCallOpts(dirAttrs, context);
 
 		IvyData methodParams;
 		Exception callError = null;
@@ -251,18 +248,18 @@ public:
 
 		if( callError is null )
 		{
-			_addViewParams(methodParams, context);
+			_addViewParams(context, methodParams, dirAttrs);
 			interp.runModuleDirective(_entry.ivyMethod, methodParams)
 				.then(&renderResult, &renderError);
 		}
 		else
 		{
 			// Есть ошибка вызова метода
-			auto errorOpts = _getErrorOpts(defOpts);
+			auto errorOpts = _getErrorOpts(dirAttrs);
 			if( !errorOpts.ivyModuleError.empty && !errorOpts.ivyMethodError.empty )
 			{
 				IvyData errorParams = errorToIvyData(callError);
-				_addViewParams(errorParams, context);
+				_addViewParams(context, errorParams, dirAttrs);
 				_getServiceMixin(context)
 					.ivyEngine
 					.getByModuleName(_entry.ivyModule)
@@ -276,72 +273,72 @@ public:
 	}
 
 	// Добавляем параметры, которые нужно передать напрямую в шаблон
-	void _addViewParams(ref IvyData params, HTTPContext context)
+	void _addViewParams(HTTPContext context, ref IvyData params, DirValueAttr[string] dirAttrs)
 	{
-		import std.range: chain;
+		import webtank.common.conv: conv;
+		import std.range: empty;
+		import std.algorithm: canFind;
 
-		auto paramsToPass = chain(_entry.ivyParams, [`instanceName`, `cssBaseClass`, `cssClass`]);
-		
 		// Пробрасываем разрешенные параметры из web-формы в интерфейс
-		foreach( parName; paramsToPass )
+		foreach( attrName, dirAttr; dirAttrs )
 		{
-			if( auto parValPtr = parName in context.request.form )
+			if( auto valPtr = attrName in context.request.form )
 			{
-				if( parName in params )
-					continue; // Не перезаписываем поля переданные нам backend-сервером
-				params[parName] = *parValPtr;
+				if( attrName in params )
+					continue; // Не перезаписываем поля, переданные backend-сервером
+
+				if( dirAttr.typeName.empty || [`str`, `any`].canFind(dirAttr.typeName) ) {
+					// For string or `any` pass `as is`
+					params[attrName] = *valPtr;
+					continue;
+				}
+
+				if( (*valPtr).empty ) {
+					continue; // Just ignore empty context values for non-string types
+				}
+
+				// Create white list of type that we can deserialize
+				switch( dirAttr.typeName )
+				{
+					case `bool`: {
+						params[attrName] = conv!bool(*valPtr);
+						break;
+					}
+					case `int`: {
+						params[attrName] = conv!long(*valPtr);
+						break;
+					}
+					case `float`: {
+						params[attrName] = conv!double(*valPtr);
+						break;
+					}
+					default:
+						continue; // We don't want to fail with wrong param from interface for now
+				}
 			}
 		}
 	}
 
 	import std.typecons: Tuple;
-
-	Tuple!(
-		string, `ivyModuleError`,
-		string, `ivyMethodError`
-	)
-	_getErrorOpts(IvyData[string] defOpts)
-	{
-		
-		typeof(return) res;
-		auto modErrorPtr = `ivyModuleError` in defOpts;
-		if( !_entry.ivyModuleError.empty ) {
-			res.ivyModuleError = _entry.ivyModuleError;
-		} else if( modErrorPtr !is null && modErrorPtr.type == IvyDataType.String && !modErrorPtr.str.empty ) {
-			res.ivyModuleError = modErrorPtr.str;
-		} else {
-			res.ivyModuleError = _entry.ivyModuleError;
-		}
-
-		auto methErrorPtr = `ivyMethodError` in defOpts;
-		if( !_entry.ivyMethodError.empty ) {
-			res.ivyMethodError = _entry.ivyMethodError;
-		} else if( methErrorPtr !is null && methErrorPtr.type == IvyDataType.String && !methErrorPtr.str.empty ) {
-			res.ivyMethodError = methErrorPtr.str;
-		} else {
-			res.ivyMethodError = _entry.ivyMethodError;
-		}
-		return res;
-	}
-
 	Tuple!(
 		string, `address`,
 		string, `HTTPMethod`,
 		string[string], `HTTPHeaders`
 	)
-	_getCallOpts(IvyData[string] defOpts, HTTPContext context)
+	_getCallOpts(DirValueAttr[string] dirAttrs, HTTPContext context)
 	{
 		import std.algorithm: canFind;
 
 		string defaultRequestURI;
-		if( auto reqUriPtr = `requestURI` in defOpts )
+		if( auto reqUriPtr = `requestURI` in dirAttrs )
 		{
-			enforce(
-				[IvyDataType.Undef, IvyDataType.Null, IvyDataType.String].canFind(reqUriPtr.type),
+			enforce([
+					IvyDataType.Undef, IvyDataType.Null, IvyDataType.String
+				].canFind(reqUriPtr.defaultValue.type),
 				`Request URI attrubute expected to be string or empty`);
 			
-			if( reqUriPtr.type == IvyDataType.String ) {
-				defaultRequestURI = reqUriPtr.str;
+			if( reqUriPtr.defaultValue.type == IvyDataType.String ) {
+				defaultRequestURI = reqUriPtr.defaultValue.str;
 			}
 		}
 
@@ -390,6 +387,38 @@ public:
 		enforce(!HTTPMethod.empty, `Failed to determine HTTP method for request`);
 
 		return typeof(return)(requestURI.toRawString(), HTTPMethod, getAllowedRequestHeaders(context));
+	}
+
+	Tuple!(
+		string, `ivyModuleError`,
+		string, `ivyMethodError`
+	)
+	_getErrorOpts(DirValueAttr[string] dirAttrs)
+	{
+		
+		typeof(return) res;
+		if( !_entry.ivyModuleError.empty ) {
+			res.ivyModuleError = _entry.ivyModuleError;
+		}
+		if( auto modErrorPtr = `ivyModuleError` in dirAttrs )
+		{
+			auto defVal = modErrorPtr.defaultValue;
+			if( defVal.type == IvyDataType.String && !defVal.str.empty ) {
+				res.ivyModuleError = defVal.str;
+			}
+		}
+
+		if( !_entry.ivyMethodError.empty ) {
+			res.ivyMethodError = _entry.ivyMethodError;
+		}
+		if( auto methErrorPtr = `ivyMethodError` in dirAttrs )
+		{
+			auto defVal = methErrorPtr.defaultValue;
+			if( defVal.type == IvyDataType.String && !defVal.str.empty ) {
+				res.ivyMethodError = defVal.str;
+			}
+		}
+		return res;
 	}
 }
 
