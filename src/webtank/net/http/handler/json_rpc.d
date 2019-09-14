@@ -77,8 +77,12 @@ public:
 		// Версия должна быть по протоколу. Раз мы проверили, что версия 2.0 - уже можно записать её в результат
 		jResponse["jsonrpc"] = "2.0";
 
-		if( "id" in jMessageBody ) {
+		if( "id" in jMessageBody )
+		{
 			jResponse["id"] = jMessageBody["id"]; // По протоколу возвращаем обратно идентификатор сообщения
+
+			// Костыль для получения идентификатора запроса в случае ошибки...
+			context.response.headers["jsonrpc-id"] = jResponse["id"].toString();
 		} else {
 			jResponse["id"] = null; // По протоколу должны вернуть null, если нету в запросе
 		}

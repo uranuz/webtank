@@ -3,6 +3,8 @@ module webtank.net.server.common;
 import std.socket: Socket, SocketShutdown, InternetAddress, SocketOSException;
 import core.thread: Thread;
 import core.time: dur;
+import std.typecons: Tuple;
+
 import webtank.net.http.handler.iface: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.http: HTTPReasonPhrases, HTTPException;
@@ -11,73 +13,82 @@ import webtank.net.http.input: HTTPInput, readHTTPInputFromSocket;
 import webtank.net.service.iface: IWebService;
 import webtank.net.server.iface: IWebServer;
 
-void makeErrorResponse(Throwable ex, HTTPOutput response)
+void makeErrorResponse(Throwable error, HTTPOutput response)
 {
-	import std.algorithm: castSwitch;
 	import std.conv: text;
+
+	import webtank.net.utils: makeErrorMsg;
 	import webtank.net.utils: parseContentType;
 
-	string statusCode;
-	string reasonPhrase;
-	castSwitch!(
-		(HTTPException e)
-		{
-			statusCode = text(e.HTTPStatusCode);
-			reasonPhrase = HTTPReasonPhrases.get(e.HTTPStatusCode, "Absolutely unknown status");
-		},
-		(Throwable e)
-		{
-			statusCode = "500";
-			reasonPhrase = HTTPReasonPhrases.get(500, null);
-		},
-		() {}
-	)(ex);
-
+	auto errHead = getHTTPErrorHeaders(error);
 	auto contentTypeParts = parseContentType(response.headers.get("content-type", null));
+	string statusCode = text(errHead.statusCode);
 
 	response.headers["status-code"] = statusCode;
-	response.headers["reason-phrase"] = reasonPhrase;
+	response.headers["reason-phrase"] = errHead.reasonPhrase;
 	response.headers["connection"] = "close";
-	response.tryClearBody();
-	response.write(
-		errorResponseData(
-			ex, contentTypeParts.mimeType, statusCode, reasonPhrase));
-}
 
-string errorResponseData(Throwable ex, string mimeType, string statusCode, string reasonPhrase)
-{
-	import std.json: toJSON, JSONValue;
-	import webtank.net.utils: errorToJSON;
-	import webtank.net.utils: makeErrorMsg;
-
-	switch(mimeType)
+	string messageBody;
+	switch(contentTypeParts.mimeType)
 	{
-		case "application/json": {
+		case "application/json":
+		{
+			import std.json: toJSON, JSONValue, parseJSON, JSONException;
+			import webtank.net.utils: errorToJSON;
+
 			JSONValue jErr = [
-				"error": errorToJSON(ex)
+				"error": errorToJSON(error)
 			]; // Variable for workaround
-			return jErr.toJSON();
+			// Get saved JSON-RPC "id" field from response headers
+			try {
+				jErr["id"] = parseJSON(response.headers.get("jsonrpc-id", null));
+			} catch(JSONException) {}
+			messageBody = jErr.toJSON();
+			break;
 		}
-		case "plain/text": {
-			return makeErrorMsg(ex).userError;
+		case "plain/text":
+		{
+			messageBody = makeErrorMsg(error).userError;
+			break;
 		}
-		default: break;
+		default:
+		{
+			// By default print as HTML
+			messageBody = `<html><head><title>` ~ statusCode ~ ` ` ~ errHead.reasonPhrase ~ `</title></head><body>`
+				~ `<h3>` ~ statusCode ~ ` ` ~ errHead.reasonPhrase ~ `</h3>`
+				~ `<h4>` ~ makeErrorMsg(error).userError ~ `</h4>`
+				~ `<hr/><p style="text-align: right;">webtank.net.server</p>`
+				~ `</body></html>`;
+			break;
+		}
 	}
-	// By default print as HTML
-	return `<html><head><title>` ~ statusCode ~ ` ` ~ reasonPhrase ~ `</title></head><body>`
-		~ `<h3>` ~ statusCode ~ ` ` ~ reasonPhrase ~ `</h3>`
-		~ `<h4>` ~ makeErrorMsg(ex).userError ~ `</h4>`
-		~ `<hr><p style="text-align: right;">webtank.net.server</p>`
-		~ `</body></html>`;
+
+	response.tryClearBody();
+	response.write(messageBody);
 }
 
+Tuple!(
+	ushort, `statusCode`,
+	string, `reasonPhrase`
+)
+getHTTPErrorHeaders(Throwable error)
+{
+	import std.algorithm: castSwitch;
 
+	typeof(return) res;
+	res.statusCode = cast(ushort) castSwitch!(
+		(HTTPException ex) => ex.HTTPStatusCode,
+		(Throwable ex) => 500
+	)(error);
+	res.reasonPhrase = HTTPReasonPhrases.get(res.statusCode, "Absolutely unknown status");
+	return res;
+}
 
 // Реализация приема и обработки запроса из сокета
 void processRequest(Socket sock, IWebService service, IWebServer server)
 {
 	import webtank.net.utils: makeErrorMsg;
-	
+
 	scope(exit)
 	{
 		sock.shutdown(SocketShutdown.BOTH);

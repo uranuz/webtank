@@ -48,18 +48,22 @@ alias RightDataVariant = Algebraic!(RightDataTypes);
 
 
 import webtank.net.http.context: HTTPContext;
-private void _checkItemRights(DataStruct, string fieldName)(HTTPContext ctx, string accessKind)
+private void _checkItemRights(DataStruct, string fieldName)(HTTPContext ctx, string[] accessKinds)
 {
 	import mkk.security.common.exception: SecurityException;
 	import webtank.security.right.common: GetSymbolAccessObject;
 	import std.exception: enforce;
 	string accessObj = GetSymbolAccessObject!(DataStruct, fieldName)();
-	enforce!SecurityException(
-		ctx.rights.hasRight(accessObj, accessKind),
-		`Недостаточно прав для редактирования поля: ` ~ fieldName);
+	foreach( accessKind; accessKinds ) {
+		if( ctx.rights.hasRight(accessObj, accessKind) ) {
+			return; // Есть права хотя бы по одному из типов доступа
+		}
+	}
+	// Не указаны типы доступа, либо нет прав ни по одному из них...
+	enforce!SecurityException(false, `Недостаточно прав для редактирования поля: ` ~ fieldName);
 }
 
-void checkStructEditRights(DataStruct)(auto ref DataStruct record, HTTPContext ctx, string accessKind = `edit`)
+void checkStructEditRights(DataStruct)(auto ref DataStruct record, HTTPContext ctx, string[] accessKinds)
 {
 	import mkk.security.common.exception: SecurityException;
 	import webtank.security.right.common: RightObjAttr;
@@ -75,9 +79,14 @@ void checkStructEditRights(DataStruct)(auto ref DataStruct record, HTTPContext c
 			auto field = __traits(getMember, record, fieldName);
 			if( field.isUndef )
 				continue; // Если поле не изменилось, то права на него не проверяем
-			_checkItemRights!(DataStruct, fieldName)(ctx, accessKind);
+			_checkItemRights!(DataStruct, fieldName)(ctx, accessKinds);
 		} else static if( RightObjAttrs.length > 0 ) {
-			_checkItemRights!(DataStruct, fieldName)(ctx, accessKind);
+			_checkItemRights!(DataStruct, fieldName)(ctx, accessKinds);
 		}
 	}
+}
+
+void checkStructEditRights(DataStruct)(auto ref DataStruct record, HTTPContext ctx, string accessKind = `edit`)
+{
+	checkStructEditRights(record, ctx, [accessKind]);
 }

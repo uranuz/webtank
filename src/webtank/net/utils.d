@@ -138,7 +138,11 @@ auto errorToJSON(Throwable ex)
 }
 
 import std.typecons: Tuple;
-Tuple!(string, "mimeType", string, "key", string, "value")
+Tuple!(
+	string, "mimeType",
+	string, "key",
+	string, "value"
+)
 parseContentType(string contentType)
 {
 	import std.algorithm: findSplit;
