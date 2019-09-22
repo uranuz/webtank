@@ -55,7 +55,10 @@ public override {
 		import std.algorithm: startsWith, splitter, canFind;
 		import std.array: split;
 		string[] splitted = name.split(":");
-		enforce(splitted.length >= 2, `Expected at least module and directive names in ivy rule name`);
+		//enforce(splitted.length >= 2, `Expected at least module and directive names in ivy rule name`);
+		if( splitted.length < 2 ) {
+			return false;
+		}
 		string moduleName;
 		string dirName;
 
