@@ -647,3 +647,20 @@ unittest {
 	assert(dt.isNull);
 	assert(!dt.isSet);
 }
+
+unittest {
+	// Test special case with 0 int value
+	Undefable!size_t nollInt = 0;
+	assert(!nollInt.isNull);
+	assert(!nollInt.isUndef);
+	assert(nollInt.isSet);
+
+	Undefable!size_t nollInt2;
+	assert(!nollInt2.isNull);
+	assert(nollInt2.isUndef);
+	assert(!nollInt2.isSet);
+	nollInt2 = 0;
+	assert(!nollInt2.isNull);
+	assert(!nollInt2.isUndef);
+	assert(nollInt2.isSet);
+}

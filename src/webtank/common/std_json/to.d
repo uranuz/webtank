@@ -192,3 +192,16 @@ unittest
 	assert(intArrVal.toStdJSON() == JSONValue(intArrVal));
 	assert(strArrVal.toStdJSON() == JSONValue(strArrVal));
 }
+
+unittest {
+	static struct Nav
+	{
+		Undefable!size_t pageSize;
+	}
+	Nav nnn;
+	nnn.pageSize = 0;
+	JSONValue serExp = [
+		`pageSize`: 0
+	];
+	assert(nnn.toStdJSON() == serExp);
+}
