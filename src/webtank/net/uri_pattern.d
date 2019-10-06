@@ -72,7 +72,9 @@ struct URIMatchingData
 		return 0;
 	}
 
-	inout(string)* opIn_r(string name) inout {
+	inout(string)* opBinaryRight(string op)(string name) inout
+		if( op == "in" )
+	{
 		return name in _data;
 	}
 

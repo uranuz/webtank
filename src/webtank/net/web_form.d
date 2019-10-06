@@ -44,7 +44,15 @@ interface IFormData
 	int opApply(int delegate(ref string value) del);
 	int opApply(int delegate(ref string name, ref string value) del);
 	int opApply(int delegate(ref string name, string[] values) del);
-	inout(string)* opIn_r(string name) inout;
+
+	final inout(string)* opBinaryRight(string op)(string name) inout
+		if( op == "in" )
+	{
+		return opInImpl(name);
+	}
+
+	// Operator implementation for overloading
+	protected inout(string)* opInImpl(string name) inout;
 	string toString();
 }
 
@@ -123,7 +131,7 @@ override {
 		return 0;
 	}
 
-	inout(string)* opIn_r(string name) inout
+	inout(string)* opInImpl(string name) inout
 	{
 		auto array = name in _data;
 		if( array )
@@ -252,7 +260,7 @@ override {
 		return 0;
 	}
 
-	inout(string)* opIn_r(string name) inout
+	inout(string)* opInImpl(string name) inout
 	{
 		if( auto val = name in _queryForm )
 			return val;
