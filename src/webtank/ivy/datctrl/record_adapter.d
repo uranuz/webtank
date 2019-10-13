@@ -7,6 +7,8 @@ import webtank.ivy.datctrl.enum_adapter: EnumAdapter;
 
 import std.exception: enforce;
 
+import webtank.datctrl.consts;
+
 class RecordAdapter: IClassNode
 {
 private:
@@ -16,7 +18,18 @@ private:
 public:
 	this(IvyData rawRec)
 	{
-		_ensureRecord(rawRec);
+		auto typePtr = WT_TYPE_FIELD in rawRec;
+		auto dataPtr = WT_DATA_FIELD in rawRec;
+		auto fmtPtr = WT_FORMAT_FIELD in rawRec;
+
+		enforce(typePtr, `Expected type field "` ~ WT_TYPE_FIELD ~ `" in record raw data!`);
+		enforce(dataPtr, `Expected data field "` ~ WT_DATA_FIELD ~ `" in record raw data!`);
+		enforce(dataPtr.type == IvyDataType.Array, `Data field "` ~ WT_DATA_FIELD ~ `" expected to be array`);
+		enforce(fmtPtr, `Expected format field "` ~ WT_FORMAT_FIELD ~ `" in record raw data!`);
+		enforce(
+			typePtr.type == IvyDataType.String && typePtr.str == WT_TYPE_RECORD,
+			`Expected "` ~ WT_TYPE_RECORD ~ `" value in "` ~ WT_TYPE_FIELD ~ `" field`);
+	
 		_fmt = new RecordFormatAdapter(rawRec);
 		_items = _deserialize(rawRec);
 	}
@@ -30,22 +43,10 @@ public:
 		_items = items;
 	}
 
-	static void _ensureRecord(IvyData rawRec)
-	{
-		enforce("t" in rawRec, `Expected type field "t" in record raw data!`);
-		enforce("d" in rawRec, `Expected data field "d" in record raw data!`);
-		enforce(rawRec["d"].type == IvyDataType.Array, `Data field "d" expected to be array`);
-		enforce("f" in rawRec, `Expected format field "f" in record raw data!`);
-		enforce(
-			rawRec["t"].type == IvyDataType.String && rawRec["t"].str == "record",
-			`Expected "record" value in "t" field`
-		);
-	}
-
 	IvyData[] _deserialize(IvyData rawRec)
 	{
 		import webtank.ivy.datctrl.deserialize: _deserializeRecordData;
-		IvyData rawItems = rawRec["d"];
+		IvyData rawItems = rawRec[WT_DATA_FIELD];
 		IvyData[] res;
 		foreach( i, ref fieldData; rawItems.array ) {
 			res ~= _deserializeRecordData(fieldData, _fmt[IvyData(i)]);
@@ -125,8 +126,8 @@ public:
 		IvyData __serialize__()
 		{
 			IvyData res = _fmt.__serialize__();
-			res["d"] = _serializeData();
-			res["t"] = "record";
+			res[WT_DATA_FIELD] = _serializeData();
+			res[WT_TYPE_FIELD] = WT_TYPE_RECORD;
 
 			return res;
 		}

@@ -5,6 +5,8 @@ import webtank.ivy.datctrl.deserialize;
 
 import std.exception: enforce;
 
+import webtank.datctrl.consts;
+
 class FieldFormatAdapter: IClassNode
 {
 private:
@@ -13,13 +15,9 @@ public:
 	this(IvyData rawField)
 	{
 		_rawField = rawField;
-		_ensureField();
-	}
 
-	void _ensureField()
-	{
-		enforce("t" in _rawField, `Expected type field "t" in field format raw data!`);
-		enforce("n" in _rawField, `Expected name field "n" in field format raw data!`);
+		enforce(WT_TYPE_FIELD in _rawField, `Expected type field "` ~ WT_TYPE_FIELD ~ `" in field format raw data!`);
+		enforce(WT_NAME_FIELD in _rawField, `Expected name field "` ~ WT_NAME_FIELD ~ `" in field format raw data!`);
 	}
 
 	override {
@@ -39,8 +37,8 @@ public:
 		{
 			switch(attrName)
 			{
-				case "name": return _rawField["n"];
-				case "typeStr": return _rawField["t"];
+				case "name": return _rawField[WT_NAME_FIELD];
+				case "typeStr": return _rawField[WT_TYPE_FIELD];
 				default: break;
 			}
 			throw new Exception(`Unexpected attribute name for FieldFormatAdapter`);
@@ -62,6 +60,6 @@ public:
 	}
 
 	string typeStr() @property {
-		return _rawField["t"].str;
+		return _rawField[WT_TYPE_FIELD].str;
 	}
 }

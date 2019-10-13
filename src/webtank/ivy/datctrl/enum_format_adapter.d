@@ -5,6 +5,8 @@ import webtank.ivy.datctrl.deserialize;
 
 import std.exception: enforce;
 
+import webtank.datctrl.consts;
+
 class EnumFormatAdapter: IClassNode
 {
 private:
@@ -16,24 +18,23 @@ public:
 	this(IvyData rawEnum)
 	{
 		_rawEnum = rawEnum;
-		_ensureEnum();
+
+		auto typePtr = WT_TYPE_FIELD in _rawEnum;
+		auto enumPtr = WT_ENUM_FIELD in _rawEnum;
+
+		enforce(typePtr, `Expected type field "` ~ WT_TYPE_FIELD ~ `" in enum raw data!`);
+		enforce(enumPtr, `Expected "` ~ WT_ENUM_FIELD ~ `" field in enum raw data!`);
+		enforce(
+			typePtr.type == IvyDataType.String && typePtr.str == WT_TYPE_ENUM,
+			`Expected "` ~ WT_TYPE_ENUM ~ `" value in "` ~ WT_TYPE_FIELD ~ `" field`);
+		enforce(_rawItems.type == IvyDataType.Array, `Expected array as enum items`);
+
 		_names = new NameByValue(this);
 		_values = new ValueByName(this);
 	}
 
-	void _ensureEnum()
-	{
-		enforce("t" in _rawEnum, `Expected type field "t" in enum raw data!`);
-		enforce("enum" in _rawEnum, `Expected "enum" field in enum raw data!`);
-		enforce(
-			_rawEnum["t"].type == IvyDataType.String && _rawEnum["t"].str == "enum",
-			`Expected "enum" value in "t" field`
-		);
-		enforce(_rawItems.type == IvyDataType.Array, `Expected array as enum items`);
-	}
-
 	IvyData _rawItems() @property {
-		return _rawEnum["enum"];
+		return _rawEnum[WT_ENUM_FIELD];
 	}
 
 	NameByValue names() @property {

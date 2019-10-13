@@ -7,6 +7,8 @@ import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
 import webtank.ivy.datctrl.enum_adapter: EnumAdapter;
 import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
 
+import webtank.datctrl.consts;
+
 IvyData _deserializeRecordData(ref IvyData fieldData, IvyData format)
 {
 	import std.datetime: SysTime, Date;
@@ -27,10 +29,11 @@ IvyData _deserializeRecordData(ref IvyData fieldData, IvyData format)
 
 	switch(fmt.typeStr)
 	{
-		case "date", "dateTime":
+		case WT_TYPE_DATE:
+		case WT_TYPE_DATETIME:
 			if( fieldData.type == IvyDataType.String ) {
 				return IvyData(
-					fmt.typeStr == "date"?
+					fmt.typeStr == WT_TYPE_DATE?
 					SysTime(Date.fromISOExtString(fieldData.str)):
 					SysTime.fromISOExtString(fieldData.str)
 				);
@@ -47,8 +50,8 @@ IvyData _deserializeRecordData(ref IvyData fieldData, IvyData format)
 bool _isContainerRawData(ref IvyData srcNode) {
 	return
 		srcNode.type == IvyDataType.AssocArray
-		&& "t" in srcNode 
-		&& srcNode["t"].type == IvyDataType.String;
+		&& WT_TYPE_FIELD in srcNode 
+		&& srcNode[WT_TYPE_FIELD].type == IvyDataType.String;
 }
 
 IvyData tryExtractContainer(ref IvyData srcNode)
@@ -57,14 +60,18 @@ IvyData tryExtractContainer(ref IvyData srcNode)
 		return srcNode;
 	}
 
-	switch( srcNode["t"].str )
+	switch( srcNode[WT_TYPE_FIELD].str )
 	{
-		case "recordset":
+		case WT_TYPE_RECORDSET:
 			return IvyData(new RecordSetAdapter(srcNode));
-		case "record":
+		case WT_TYPE_RECORD:
 			return IvyData(new RecordAdapter(srcNode));
-		case "enum":
-			return "d" in srcNode.assocArray? IvyData(new EnumAdapter(srcNode)):	IvyData(new EnumFormatAdapter(srcNode));
+		case WT_TYPE_ENUM:
+			return (
+				WT_DATA_FIELD in srcNode.assocArray?
+				IvyData(new EnumAdapter(srcNode)):
+				IvyData(new EnumFormatAdapter(srcNode))
+			);
 		default: break;
 	}
 	return srcNode;

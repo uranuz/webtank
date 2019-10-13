@@ -7,6 +7,8 @@ import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
 
 import std.exception: enforce;
 
+import webtank.datctrl.consts;
+
 class EnumAdapter: IClassNode
 {
 private:
@@ -18,8 +20,8 @@ public:
 	{
 		
 		_fmt = new EnumFormatAdapter(rawEnum);
-		auto valPtr = "d" in rawEnum;
-		enforce(valPtr, `Expected field "d" as enum value`);
+		auto valPtr = WT_DATA_FIELD in rawEnum;
+		enforce(valPtr, `Expected field "` ~ WT_DATA_FIELD ~ `" as enum value`);
 		enforce(hasValueOrEmpty(*valPtr), `There is such no value in enum`);
 		_value = *valPtr; // Just for validation
 	}
@@ -71,7 +73,7 @@ public:
 		IvyData __serialize__()
 		{
 			IvyData res = _fmt.__serialize__();
-			res["d"] = _value;
+			res[WT_DATA_FIELD] = _value;
 			return res;
 		}
 

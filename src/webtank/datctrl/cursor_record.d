@@ -4,6 +4,8 @@ import webtank.datctrl.iface.data_field: IBaseDataField, IBaseWriteableDataField
 import webtank.datctrl.iface.record: IBaseRecord, IBaseWriteableRecord;
 import webtank.datctrl.iface.record_set: IBaseRecordSet, IBaseWriteableRecordSet;
 
+import webtank.datctrl.consts;
+
 /++
 $(LANG_EN Class implements working with record)
 $(LANG_RU Класс реализует работу с записью)
@@ -88,8 +90,8 @@ public:
 		JSONValue toStdJSON()
 		{
 			JSONValue jValues = _recordSet.getStdJSONFormat();
-			jValues["d"] = _recordSet.getStdJSONData(recordIndex);
-			jValues["t"] = "record";
+			jValues[WT_DATA_FIELD] = _recordSet.getStdJSONData(recordIndex);
+			jValues[WT_TYPE_FIELD] = WT_TYPE_RECORD;
 			return jValues;
 		}
 

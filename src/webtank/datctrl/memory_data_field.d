@@ -4,6 +4,8 @@ import webtank.datctrl.iface.data_field;
 import webtank.datctrl.record_format;
 import webtank.datctrl.enum_format;
 
+import webtank.datctrl.consts;
+
 class MemoryDataField(FormatType): IWriteableDataField!(FormatType)
 {
 	import webtank.common.optional: Optional;
@@ -235,23 +237,21 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 	IBaseWriteableDataField[] fields;
 	foreach( size_t fieldIndex, JSONValue jField; jFormat.array )
 	{
-		auto jTypePtr = `t` in jField;
-		auto jNamePtr = `n` in jField;
+		auto jTypePtr = WT_TYPE_FIELD in jField;
+		auto jNamePtr = WT_NAME_FIELD in jField;
 		
-		enforce(jTypePtr !is null, `Expected "t" field in field format JSON`);
-		enforce(jTypePtr.type == JSONType.string, `Field format field "t" expected to be a string`);
+		enforce(jTypePtr !is null, `Expected "` ~ WT_TYPE_FIELD ~ `" field in field format JSON`);
+		enforce(jTypePtr.type == JSONType.string, `Field format field "` ~ WT_TYPE_FIELD ~ `" expected to be a string`);
 
-		enforce(jNamePtr !is null, `Expected "n" field in field format JSON`);
-		enforce(jNamePtr.type == JSONType.string, `Field format field "n" expected to be a string`);
+		enforce(jNamePtr !is null, `Expected "` ~ WT_NAME_FIELD ~ `" field in field format JSON`);
+		enforce(jNamePtr.type == JSONType.string, `Field format field "` ~ WT_NAME_FIELD ~ `" expected to be a string`);
 
-		string typeStr = jTypePtr.str;
-		string fieldName = jNamePtr.str;
 		Optional!size_t theSize;
-		if( auto jSizePtr = `sz` in jField )
+		if( auto jSizePtr = WT_SIZE_FIELD in jField )
 		{
 			enforce(
 				[JSONType.uinteger, JSONType.integer].canFind(jSizePtr.type),
-				`Expected integer as "sz" field`);
+				`Expected integer as "` ~ WT_SIZE_FIELD ~ `" field`);
 			theSize = (
 				jSizePtr.type == JSONType.uinteger?
 				jSizePtr.uinteger.to!size_t:
@@ -260,9 +260,10 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 		}
 
 		import std.meta: AliasSeq;
+		string fieldName = jNamePtr.str;
 		alias fArgs = AliasSeq!(fields, fieldName, fieldIndex, jData);
 
-		switch( typeStr )
+		switch( jTypePtr.str )
 		{
 			case `bool`: {
 				_addField!bool(fArgs);
@@ -285,8 +286,8 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 			case `array`:
 			{
 				string arrayKind;
-				if( auto jArrayKindPtr = "vt" in jField ) {
-					enforce(jArrayKindPtr.type == JSONType.string, `Expected string as "vt" field`);
+				if( auto jArrayKindPtr = WT_VALUE_TYPE_FIELD in jField ) {
+					enforce(jArrayKindPtr.type == JSONType.string, `Expected string as "` ~ WT_VALUE_TYPE_FIELD ~ `" field`);
 					arrayKind = jArrayKindPtr.str;
 				}
 				switch( arrayKind )

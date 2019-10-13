@@ -3,6 +3,8 @@ module webtank.datctrl.detatched_record;
 import webtank.datctrl.iface.record;
 import webtank.datctrl.iface.data_field;
 
+import webtank.datctrl.consts;
+
 class DetatchedRecord: IBaseWriteableRecord
 {
 protected:
@@ -83,8 +85,8 @@ public:
 		JSONValue toStdJSON()
 		{
 			auto jValues = this.getStdJSONFormat();
-			jValues["d"] = this.getStdJSONData(recordIndex);
-			jValues["t"] = "record";
+			jValues[WT_DATA_FIELD] = this.getStdJSONData(recordIndex);
+			jValues[WT_TYPE_FIELD] = WT_TYPE_RECORD;
 			return jValues;
 		}
 
@@ -106,7 +108,7 @@ public:
 
 		_extractFromJSON(jRecord, jFormat, jData, type, kfi);
 
-		enforce(type == `record`, `Expected record type`);
+		enforce(type == WT_TYPE_RECORD, `Expected record type`);
 
 		// Fill with init format for now
 		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init);
@@ -139,7 +141,7 @@ public:
 		_extractFromJSON(jRecord, jFormat, jData, type, kfi);
 
 		enforce(kfi.isSet, `Expected key field index`);
-		enforce(type == `record`, `Expected recordset type`);
+		enforce(type == WT_TYPE_RECORD, `Expected recordset type`);
 
 		IBaseWriteableDataField[] dataFields = makeMemoryDataFieldsDyn(jFormat, JSONValue([jData]));
 		auto newRec = new DetatchedRecord(dataFields, kfi.value);

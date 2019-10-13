@@ -1,13 +1,16 @@
 module webtank.datctrl.common;
 
+import webtank.datctrl.consts;
+
 mixin template GetStdJSONFormatImpl()
 {
 	import std.json: JSONValue;
+	import webtank.datctrl.consts;
 	JSONValue getStdJSONFormat() inout
 	{
 		JSONValue jValues;
-		jValues["kfi"] = _keyFieldIndex; // Номер ключевого поля
-		jValues["t"] = "recordset"; // Тип данных - набор записей
+		jValues[WT_KEY_FIELD_INDEX] = _keyFieldIndex; // Номер ключевого поля
+		jValues[WT_TYPE_FIELD] = WT_TYPE_RECORDSET; // Тип данных - набор записей
 
 		//Образуем JSON-массив форматов полей
 		JSONValue[] jFieldFormats;
@@ -16,7 +19,7 @@ mixin template GetStdJSONFormatImpl()
 		foreach( i, field; _dataFields ) {
 			jFieldFormats[i] = field.getStdJSONFormat();
 		}
-		jValues["f"] = jFieldFormats;
+		jValues[WT_FORMAT_FIELD] = jFieldFormats;
 
 		return jValues;
 	}
@@ -39,6 +42,7 @@ mixin template GetStdJSONDataImpl()
 mixin template RecordSetToStdJSONImpl()
 {
 	import std.json: JSONValue;
+	import webtank.datctrl.consts;
 	JSONValue toStdJSON() inout
 	{
 		auto jValues = this.getStdJSONFormat();
@@ -50,8 +54,8 @@ mixin template RecordSetToStdJSONImpl()
 			jData[i] = this.getStdJSONData(i);
 		}
 
-		jValues["d"] = jData;
-		jValues["t"] = "recordset";
+		jValues[WT_DATA_FIELD] = jData;
+		jValues[WT_TYPE_FIELD] = WT_TYPE_RECORDSET;
 
 		return jValues;
 	}
@@ -59,8 +63,9 @@ mixin template RecordSetToStdJSONImpl()
 
 mixin template GetStdJSONFieldFormatImpl()
 {
-
 	import std.json: JSONValue;
+	import webtank.datctrl.consts;
+
 	/// Сериализации формата поля в std.json
 	JSONValue getStdJSONFormat() inout
 	{
@@ -70,23 +75,23 @@ mixin template GetStdJSONFieldFormatImpl()
 			res = _enumFormat.toStdJSON();
 		} else {
 			import std.traits: isIntegral, isFloatingPoint, isArray, isAssociativeArray, isSomeString;
-			res["t"] = getFieldTypeString!ValueType; // Вывод типа поля
-			res["dt"] = ValueType.stringof; // D-шный тип поля
+			res[WT_TYPE_FIELD] = getFieldTypeString!ValueType; // Вывод типа поля
+			res[WT_DLANG_TYPE_FIELD] = ValueType.stringof; // D-шный тип поля
 
 			static if( isIntegral!(ValueType) || isFloatingPoint!(ValueType) ) {
-				res["sz"] = ValueType.sizeof; // Размер чисел в байтах
+				res[WT_SIZE_FIELD] = ValueType.sizeof; // Размер чисел в байтах
 			}
 
 			static if( isArray!ValueType && !isSomeString!ValueType ) {
 				import std.range: ElementType;
-				res["vt"] = getFieldTypeString!(ElementType!ValueType);
+				res[WT_VALUE_TYPE_FIELD] = getFieldTypeString!(ElementType!ValueType);
 			} else static if( isAssociativeArray!(ValueType) ) {
 				import std.traits: TKeyType = KeyType, TValueType = ValueType;
-				res["vt"] = getFieldTypeString!(TValueType!ValueType);
-				res["kt"] = getFieldTypeString!(TKeyType!ValueType);
+				res[WT_VALUE_TYPE_FIELD] = getFieldTypeString!(TValueType!ValueType);
+				res[WT_KEY_TYPE_FIELD] = getFieldTypeString!(TKeyType!ValueType);
 			}
 		}
-		res["n"] = _name; // Вывод имени поля
+		res[WT_NAME_FIELD] = _name; // Вывод имени поля
 
 		return res;
 	}
@@ -148,22 +153,22 @@ void _extractFromJSON(
 	import std.conv: to;
 
 	enforce(jContainer.type == JSONType.object, `Expected JSON object as container serialized data!!!`);
-	auto jFormatPtr = `f` in jContainer;
-	auto jDataPtr = `d` in jContainer;
-	auto jTypePtr = `t` in jContainer;
-	auto jKfiPtr = `kfi` in jContainer;
+	auto jFormatPtr = WT_FORMAT_FIELD in jContainer;
+	auto jDataPtr = WT_DATA_FIELD in jContainer;
+	auto jTypePtr = WT_TYPE_FIELD in jContainer;
+	auto jKfiPtr = WT_KEY_FIELD_INDEX in jContainer;
 
-	enforce(jFormatPtr, `Expected "f" field in container serialized data!!!`);
-	enforce(jDataPtr, `Expected "d" field in container serialized data!!!`);
-	enforce(jTypePtr, `Expected "t" field in container serialized data!!!`);
-	enforce(jKfiPtr, `Expected "kfi" field in container serialized data!!!`);
+	enforce(jFormatPtr, `Expected "` ~ WT_FORMAT_FIELD ~ `" field in container serialized data!!!`);
+	enforce(jDataPtr, `Expected "` ~ WT_DATA_FIELD ~ `" field in container serialized data!!!`);
+	enforce(jTypePtr, `Expected "` ~ WT_TYPE_FIELD ~ `" field in container serialized data!!!`);
+	enforce(jKfiPtr, `Expected "` ~ WT_KEY_FIELD_INDEX ~ `" field in container serialized data!!!`);
 
-	enforce(jFormatPtr.type == JSONType.array, `Format field "f" must be JSON array!!!`);
-	enforce(jDataPtr.type == JSONType.array, `Data field "d" must be JSON array!!!`);
-	enforce(jTypePtr.type == JSONType.string, `Type field "t" must be JSON string!!!`);
+	enforce(jFormatPtr.type == JSONType.array, `Format field "` ~ WT_FORMAT_FIELD ~ `" must be JSON array!!!`);
+	enforce(jDataPtr.type == JSONType.array, `Data field "` ~ WT_DATA_FIELD ~ `" must be JSON array!!!`);
+	enforce(jTypePtr.type == JSONType.string, `Type field "` ~ WT_TYPE_FIELD ~ `" must be JSON string!!!`);
 	enforce(
 		[JSONType.uinteger, JSONType.integer].canFind(jKfiPtr.type),
-		`Expected integer as "kfi" field in container JSON`);
+		`Expected integer as "` ~ WT_KEY_FIELD_INDEX ~ `" field in container JSON`);
 
 	jFormat = (*jFormatPtr);
 	jData = (*jDataPtr);
@@ -183,8 +188,8 @@ auto _makeRecordFieldIndex(JSONValue jFormat)
 	foreach( size_t index, JSONValue jField; jFormat )
 	{
 		enforce(jField.type == JSONType.object, `RecordSet serialized field format must be object!!!`);
-		auto jNamePtr = `n` in jField;
-		enforce(jNamePtr !is null, `RecordSet serialized field format must have "n" field`);
+		auto jNamePtr = WT_NAME_FIELD in jField;
+		enforce(jNamePtr !is null, `RecordSet serialized field format must have "` ~ WT_NAME_FIELD ~ `" field`);
 		enforce(jNamePtr.type == JSONType.string, `RecordSet serialized field name must be JSON string!!!`);
 		enforce(jNamePtr.str !in fieldToIndex, `RecordSet field name must be unique!!!`);
 		fieldToIndex[jNamePtr.str] = index;

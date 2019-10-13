@@ -6,6 +6,8 @@ import std.exception: enforce;
 import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
 import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
 
+import webtank.datctrl.consts;
+
 class RecordFormatAdapter: IClassNode
 {
 private:
@@ -17,23 +19,27 @@ public:
 	this(IvyData rawData)
 	{
 		enforce(rawData.type == IvyDataType.AssocArray, `Record format raw data must be object`);
-		enforce("f" in rawData, `Expected format field "f" in record raw data!`);
-		enforce(rawData["f"].type == IvyDataType.Array, `Format field "d" expected to be array`);
+		auto fmtPtr = WT_FORMAT_FIELD in rawData;
+		enforce(fmtPtr, `Expected format field "` ~ WT_FORMAT_FIELD ~ `" in record raw data!`);
+		enforce(fmtPtr.type == IvyDataType.Array, `Format field "` ~ WT_FORMAT_FIELD ~ `" expected to be array`);
 
-		IvyData rawItems = rawData["f"];
-		foreach( i, fmt; rawItems.array )
+		foreach( i, fmt; fmtPtr.array )
 		{
 			enforce(fmt.type == IvyDataType.AssocArray, `Expected assoc array as field format raw data`);
-			enforce("n" in fmt, `Expected name field "n" for field in raw record format`);
-			enforce("t" in fmt, `Expected type field "t" for field in raw record format`);
-			_namesMapping[ fmt["n"].str ] = i;
-			if( fmt["t"].str == "enum" ) {
+
+			auto namePtr = WT_NAME_FIELD in fmt;
+			auto typePtr = WT_TYPE_FIELD in fmt;
+			enforce(namePtr, `Expected name field "` ~ WT_NAME_FIELD ~ `" for field in raw record format`);
+			enforce(typePtr, `Expected type field "` ~ WT_TYPE_FIELD ~ `" for field in raw record format`);
+
+			_namesMapping[namePtr.str] = i;
+			if( typePtr.str == WT_ENUM_FIELD ) {
 				_items ~= new EnumFormatAdapter(fmt);
 			} else {
 				_items ~= new FieldFormatAdapter(fmt);
 			}
 		}
-		if( auto keyFieldIndexPtr = "kfi" in rawData.assocArray )
+		if( auto keyFieldIndexPtr = WT_KEY_FIELD_INDEX in rawData.assocArray )
 		{
 			enforce(keyFieldIndexPtr.type == IvyDataType.Integer, `Key field index field expected to be integer`);
 			_keyFieldIndex = keyFieldIndexPtr.integer;
@@ -115,8 +121,8 @@ public:
 			}
 
 			return IvyData([
-				"f": IvyData(formats),
-				"kfi": IvyData(_keyFieldIndex)
+				WT_FORMAT_FIELD: IvyData(formats),
+				WT_KEY_FIELD_INDEX: IvyData(_keyFieldIndex)
 			]);
 		}
 

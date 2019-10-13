@@ -8,6 +8,8 @@ import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
 
 import std.exception: enforce;
 
+import webtank.datctrl.consts;
+
 class RecordSetAdapter: IClassNode
 {
 private:
@@ -17,12 +19,22 @@ private:
 public:
 	this(IvyData rawRS)
 	{
-		_ensureRecordSet(rawRS);
+		auto typePtr = WT_TYPE_FIELD in rawRS;
+		auto dataPtr = WT_DATA_FIELD in rawRS;
+		auto fmtPtr = WT_FORMAT_FIELD in rawRS;
+		
+		enforce(typePtr, `Expected type field "` ~ WT_TYPE_FIELD ~ `" in recordset raw data!`);
+		enforce(dataPtr, `Expected data field "` ~ WT_DATA_FIELD ~ `" in recordset raw data!`);
+		enforce(dataPtr.type == IvyDataType.Array, `Data field "` ~ WT_DATA_FIELD ~ `" expected to be array`);
+		enforce(fmtPtr, `Expected format field "` ~ WT_FORMAT_FIELD ~ `" in recordset raw data!`);
+		enforce(
+			typePtr.type == IvyDataType.String && typePtr.str == WT_TYPE_RECORDSET,
+			`Expected "` ~ WT_TYPE_RECORDSET ~ `" value in "` ~ WT_FORMAT_FIELD ~ `" field`);
+
 		_fmt = new RecordFormatAdapter(rawRS);
 
 		import webtank.ivy.datctrl.deserialize: _deserializeRecordData;
-		IvyData rawItems = rawRS["d"];
-		foreach( i, ref recData; rawItems.array )
+		foreach( i, ref recData; dataPtr.array )
 		{
 			IvyData[] recordData;
 			foreach( j, ref fieldData; recData.array ) {
@@ -30,18 +42,6 @@ public:
 			}
 			_items ~= new RecordAdapter(_fmt, recordData);
 		}
-	}
-
-	void _ensureRecordSet(IvyData rawRS)
-	{
-		enforce("t" in rawRS, `Expected type field "t" in recordset raw data!`);
-		enforce("d" in rawRS, `Expected data field "d" in recordset raw data!`);
-		enforce(rawRS["d"].type == IvyDataType.Array, `Data field "d" expected to be array`);
-		enforce("f" in rawRS, `Expected format field "f" in recordset raw data!`);
-		enforce(
-			rawRS["t"].type == IvyDataType.String && rawRS["t"].str == "recordset",
-			`Expected "recordset" value in "t" field`
-		);
 	}
 
 	static class Range: IvyNodeRange
@@ -118,13 +118,13 @@ public:
 		IvyData __serialize__()
 		{
 			IvyData res = _fmt.__serialize__();
-			res["t"] = "recordset";
+			res[WT_TYPE_FIELD] = WT_TYPE_RECORDSET;
 
 			IvyData[] itemsData;
 			foreach( record; _items ) {
 				itemsData ~= record._serializeData();
 			}
-			res["d"] = itemsData;
+			res[WT_DATA_FIELD] = itemsData;
 			
 			return res;
 		}
@@ -137,13 +137,13 @@ public:
 	IvyData serializeSlice(size_t begin, size_t end)
 	{
 		IvyData res = _fmt.__serialize__();
-		res["t"] = "recordset";
+		res[WT_TYPE_FIELD] = WT_TYPE_RECORDSET;
 
 		IvyData[] itemsData;
 		foreach( record; _items[begin..end] ) {
 			itemsData ~= record._serializeData();
 		}
-		res["d"] = itemsData;
+		res[WT_DATA_FIELD] = itemsData;
 		
 		return res;
 	}
