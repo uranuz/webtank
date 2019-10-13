@@ -20,15 +20,15 @@ public:
 
 	override {
 		IvyNodeRange opSlice() {
-			throw new Exception("Method opSlice not implemented");
+			throw new Exception("Method opSlice is not implemented");
 		}
 
 		IClassNode opSlice(size_t, size_t) {
-			throw new Exception("Method opSlice not implemented");
+			throw new Exception("Method opSlice is not implemented");
 		}
 
 		IvyData opIndex(IvyData) {
-			throw new Exception("Method opIndex not implemented");
+			throw new Exception("Method opIndex is not implemented");
 		}
 
 		IvyData __getAttr__(string attrName)
