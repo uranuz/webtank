@@ -188,30 +188,64 @@ IBaseDataField[] makePostgreSQLDataFields(RecordFormatType)(IDBQueryResult query
 {
 	import std.exception: enforce;
 	import std.conv: text;
+	import webtank.datctrl.memory_data_field: MemoryDataField;
+	import webtank.common.optional: Optional;
+
+	alias fieldNames = RecordFormatType.tupleOfNames;
 	enforce(queryResult !is null, `Expectes instance of IDBQueryResult`);
 	enforce(
-		RecordFormatType.tupleOfNames.length <= queryResult.fieldCount,
-		`Expected at least ` ~ RecordFormatType.tupleOfNames.length.text
+		fieldNames.length <= queryResult.fieldCount,
+		`Expected at least ` ~ fieldNames.length.text
 		~ ` fields in database query result, but got ` ~ queryResult.fieldCount.text);
-	IBaseDataField[] dataFields;
-	foreach( fieldName; RecordFormatType.tupleOfNames )
-	{
-		alias FieldFormatDecl = RecordFormatType.getFieldFormatDecl!(fieldName);
-		alias CurrFieldT = DatabaseField!(FieldFormatDecl);
-		alias fieldIndex = RecordFormatType.getFieldIndex!(fieldName);
-
+	IBaseDataField[] fields;
+	fields.length = fieldNames.length; // preallocating
+	static foreach( size_t fi, fieldName; fieldNames )
+	{{
+		alias fieldSpec = RecordFormatType.getFieldSpec!(fieldName);
 		bool isNullable = format.nullableFlags.get(fieldName, true);
 
-		static if( isEnumFormat!(FieldFormatDecl) )
-		{
+		static if( isEnumFormat!(fieldSpec.FormatDecl) ) {
 			alias enumFieldIndex = RecordFormatType.getEnumFormatIndex!(fieldName);
-			dataFields ~= new CurrFieldT(queryResult, fieldIndex, fieldName, isNullable,  format.enumFormats[enumFieldIndex]);
 		}
-		else {
-			dataFields ~= new CurrFieldT(queryResult, fieldIndex, fieldName, isNullable);
+
+		static if( fieldSpec.hasWriteableSpec )
+		{
+			alias CurrFieldT = MemoryDataField!(fieldSpec.FormatDecl);
+			Optional!(fieldSpec.ValueType)[] data;
+			data.length = queryResult.recordCount; // preallocating
+
+			// Copy data from database to create memory field
+			foreach( recordIndex; 0..queryResult.recordCount )
+			{
+				if( queryResult.isNull(fi, recordIndex) )
+					continue;
+
+				try {
+					data[recordIndex] = queryResult.get(fi, recordIndex).conv!(fieldSpec.ValueType);
+				} catch(ConvException ex) {
+					throw new ConvException(
+						`Exception during parsing value for field with name "` ~ fieldSpec.name
+						~ `" at index: ` ~ recordIndex.text ~ `. Error msg:` ~ ex.to!string);
+				}
+			}
+
+			static if( isEnumFormat!(fieldSpec.FormatDecl) ) {
+				fields[fi] = new CurrFieldT(fieldName, format.enumFormats[enumFieldIndex], data, isNullable);
+			} else {
+				fields[fi] = new CurrFieldT(fieldName, data, isNullable);
+			}
 		}
-	}
-	return dataFields;
+		else
+		{
+			alias CurrFieldT = DatabaseField!(fieldSpec.FormatDecl);
+			static if( isEnumFormat!(fieldSpec.FormatDecl) ) {
+				fields[fi] = new CurrFieldT(queryResult, fi, fieldName, isNullable, format.enumFormats[enumFieldIndex]);
+			} else {
+				fields[fi] = new CurrFieldT(queryResult, fi, fieldName, isNullable);
+			}
+		}
+	}}
+	return fields;
 }
 
 
@@ -222,7 +256,7 @@ unittest
 	import webtank.datctrl.typed_record_set;
 
 	auto recFormat = RecordFormat!(
-		PrimaryKey!(size_t), "num",
+		PrimaryKey!(size_t, "num"),
 		string, "name"
 	)();
 	IDBQueryResult pgResult;

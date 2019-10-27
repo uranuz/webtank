@@ -31,15 +31,14 @@ public:
 
 mixin template CursorRecordImpl(bool isWriteableFlag)
 {
+	alias DataFieldIface = IBaseDataField;
 	static if( isWriteableFlag )
 	{
 		alias RecordSetIface = IBaseWriteableRecordSet;
-		alias DataFieldIface = IBaseWriteableDataField;
 	}
 	else
 	{
 		alias RecordSetIface = IBaseRecordSet;
-		alias DataFieldIface = IBaseDataField;
 	}
 protected:
 	RecordSetIface _recordSet;

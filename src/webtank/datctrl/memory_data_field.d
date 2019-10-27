@@ -17,7 +17,8 @@ protected:
 	string _name;
 	Optional!(ValueType)[] _values;
 	bool _isNullable;
-	
+
+public:
 
 	static if( isEnumFormat!(FormatType) )
 	{
@@ -392,7 +393,7 @@ unittest
 	import webtank.datctrl.iface.data_field;
 	import webtank.datctrl.record_format;
 	auto recFormat = RecordFormat!(
-		PrimaryKey!size_t, "num",
+		PrimaryKey!(size_t, "num"),
 		string, "name"
 	)();
 	IBaseWriteableDataField[] dataFields = makeMemoryDataFields(recFormat);

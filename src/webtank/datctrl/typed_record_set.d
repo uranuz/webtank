@@ -310,7 +310,7 @@ unittest
 	import webtank.datctrl.record_set;
 
 	auto recFormat = RecordFormat!(
-		PrimaryKey!(size_t), "num",
+		PrimaryKey!(size_t, "num"),
 		string, "name"
 	)();
 	IBaseWriteableDataField[] dataFields = makeMemoryDataFields(recFormat);

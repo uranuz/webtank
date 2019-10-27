@@ -99,8 +99,6 @@ interface IBaseRecord
 
 interface IBaseWriteableRecord: IBaseRecord
 {
-	override IBaseWriteableDataField getField(string fieldName);
-
 	void nullify(string fieldName);
 	void setNullable(string fieldName, bool value);
 }

@@ -15,14 +15,27 @@ class WriteableRecordSet: IBaseWriteableRecordSet
 {
 	mixin RecordSetImpl!true;
 
+	import webtank.datctrl.iface.data_field: IBaseWriteableDataField;
+
 public:
+	IBaseWriteableDataField getWriteableField(string fieldName) {
+		return _assureWriteable(getField(fieldName));
+	}
+
+	IBaseWriteableDataField _assureWriteable(DataFieldIface field)
+	{
+		auto wrField = cast(IBaseWriteableDataField) field;
+		enforce(wrField !is null, `Field with name "` ~ field.name ~ `" is not writeable`);
+		return wrField;
+	}
+
 	override {
 		void nullify(string fieldName, size_t recordIndex) {
-			getField(fieldName).nullify(recordIndex);
+			getWriteableField(fieldName).nullify(recordIndex);
 		}
 
 		void setNullable(string fieldName, bool value) {
-			getField(fieldName).isNullable = value;
+			getWriteableField(fieldName).isNullable = value;
 		}
 
 		void addItems(size_t count, size_t index = size_t.max)
@@ -34,7 +47,7 @@ public:
 			}
 
 			foreach( dataField; _dataFields ) {
-				dataField.addItems(count, index);
+				_assureWriteable(dataField).addItems(count, index);
 			}
 
 			RecordType[] newCursors;
@@ -122,6 +135,7 @@ protected:
 	import std.exception: enforce;
 
 	import webtank.datctrl.iface.record: IBaseRecord;
+	import webtank.datctrl.iface.data_field: IBaseDataField;
 	static if( isWriteableFlag )
 	{
 		import webtank.datctrl.cursor_record: WriteableCursorRecord;
@@ -129,7 +143,7 @@ protected:
 		import webtank.datctrl.iface.data_field: IBaseWriteableDataField;
 		import webtank.datctrl.iface.record_set: IWriteableRecordSetRange;
 		alias RecordSetIface = IBaseWriteableRecordSet;
-		alias DataFieldIface = IBaseWriteableDataField;
+		alias DataFieldIface = IBaseDataField;
 		alias RangeIface = IWriteableRecordSetRange;
 		alias RecordIface = IBaseWriteableRecord;
 		alias RecordType = WriteableCursorRecord;
@@ -137,7 +151,6 @@ protected:
 	else
 	{
 		import webtank.datctrl.cursor_record: CursorRecord;
-		import webtank.datctrl.iface.data_field: IBaseDataField;
 		import webtank.datctrl.iface.record_set: IRecordSetRange;
 		alias RecordSetIface = IBaseRecordSet;
 		alias DataFieldIface = IBaseDataField;
@@ -207,6 +220,13 @@ public:
 		_reindexFields();
 		_initCursors();
 		_reindexRecords();
+	}
+
+	static if( isWriteableFlag )
+	{
+		this(IBaseWriteableDataField[] dataFields, size_t keyFieldIndex = 0) {
+			this(cast(DataFieldIface[]) dataFields, keyFieldIndex);
+		}
 	}
 
 	override {

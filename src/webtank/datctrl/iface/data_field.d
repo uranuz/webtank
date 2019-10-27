@@ -10,16 +10,44 @@ import webtank.datctrl.enum_format;
 
 
 ///В шаблоне хранится соответсвие между именем и типом поля
-template FieldSpec( T, string s = null )
+struct FieldSpec(T, string s, Attrs...)
 {
+	/// Тип поля. Тип значения, либо формат перечислимого поля
 	alias FormatDecl = T;
+
+	/// Тип значения перечислимого поля
 	alias ValueType = DataFieldValueType!(T);
+
+	/// Название поля
 	alias name = s;
+
+	enum bool hasKeySpec = _hasSpecAttr!(KeySpecAttr, Attrs);
+	enum bool hasWriteableSpec = _hasSpecAttr!(WriteableSpecAttr, Attrs);
 }
 
-struct PrimaryKey(T) {
-	alias BaseDecl = T;
+/// Проверка наличия аттрибута спецификации поля SpecAttr в списке Attrs
+template _hasSpecAttr(SpecAttr, Attrs...)
+{
+	static if( Attrs.length == 0 ) {
+		enum bool _hasSpecAttr = false;
+	} else static if( is( Attrs[0] == SpecAttr ) ) {
+		enum bool _hasSpecAttr = true;
+	} else {
+		enum bool _hasSpecAttr = _hasSpecAttr!(SpecAttr, Attrs[1..$]);
+	}
 }
+
+/// Аттрибут спецификации поля: "Поле ключа"
+struct KeySpecAttr {}
+
+/// Аттрибут спецификации поля: "Записываемое"
+struct WriteableSpecAttr {}
+
+/// Спецификация поля первичного ключа
+alias PrimaryKey(T, string name) = FieldSpec!(T, name, KeySpecAttr);
+
+/// Спецификация записываемого поля
+alias Writeable(T, string name) = FieldSpec!(T, name, WriteableSpecAttr);
 
 /++
 $(LANG_EN

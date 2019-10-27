@@ -6,26 +6,26 @@ import webtank.datctrl.record_format: RecordFormat;
 import webtank.datctrl.iface.record_set: IBaseRecordSet;
 
 static immutable ruleRecFormat = RecordFormat!(
-	PrimaryKey!(size_t), "num",
+	PrimaryKey!(size_t, "num"),
 	string, "name",
 	size_t[], "children",
 	ubyte, "relation"
 )();
 
 static immutable objectRecFormat = RecordFormat!(
-	PrimaryKey!(size_t), "num",
+	PrimaryKey!(size_t, "num"),
 	string, "name",
 	size_t, "parent_num",
 	bool, "is_group"
 )();
 
 static immutable roleRecFormat = RecordFormat!(
-	PrimaryKey!(size_t), "num",
+	PrimaryKey!(size_t, "num"),
 	string, "name"
 )();
 
 static immutable rightRecFormat = RecordFormat!(
-	PrimaryKey!(size_t), "num",
+	PrimaryKey!(size_t, "num"),
 	size_t, "role_num",
 	size_t, "object_num",
 	size_t, "rule_num",
@@ -33,8 +33,9 @@ static immutable rightRecFormat = RecordFormat!(
 	bool, "inheritance"
 )();
 
+
 static immutable groupObjectsRecFormat = RecordFormat!(
-	PrimaryKey!(size_t), "num",
+	PrimaryKey!(size_t, "num"),
 	size_t, "group_num",
 	size_t, "object_num"
 )();

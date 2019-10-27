@@ -4,11 +4,8 @@ import webtank._version;
 
 static if( isDatCtrlEnabled ) {
 
-import
-	std.meta,
-	std.typecons,
-	std.conv,
-	std.traits;
+import std.meta: AliasSeq;
+import std.typecons: Tuple;
 
 import
 	webtank.common.optional,
@@ -16,7 +13,7 @@ import
 	webtank.datctrl.enum_format,
 	webtank.common.std_json;
 
-public import webtank.datctrl.iface.data_field: PrimaryKey;
+public import webtank.datctrl.iface.data_field: PrimaryKey, Writeable, FieldSpec;
 
 /++
 $(LANG_EN Struct representing format of record or record set)
@@ -45,6 +42,12 @@ struct RecordFormat(Args...)
 	$(LANG_RU Возвращает true, если в формате есть поле первичного ключа)
 	+/
 	enum bool hasKeyField = _keyFieldIndex != size_t.max;
+
+	/++
+	$(LANG_EN Returns true if format includes at least one field with WriteableSpecAttr specification)
+	$(LANG_RU Возвращает true, если в формате хотя бы одно поле со спецификацией WriteableSpecAttr)
+	+/
+	enum bool hasWriteableSpec = _hasWriteableSpec!_fieldSpecs;
 
 
 	/++
@@ -78,7 +81,7 @@ struct RecordFormat(Args...)
 
 	private static immutable(string[]) _names = ((){
 		string[] result;
-		foreach( spec; _fieldSpecs )
+		static foreach( spec; _fieldSpecs )
 			result ~= spec.name;
 		return result;
 	})();
@@ -95,7 +98,7 @@ struct RecordFormat(Args...)
 
 	shared static this()
 	{
-		foreach( i, spec; _fieldSpecs )
+		static foreach( i, spec; _fieldSpecs )
 			_indexes[spec.name] = i;
 	}
 
@@ -138,34 +141,47 @@ struct RecordFormat(Args...)
 	alias getFieldValueTypes = _getFieldValueTypes!(_fieldSpecs);
 
 	/++
+	$(LANG_EN Returns specification for field with name $(D_PARAM fieldName))
+	$(LANG_RU Возвращает спецификацию для поля с именем $(D_PARAM fieldName))
+	+/
+	alias getFieldSpec(string fieldName) = _getFieldSpec!(fieldName, _fieldSpecs);
+
+	/++
+	$(LANG_EN Returns specification for field with index $(D_PARAM fieldIndex))
+	$(LANG_RU Возвращает спецификацию для поля с индексом $(D_PARAM fieldIndex))
+	+/
+	alias getFieldSpec(size_t fieldIndex) = _getFieldSpec!(fieldIndex, _fieldSpecs);
+
+	/++
 	$(LANG_EN Returns semantic field type $(D FieldType) for field with name $(D_PARAM fieldName))
 	$(LANG_RU Возвращает семантический тип поля $(D FieldType) для поля с именем $(D_PARAM fieldName))
 	+/
-	alias getFieldFormatDecl(string fieldName) = _getFieldSpec!(fieldName, _fieldSpecs).FormatDecl;
+	alias getFieldFormatDecl(string fieldName) = getFieldSpec!(fieldName).FormatDecl;
 
 	/++
 	$(LANG_EN Returns semantic field type $(D FieldType) for field with index $(D_PARAM fieldIndex))
 	$(LANG_RU Возвращает семантический тип поля $(D FieldType) для поля с номером $(D_PARAM fieldIndex))
 	+/
-	alias getFieldFormatDecl(size_t fieldIndex) = _getFieldSpec!(fieldIndex, _fieldSpecs).FormatDecl;
+	alias getFieldFormatDecl(size_t fieldIndex) = getFieldSpec!(fieldIndex).FormatDecl;
+
 
 	/++
 	$(LANG_EN Returns D value type for field with name $(D_PARAM fieldName))
 	$(LANG_RU Возвращает тип языка D для поля с именем $(D_PARAM fieldName))
 	+/
-	alias getValueType(string fieldName) = _getFieldSpec!(fieldName, _fieldSpecs).ValueType;
+	alias getValueType(string fieldName) = getFieldSpec!(fieldName).ValueType;
 
 	/++
 	$(LANG_EN Returns D value type for field with index $(D_PARAM fieldIndex))
 	$(LANG_RU Возвращает тип языка D для поля с номером $(D_PARAM fieldIndex))
 	+/
-	alias getValueType(size_t fieldIndex) = _getFieldSpec!(fieldIndex, _fieldSpecs).ValueType;
+	alias getValueType(size_t fieldIndex) = getFieldSpec!(fieldIndex).ValueType;
 
 	/++
 	$(LANG_EN Returns name for field with index $(D_PARAM fieldIndex))
 	$(LANG_RU Возвращает имя поля с номером $(D_PARAM fieldIndex))
 	+/
-	alias getFieldName(size_t fieldIndex) = _getFieldSpec!(fieldIndex, _fieldSpecs).name;
+	alias getFieldName(size_t fieldIndex) = getFieldSpec!(fieldIndex).name;
 
 	/++
 	$(LANG_EN Returns index for field with name $(D_PARAM fieldName))
@@ -204,6 +220,19 @@ struct RecordFormat(Args...)
 }
 
 
+/// Проверяет наличие аттрибута записываемости хотя бы в одном поле формата записи
+template _hasWriteableSpec(FieldSpecs...)
+{
+	static if( FieldSpecs.length == 0 ) {
+		enum bool _hasWriteableSpec = false;
+	} else static if( FieldSpecs[0].hasWriteableSpec ) {
+		enum bool _hasWriteableSpec = true;
+	} else {
+		enum bool _hasWriteableSpec = _hasWriteableSpec!(FieldSpecs[1..$]);
+	}
+}
+
+
 template _getHasField(string fieldName, FieldSpecs...)
 {
 	static if( FieldSpecs.length == 0 )
@@ -219,6 +248,7 @@ template _getHasField(string fieldName, FieldSpecs...)
 //Результат: кортеж элементов FieldSpecKind
 template _parseRecordFormatArgs(size_t index, Args...)
 {
+	import std.traits: isInstanceOf;
 	static if( Args.length == 0 )
 	{
 		alias FieldSpecs = AliasSeq!();
@@ -239,20 +269,21 @@ template _parseRecordFormatArgs(size_t index, Args...)
 
 		alias _Res = _parseRecordFormatArgs!(index + 1, _RestArgs);
 
-		static if( is( Args[0] == PrimaryKey!(T), T...) )
+		static if( isInstanceOf!(FieldSpec, Args[0]) )
 		{
+			alias _FieldSpec = Args[0];
+		} else {
+			alias _FieldSpec = FieldSpec!(Args[0], _fieldName);
+		}
+
+		static if( isInstanceOf!(FieldSpec, Args[0]) && Args[0].hasKeySpec ) {
 			static assert(_Res.keyFieldIndex == size_t.max, `Multiple PrimaryKey field format specifiers detected!`);
-			alias _FormatDecl = Args[0].BaseDecl;
 			enum size_t keyFieldIndex = index;
 		} else {
-			alias _FormatDecl = Args[0];
 			enum size_t keyFieldIndex = _Res.keyFieldIndex;
 		}
 
-		alias FieldSpecs = AliasSeq!(
-			FieldSpec!(_FormatDecl, _fieldName),
-			_Res.FieldSpecs
-		);
+		alias FieldSpecs = AliasSeq!(_FieldSpec, _Res.FieldSpecs);
 	}
 }
 
@@ -338,6 +369,7 @@ template _filterFieldSpecs(FieldSpecs...)
 //Элементы кортежа FilterFieldTypes должны иметь тип FieldType
 template _filterFieldSpec(alias FieldSpec, FilterFieldTypes...)
 {
+	import std.traits: isInstanceOf;
 	static if( FilterFieldTypes.length == 0 ) {
 		alias _filterFieldSpec = AliasSeq!();
 	}

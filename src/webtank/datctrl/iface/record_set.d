@@ -170,7 +170,6 @@ interface IBaseWriteableRecordSet: IBaseRecordSet
 
 	override {
 		// Ковариантные переопределения методов для записываемых типов
-		IBaseWriteableDataField getField(string fieldName);
 		IBaseWriteableRecord opIndex(size_t recordIndex);
 		IBaseWriteableRecord getRecordAt(size_t recordIndex);
 		IWriteableRecordSetRange opSlice();
