@@ -18,6 +18,9 @@
 			},
 			"buildRequirements": [
 				"allowWarnings"
+			],
+			"dflags": [
+				"-lowmem"
 			]
 		}, {
 			"name": "with_ivy",
@@ -30,6 +33,9 @@
 			"excludedSourceFiles": [
 				"src/webtank/crypto/*",
 				"src/webtank/db/*"
+			],
+			"dflags": [
+				"-lowmem"
 			]
 		}, {
 			"name": "minimal_deps",
@@ -40,6 +46,9 @@
 			],
 			"buildRequirements": [
 				"allowWarnings"
+			],
+			"dflags": [
+				"-lowmem"
 			]
 		}
 	],
