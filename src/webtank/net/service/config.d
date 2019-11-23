@@ -51,22 +51,18 @@ string[string] resolveConfigPaths(bool shouldExpandTilde = false)(
 			[JSONType.string, JSONType.null_].canFind(rootPathPtr.type),
 			`Config path "` ~ rootPathName  ~ `" value must be string or null!!!`);
 
-		if( rootPathPtr.type == JSONType.string )
-		{
-			static if( shouldExpandTilde )
-				rootPath = rootPathPtr.str.expandTilde();
-			else
-				rootPath = rootPathPtr.str;
+		if( rootPathPtr.type == JSONType.string ) {
+			rootPath = rootPathPtr.str;
 		}
 
 	}
 
-	if( !rootPath )
-	{
-		static if( shouldExpandTilde )
-			rootPath = defaultPaths.get(rootPathName, null).expandTilde();
-		else
-			rootPath = defaultPaths.get(rootPathName, null);
+	if( !rootPath ) {
+		rootPath = defaultPaths.get(rootPathName, null);
+	}
+
+	static if( shouldExpandTilde ) {
+		rootPath = rootPath.expandTilde();
 	}
 
 	enforce(
@@ -82,10 +78,12 @@ string[string] resolveConfigPaths(bool shouldExpandTilde = false)(
 		//Extracting only non-empty strings
 		if( jsonPath.type == JSONType.string && jsonPath.str.length > 0 )
 		{
-			static if( shouldExpandTilde )
-				result[pathName] = buildNormalPath( rootPath, jsonPath.str.expandTilde() );
-			else
-				result[pathName] = buildNormalPath( rootPath, jsonPath.str );
+			string strPath = jsonPath.str;
+			static if( shouldExpandTilde ) {
+				strPath = strPath.expandTilde();
+			}
+
+			result[pathName] = buildNormalPath(rootPath, strPath);
 		}
 	}
 
@@ -96,10 +94,11 @@ string[string] resolveConfigPaths(bool shouldExpandTilde = false)(
 
 		if( pathName !in result )
 		{
-			static if( shouldExpandTilde )
-				result[pathName] = buildNormalPath( rootPath, defaultPaths[pathName].expandTilde() );
-			else
-				result[pathName] = buildNormalPath( rootPath, defaultPaths[pathName] );
+			string strPath = defaultPaths[pathName];
+			static if( shouldExpandTilde ) {
+				strPath = strPath.expandTilde();
+			}
+			result[pathName] = buildNormalPath(rootPath, strPath);
 		}
 	}
 
