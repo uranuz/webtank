@@ -16,8 +16,7 @@ mixin template IvyServiceMixin()
 	import webtank.net.http.context: HTTPContext;
 	import webtank.net.http.output: HTTPOutput;
 	import webtank.common.loger: Loger, LogEvent, LogEventType, ThreadedLoger, FileLoger, LogLevel;
-	import webtank.ivy.remote_call: RemoteCallInterpreter;
-	import webtank.ivy.opt_storage: OptStorageInterpreter;
+	import webtank.ivy.directive.standard_factory: makeStandardInterpreterDirFactory;
 
 	import ivy.engine: IvyEngine;
 	import ivy.engine_config: IvyConfig;
@@ -26,7 +25,7 @@ mixin template IvyServiceMixin()
 	import ivy.interpreter.data_node: IvyData;
 	import ivy.common: LogInfo, LogInfoType;
 	import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
-	import ivy.interpreter.directive.standard_factory: makeStandardInterpreterDirFactory;
+	
 	import ivy.interpreter.async_result: AsyncResult;
 
 public:
@@ -73,8 +72,6 @@ private:
 		ivyConfig.interpreterLoger = &_ivyLogerMethod;
 
 		ivyConfig.directiveFactory = makeStandardInterpreterDirFactory();
-		ivyConfig.directiveFactory.add(new RemoteCallInterpreter);
-		ivyConfig.directiveFactory.add(new OptStorageInterpreter);
 
 		debug ivyConfig.clearCache = true;
 

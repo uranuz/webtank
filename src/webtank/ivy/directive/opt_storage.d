@@ -1,4 +1,4 @@
-module webtank.ivy.opt_storage;
+module webtank.ivy.directive.opt_storage;
 
 import ivy.interpreter.data_node: IvyDataType, IvyNodeRange, IvyData, IClassNode;
 import ivy.interpreter.iface: INativeDirectiveInterpreter;

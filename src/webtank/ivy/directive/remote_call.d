@@ -1,13 +1,13 @@
-module webtank.ivy.remote_call;
+module webtank.ivy.directive.remote_call;
 
-import ivy.interpreter.data_node: IvyDataType, IvyNodeRange, IvyData;
+import ivy.interpreter.data_node: IvyDataType, IvyData;
 import ivy.interpreter.iface: INativeDirectiveInterpreter;
 import ivy.interpreter.interpreter: Interpreter;
-import webtank.net.std_json_rpc_client: RemoteCallInfo;
-import webtank.ivy.rpc_client: remoteCallWebForm;
 import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirValueAttr;
 import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
 import ivy.interpreter.async_result: AsyncResult;
+
+import webtank.ivy.rpc_client: remoteCallWebForm;
 
 class RemoteCallInterpreter: INativeDirectiveInterpreter
 {
