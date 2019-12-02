@@ -219,6 +219,16 @@ public:
 	{
 		DirValueAttr[string] dirAttrs = interp.getDirAttrs(_entry.ivyMethod);
 		auto callOpts = _getCallOpts(dirAttrs, context);
+		//context.junk[`ivyModule`] = _entry.ivyModule.empty;
+		//context.junk[`ivyMethod`] = _entry.ivyMethod;
+		if( auto moduleNamePtr = `moduleName` in dirAttrs )
+		{
+			enforce(
+				moduleNamePtr && moduleNamePtr.defaultValue.type == IvyDataType.String,
+				`Expected non-empty string as "moduleName" attribute`
+			);
+			context.junk[`moduleName`] = moduleNamePtr.defaultValue.str;
+		}
 
 		IvyData methodParams;
 		Exception callError = null;

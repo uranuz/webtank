@@ -152,7 +152,8 @@ void ensureBindSocket(Socket listener, ushort port)
 	{
 		try
 		{
-			listener.bind(new InternetAddress(port));
+			InternetAddress addr = new InternetAddress(InternetAddress.ADDR_ANY, port);
+			listener.bind(addr);
 			isBinded = true;
 
 			//Ждём, чтобы излишне не загружать систему

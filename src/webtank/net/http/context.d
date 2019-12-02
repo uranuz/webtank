@@ -59,6 +59,14 @@ public:
 		return UserRights(this);
 	}
 
+	/++
+	+ Помойка для хранения переменных уровня сессии, для которых не смогли найти место.
+	+ Если что-то здесь лежит, то это скорее всего "бедное", либо "временное" техническое решение
+	+/
+	ref string[string] junk() @property {
+		return _junk;
+	}
+
 	void _setCurrentHandler(IHTTPHandler handler) {
 		_handlerList ~= handler;
 	}
@@ -93,4 +101,5 @@ protected:
 	IUserIdentity _userIdentity;
 
 	IHTTPHandler[] _handlerList;
+	string[string] _junk;
 }
