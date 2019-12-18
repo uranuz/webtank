@@ -172,8 +172,8 @@ public:
 
 			string relLibFileName = manifestFileName
 				.dropExactly(manifestsFolder.length)
-				.dropBackExactly(manifestFileSuffix.length) ~ `.js`;
-			string absLibFileName = buildNormalizedPath(fsPublic, relLibFileName);
+				.dropBackExactly(manifestFileSuffix.length);
+			string absLibFileName = buildNormalizedPath(fsPublic, relLibFileName ~ ".js");
 			enforce(exists(absLibFileName), `Library file name should exist: ` ~ absLibFileName);
 			enforce(isFile(absLibFileName), `Library is not a file: ` ~ absLibFileName);
 
@@ -186,11 +186,6 @@ public:
 			foreach( string moduleName, val; jContentPtr.object ) {
 				_webpackModules[moduleName] = libIndex;
 			}
-		}
-		debug {
-			import std.stdio: writeln;
-			writeln(`_webpackModules: `, _webpackModules);
-			writeln(`_webpackLibs: `, _webpackLibs);
 		}
 	}
 
