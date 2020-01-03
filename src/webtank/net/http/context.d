@@ -8,14 +8,17 @@ class HTTPContext
 	import webtank.net.server.iface: IWebServer;
 	import webtank.net.http.input: HTTPInput;
 	import webtank.net.http.output: HTTPOutput;
-	import webtank.security.access_control: IUserIdentity;
+	import webtank.security.auth.iface.user_identity: IUserIdentity;
 
 public:
-	this(HTTPInput request, HTTPOutput response, IWebService service, IWebServer server)
+	this(HTTPInput request, HTTPOutput response, IWebServer server)
 	{
+		import std.exception: enforce;
+		enforce(request, `Expected instance of HTTPInput`);
+		enforce(response, `Expected instance of HTTPOutput`);
+		enforce(server, `Expected instance of IWebServer`);
 		_request = request;
 		_response = response;
-		_service = service;
 		_server = server;
 	}
 
@@ -31,7 +34,7 @@ public:
 
 	///Экземпляр сервиса, с общими для процесса данными
 	IWebService service() @property {
-		return _service;
+		return _server.service;
 	}
 
 	///Экземпляр объекта сервера, обслуживающего запросы
@@ -42,8 +45,8 @@ public:
 	///Удостоверение пользователя
 	IUserIdentity user() @property
 	{
-		if( _userIdentity is null && _service.accessController !is null ) {
-			_userIdentity = _service.accessController.authenticate(this);
+		if( _userIdentity is null && service.accessController !is null ) {
+			_userIdentity = service.accessController.authenticate(this);
 		}
 		return _userIdentity;
 	}
@@ -96,7 +99,6 @@ public:
 protected:
 	HTTPInput _request;
 	HTTPOutput _response;
-	IWebService _service;
 	IWebServer _server;
 	IUserIdentity _userIdentity;
 

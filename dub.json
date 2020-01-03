@@ -19,6 +19,9 @@
 			"buildRequirements": [
 				"allowWarnings"
 			],
+			"excludedSourceFiles": [
+				"src/webtank/security/auth/client/*"
+			],
 			"dflags": [
 				"-lowmem"
 			]
@@ -31,7 +34,7 @@
 				"allowWarnings"
 			],
 			"excludedSourceFiles": [
-				"src/webtank/crypto/*",
+				"src/webtank/security/auth/core/*",
 				"src/webtank/db/*"
 			],
 			"dflags": [
@@ -41,7 +44,8 @@
 			"name": "minimal_deps",
 			"excludedSourceFiles": [
 				"src/webtank/ivy/*",
-				"src/webtank/crypto/*",
+				"src/webtank/security/auth/core/*",
+				"src/webtank/security/auth/client/*",
 				"src/webtank/db/*"
 			],
 			"buildRequirements": [

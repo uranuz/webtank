@@ -1,4 +1,4 @@
-module webtank.security.access_control;
+module webtank.security.auth.iface.user_identity;
 
 ///Интерфейс удостоверения пользователя
 interface IUserIdentity
@@ -6,7 +6,7 @@ interface IUserIdentity
 	///Используемый тип проверки подлинности
 	//string authenticationType() @property;
 	
-	//IAccessController accessController() @property;
+	//IAuthController accessController() @property;
 	
 	///Строка, содержащая некий идентификатор пользователя.
 	///Может быть ключом записи пользователя в БД, login'ом, токеном при
@@ -30,36 +30,4 @@ interface IUserIdentity
 	///После этого методы isAuthenticated, isInRole и т.п. должны
 	///возвращать, не позволяя выполнять какие-либо действия на уровне прав.
 	void invalidate();
-}
-
-///Класс представляет удостоверение анонимного пользователя
-class AnonymousUser: IUserIdentity
-{
-public:
-	override {
-		string id()
-		{	return null; }
-		
-		string name()
-		{	return null; }
-		
-		string[string] data()
-		{	return null; }
-		
-		bool isAuthenticated()
-		{	return false; }
-		
-		bool isInRole(string roleName)
-		{	return false; }
-
-		void invalidate() {}
-	}
-}
-
-///Интерфейс контролёра доступа пользователей к системе
-interface IAccessController
-{
-	///Метод пытается провести аутентификацию по переданному объекту context
-	///Возвращает объект IUserIdentity (удостоверение пользователя)
-	IUserIdentity authenticate(Object context);
 }

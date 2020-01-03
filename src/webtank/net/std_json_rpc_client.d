@@ -1,6 +1,9 @@
 module webtank.net.std_json_rpc_client;
 
-import webtank.net.http.input, webtank.net.http.output, webtank.net.uri, webtank.net.http.client;
+import webtank.net.http.input;
+import webtank.net.http.output;
+import webtank.net.uri;
+import webtank.net.http.client;
 
 import std.json;
 
@@ -8,6 +11,12 @@ struct RemoteCallInfo
 {
 	string URI;
 	string[string] headers;
+}
+
+struct JSON_RPC_CallResult
+{
+	JSONValue result;
+	HTTPInput response;
 }
 
 string getRemoteCallInfoURI(Address)(Address addr)
@@ -46,6 +55,35 @@ HTTPInput remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto
 	}
 }
 
+JSON_RPC_CallResult remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto ref T paramsObj)
+	if( is(Result: JSON_RPC_CallResult) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
+{
+	HTTPInput response = remoteCall!HTTPInput(addr, rpcMethod, paramsObj);
+	
+	JSON_RPC_CallResult res;
+	JSONValue bodyJSON;
+	try {
+		bodyJSON = response.messageBody.parseJSON();
+	}
+	catch (JSONException ex)
+	{
+		throw new JSONException(
+			"Unable to parse JSON response of remote method \"" ~ rpcMethod 
+			~ "\" from service " ~ addr.getRemoteCallInfoURI() ~ ":\n" ~ response.messageBody);
+	}
+
+	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
+	res.result = bodyJSON["result"];
+	return res;
+}
+
+// Перегрузка возвращает только result в виде JSONValue
+JSONValue remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto ref T paramsObj)
+	if( is(Result == JSONValue) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
+{
+	return remoteCall!JSON_RPC_CallResult(addr, rpcMethod, paramsObj).result;
+}
+
 /// Проверяем, если произошла ошибка во время вызова и бросаем исключение, если так
 private void _checkJSON_RPCErrors(ref JSONValue response)
 {
@@ -82,27 +120,7 @@ private void _checkJSON_RPCErrors(ref JSONValue response)
 		throw new Exception(`Expected "result" field in JSON-RPC response`);
 }
 
-/// Перегрузка метода, c возможностью передать HTTP заголовки запроса
-JSONValue remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto ref T paramsObj)
-	if( is(Result == JSONValue) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
-{
-	auto response = remoteCall!HTTPInput(addr, rpcMethod, paramsObj);
 
-	JSONValue bodyJSON;
-	try {
-		bodyJSON = response.messageBody.parseJSON();
-	}
-	catch (JSONException ex)
-	{
-		throw new JSONException(
-			"Unable to parse JSON response of remote method \"" ~ rpcMethod 
-			~ "\" from service " ~ addr.getRemoteCallInfoURI() ~ ":\n" ~ response.messageBody);
-	}
-
-	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
-
-	return bodyJSON["result"];
-}
 
 import webtank.net.http.context: HTTPContext;
 private static immutable _allowedHeaders = [

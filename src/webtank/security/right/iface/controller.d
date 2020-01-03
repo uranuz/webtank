@@ -1,6 +1,6 @@
 module webtank.security.right.iface.controller;
 
-import webtank.security.access_control: IUserIdentity;
+import webtank.security.auth.iface.user_identity: IUserIdentity;
 import std.variant: Algebraic;
 import std.json: JSONValue;
 import webtank.security.right.common: RightDataTypes, RightDataVariant;

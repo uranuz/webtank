@@ -50,7 +50,7 @@ alias RightDataVariant = Algebraic!(RightDataTypes);
 import webtank.net.http.context: HTTPContext;
 private void _checkItemRights(DataStruct, string fieldName)(HTTPContext ctx, string[] accessKinds)
 {
-	import mkk.security.common.exception: SecurityException;
+	import webtank.security.right.access_exception: AccessException;
 	import webtank.security.right.common: GetSymbolAccessObject;
 	import std.exception: enforce;
 	string accessObj = GetSymbolAccessObject!(DataStruct, fieldName)();
@@ -60,12 +60,11 @@ private void _checkItemRights(DataStruct, string fieldName)(HTTPContext ctx, str
 		}
 	}
 	// Не указаны типы доступа, либо нет прав ни по одному из них...
-	enforce!SecurityException(false, `Недостаточно прав для редактирования поля: ` ~ fieldName);
+	enforce!AccessException(false, `Недостаточно прав для редактирования поля: ` ~ fieldName);
 }
 
 void checkStructEditRights(DataStruct)(auto ref DataStruct record, HTTPContext ctx, string[] accessKinds)
 {
-	import mkk.security.common.exception: SecurityException;
 	import webtank.security.right.common: RightObjAttr;
 	import std.meta: AliasSeq;
 	import std.traits: getUDAs;

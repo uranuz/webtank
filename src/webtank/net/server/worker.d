@@ -105,6 +105,10 @@ socket_t getSocketHandle(string workerSockAddr)
 version(Posix)
 socket_t receiveSocketHandle(Socket acceptedSock)
 {
+	import std.stdio: writeln;
+	import std.conv: text;
+	import std.exception: enforce;
+
 	/* Allocate a char array of suitable size to hold the ancillary data.
 	However, since this buffer is in reality a 'struct cmsghdr', use a
 	union to ensure that it is aligned as required for that structure. */
@@ -115,8 +119,7 @@ socket_t receiveSocketHandle(Socket acceptedSock)
 		/* Space large enough to hold an 'int' */
 	}
 	
-	import std.stdio: writeln;
-	import std.conv: text;
+	
 	msghdr msgh;
 	iovec iov;
 	int data;
@@ -151,22 +154,21 @@ socket_t receiveSocketHandle(Socket acceptedSock)
 	/* Receive real plus ancillary data */
 
 	nr = recvmsg(acceptedSock.handle, &msgh, 0);
-	if (nr == -1)
-		throw new Exception("recvmsg");
+	enforce(nr != -1, `recvmsg returned -1`);
 	writeln("recvmsg() returned: ", nr);
-
-	if (nr > 0)
-		writeln("Received data = ", data.text);
 
 	/* Get the received file descriptor (which is typically a different
 		file descriptor number than was used in the sending process) */
 	cmhp = CMSG_FIRSTHDR(&msgh);
-	if (cmhp is null || cmhp.cmsg_len != CMSG_LEN(int.sizeof))
-		throw new Exception("bad cmsg header / message length");
-	if (cmhp.cmsg_level != SOL_SOCKET)
-		throw new Exception("cmsg_level != SOL_SOCKET");
-	if (cmhp.cmsg_type != SCM_RIGHTS)
-		throw new Exception("cmsg_type != SCM_RIGHTS");
+	enforce(
+		cmhp !is null && cmhp.cmsg_len == CMSG_LEN(int.sizeof),
+		"bad cmsg header / message length");
+	enforce(
+		cmhp.cmsg_level == SOL_SOCKET,
+		"cmsg_level != SOL_SOCKET");
+	enforce(
+		cmhp.cmsg_type == SCM_RIGHTS,
+		"cmsg_type != SCM_RIGHTS");
 
 	fd = *(cast(int*) CMSG_DATA(cmhp));
 	writeln("Received fd=", fd);

@@ -11,6 +11,54 @@ import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
 public import webtank.net.std_json_rpc_client: endpoint;
 
+struct IvyRPCCallResult
+{
+	HTTPInput response;
+	IvyData result;
+}
+
+/// Выполняет вызов метода rpcMethod по протоколу JSON-RPC с узла address и параметрами paramsObj
+/// Возвращает результат выполнения метода типа IvyRPCCallResult
+IvyRPCCallResult remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
+	if( is(Result == IvyRPCCallResult) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
+{
+	IvyRPCCallResult res;
+	res.response = remoteCallA!HTTPInput(address, rpcMethod, paramsObj);
+	res.result = _parseAndCheckResponse(address, res.response);
+	return res;
+}
+
+IvyData remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
+	if( is(Result == IvyData) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
+{
+	return remoteCallA!IvyRPCCallResult(address, rpcMethod, paramsObj).result;
+}
+
+IvyRPCCallResult remoteCallWebForm(Result)(
+	string address,
+	string HTTPMethod,
+	string[string] HTTPHeaders = null,
+	string params = null
+)
+	if( is(Result == IvyRPCCallResult) )
+{
+	IvyRPCCallResult res;
+	res.response = sendBlocking(address, HTTPMethod, HTTPHeaders, params);
+	res.result = _parseAndCheckResponse(address, res.response);
+	return res;
+}
+
+IvyData remoteCallWebForm(Result)(
+	string address,
+	string HTTPMethod,
+	string[string] HTTPHeaders = null,
+	string params = null
+)
+	if( is(Result == IvyData) )
+{
+	return remoteCallWebForm!IvyRPCCallResult(address, HTTPMethod, HTTPHeaders, params).result;
+}
+
 class OverridenTraceInfo: object.Throwable.TraceInfo
 {
 	private char[][] _backTrace;
@@ -106,30 +154,9 @@ IvyData _tryParseResponse(Address)(Address addr, string messageBody)
 	return ivyJSON;
 }
 
-/// Выполняет вызов метода rpcMethod по протоколу JSON-RPC с узла requestURI и параметрами jsonParams в формате JSON
-/// Возвращает результат выполнения метода, разобранный в формате данных шаблонизатора Ivy
-IvyData remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
-	if( is(Result == IvyData) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
+IvyData _parseAndCheckResponse(Address)(Address addr, HTTPInput response)
 {
-	auto response = remoteCallA!HTTPInput(address, rpcMethod, paramsObj);
-
-	IvyData ivyJSON = _tryParseResponse(address, response.messageBody);
-	_checkIvyJSON_RPCErrors(ivyJSON);
-
-	return ivyJSON["result"].tryExtractLvlContainers();
-}
-
-IvyData remoteCallWebForm(Result)(
-	string address,
-	string HTTPMethod,
-	string[string] HTTPHeaders = null,
-	string params = null
-)
-	if( is(Result == IvyData) )
-{
-	auto response = sendBlocking(address, HTTPMethod, HTTPHeaders, params);
-
-	IvyData ivyJSON = _tryParseResponse(address, response.messageBody);
+	IvyData ivyJSON = _tryParseResponse(addr, response.messageBody);
 	_checkIvyJSON_RPCErrors(ivyJSON);
 
 	return ivyJSON["result"].tryExtractLvlContainers();

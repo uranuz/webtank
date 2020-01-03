@@ -9,7 +9,7 @@ interface IAccessRule
 {
 	string name() @property;
 
-	import webtank.security.access_control: IUserIdentity;
+	import webtank.security.auth.iface.user_identity: IUserIdentity;
 
 	// This is main hasRight method...
 	bool hasRight(IUserIdentity identity, RightDataVariant data = RightDataVariant());

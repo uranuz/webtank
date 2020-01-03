@@ -41,7 +41,7 @@ void makeErrorResponse(Throwable error, HTTPOutput response)
 			]; // Variable for workaround
 			// Get saved JSON-RPC "id" field from response headers
 			try {
-				jErr["id"] = parseJSON(response.headers.get("jsonrpc-id", null));
+				//jErr["id"] = parseJSON(context.junk.get("jsonrpc-id", null));
 			} catch(JSONException) {}
 			messageBody = jErr.toJSON();
 			break;
@@ -85,7 +85,7 @@ getHTTPErrorHeaders(Throwable error)
 }
 
 // Реализация приема и обработки запроса из сокета
-void processRequest(Socket sock, IWebService service, IWebServer server)
+void processRequest(Socket sock, IWebServer server)
 {
 	import webtank.net.utils: makeErrorMsg;
 
@@ -103,17 +103,17 @@ void processRequest(Socket sock, IWebService service, IWebServer server)
 
 		if( request is null )
 		{
-			service.loger.crit(`request is null`);
+			server.service.loger.crit(`request is null`);
 			return;
 		}
-		
-		auto context = new HTTPContext(request, response, service, server);
+
+		auto context = new HTTPContext(request, response, server);
 
 		try {
 			//Запуск обработки HTTP-запроса
-			service.rootRouter.processRequest(context);
+			server.service.rootRouter.processRequest(context);
 		} catch(Exception ex) {
-			service.loger.error(makeErrorMsg(ex).details);
+			server.service.loger.error(makeErrorMsg(ex).details);
 			makeErrorResponse(ex, response);
 		}
 
@@ -123,7 +123,7 @@ void processRequest(Socket sock, IWebService service, IWebServer server)
 	}
 	catch(Exception exc)
 	{
-		service.loger.crit(makeErrorMsg(exc).userError); //Хотим знать, что случилось
+		server.service.loger.crit(makeErrorMsg(exc).userError); //Хотим знать, что случилось
 		makeErrorResponse(exc, response);
 		sock.send(response.getResponseString());
 
@@ -131,7 +131,7 @@ void processRequest(Socket sock, IWebService service, IWebServer server)
 	}
 	catch(Throwable exc)
 	{
-		service.loger.fatal(makeErrorMsg(exc).userError); //Хотим знать, что случилось
+		server.service.loger.fatal(makeErrorMsg(exc).userError); //Хотим знать, что случилось
 		makeErrorResponse(exc, response);
 		sock.send(response.getResponseString());
 

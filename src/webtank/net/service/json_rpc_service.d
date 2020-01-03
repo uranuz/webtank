@@ -14,7 +14,7 @@ class JSON_RPCService: IWebService
 	import webtank.net.http.context: HTTPContext;
 	import webtank.common.loger: Loger, FileLoger, ThreadedLoger, LogEvent, LogEventType, LogLevel;
 	import webtank.net.utils: makeErrorMsg;
-	import webtank.security.access_control: IAccessController;
+	import webtank.security.auth.iface.controller: IAuthController;
 	import webtank.security.right.iface.controller: IRightController;
 
 	import std.json: JSONValue, parseJSON;
@@ -33,7 +33,7 @@ protected:
 	// Объект для логирования драйвера базы данных
 	Loger _databaseLoger;
 
-	IAccessController _accessController;
+	IAuthController _accessController;
 	IRightController _rights;
 
 public:
@@ -58,7 +58,7 @@ public:
 		_subscribeRoutingEvents();
 	}
 
-	this(string serviceName, IAccessController accessController, IRightController rights)
+	this(string serviceName, IAuthController accessController, IRightController rights)
 	{
 		import std.exception: enforce;
 		enforce(accessController, `Access controller expected`);
@@ -160,7 +160,7 @@ public:
 		return _pageRouter;
 	}
 
-	IAccessController accessController() @property
+	IAuthController accessController() @property
 	{
 		assert(_accessController, `Main service access controller is not initialized!`);
 		return _accessController;

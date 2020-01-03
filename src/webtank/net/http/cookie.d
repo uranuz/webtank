@@ -82,9 +82,12 @@ T parseCookieValue(T)( ref T input )
 {
 	import std.range: empty, save, popFront, front, take;
 	import std.conv: to;
+
+	if( input.empty )
+		return null;
 	
 	bool isQuotedValue = false;
-	
+
 	if( input.front == '\"' )
 	{
 		isQuotedValue = true;
@@ -104,6 +107,14 @@ T parseCookieValue(T)( ref T input )
 		throw new HTTPException(`Expected pair quote in cookie value!!!`, 400);
 
 	return temp.take(count).to!T;
+}
+
+CookieCollection parseResponseCookies(T)(ref T input)
+{
+	Cookie[] items;
+	assert(false, `Implement parsing of response cookies!!!`);
+
+	return new CookieCollection(items);
 }
 
 

@@ -290,6 +290,22 @@ string[string] getServiceFileSystemPaths(JSONValue jsonCurrService)
 	return resolveConfigPaths!(true)(jsonFSPaths, defaultFileSystemPaths, "siteRoot");
 }
 
+string[string] getServiceDeps(JSONValue jsonCurrService)
+{
+	import std.exception: enforce;
+	auto serviceDepsPtr = "serviceDeps" in jsonCurrService;
+	string[string] res;
+	if( serviceDepsPtr is null ) {
+		return res;
+	}
+	foreach( string serviceRole, JSONValue jServiceName; serviceDepsPtr.object )
+	{
+		enforce(jServiceName.type == JSONType.string, "Expected string as service name in serviceDeps");
+		res[serviceRole] = jServiceName.str;
+	}
+	return res;
+}
+
 string[string] getServiceVirtualPaths(JSONValue jsonCurrService)
 {
 	JSONValue jsonVirtualPaths;
@@ -339,13 +355,22 @@ mixin template ServiceConfigImpl()
 		getServiceDatabases,
 		getPageRoutingConfig,
 		getServicesConfig,
-		getServiceVirtualPaths;
+		getServiceVirtualPaths,
+		getServiceDeps;
 protected:
 	JSONValue _allConfig;
 
 	JSONValue _serviceConfig;
 
 	string[string][string] _endpoints;
+
+	// Внешний сервис может испольнять какую-то *роль* по отношению к текущему:
+	// Например, может быть сервисы истории, либо сервисы аутентификации, либо осн. бакэнд (для сервиса представления).
+	// Соответственно, хочется, чтобы в эндпоинте при обращению к этому сервису можно было указать его *роль*,
+	// а не указывать конкретное имя сервиса. Например, один и тот же сервис может *играть несколько ролей*,
+	// а может быть так, что эти роли разнесены по нескольким разным сервисам.
+	// В этом словаре храним соответствие имени роли реальному названию сервиса (берется из конфига).
+	string[string] _serviceDeps;
 
 	string[string] _fileSystemPaths;
 	string[string] _dbConnStrings;
@@ -362,6 +387,10 @@ public:
 
 	override string[string] dbConnStrings() @property {
 		return _dbConnStrings;
+	}
+
+	override string[string] serviceDeps() @property {
+		return _serviceDeps;
 	}
 
 	override JSONValue rawConfig() @property {
@@ -389,9 +418,22 @@ public:
 		foreach( string srvName, JSONValue service; _allConfig.getServicesConfig().object ) {
 			_endpoints[srvName] = getServiceVirtualPaths(service);
 		}
+
+		// Get service role aliases
+		_serviceDeps = getServiceDeps(_serviceConfig);
 	}
 
 	override string endpoint(string serviceName, string endpointName)
+	{
+		if( auto realNamePtr = serviceName in _serviceDeps ) {
+			// Происходит доступ по роли сервиса
+			return _getServiceEndpoint(*realNamePtr, endpointName);
+		}
+		// Происходит доступ по реальному имени сервиса
+		return _getServiceEndpoint(serviceName, endpointName);
+	}
+
+	string _getServiceEndpoint(string serviceName, string endpointName)
 	{
 		import std.exception: enforce;
 		import std.json: JSONType;

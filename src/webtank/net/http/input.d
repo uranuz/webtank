@@ -42,15 +42,14 @@ public:
 		_remoteAddress = remoteAddress;
 		_localAddress = localAddress;
 
-		if( auto cookiePtr = "cookie" in _headers )
-		{
+		if( auto cookiePtr = "cookie" in _headers ) {
 			// Если видим заголовок "cookie" - значит это запрос
 			_cookies = parseRequestCookies( *cookiePtr );
-		}
-		else
-		{
-			// TODO: Добавить разбор cookie из ответа сервера
-			_cookies = new CookieCollection();
+		} else if( auto cookiePtr = "set-cookie" in _headers ) {
+			// Cookie ответа сервера
+			_cookies = parseResponseCookies( *cookiePtr );
+		} else {
+			_cookies = new CookieCollection(); // Заглушка, если нет cookie
 		}
 
 		// Для запроса к серверу разбираем идентификатор ресурса

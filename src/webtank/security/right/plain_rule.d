@@ -1,7 +1,7 @@
 module webtank.security.right.plain_rule;
 
 import webtank.security.right.iface.access_rule: IAccessRule;
-import webtank.security.access_control: IUserIdentity;
+import webtank.security.auth.iface.user_identity: IUserIdentity;
 import webtank.security.right.common: RightDataTypes, RightDataVariant;
 
 import webtank.datctrl.iface.record: IBaseRecord;

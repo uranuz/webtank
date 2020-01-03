@@ -62,7 +62,7 @@ class AccessRightController: IRightController
 	
 private:
 	import webtank.security.right.iface.access_rule_factory: IAccessRuleFactory;
-	import webtank.security.access_control: IUserIdentity;
+	import webtank.security.auth.iface.user_identity: IUserIdentity;
 	import webtank.security.right.composite_rule: CompositeAccessRule, RulesRelation;
 	import std.typecons: Tuple;
 

@@ -65,24 +65,24 @@ public:
 			throw new JSON_RPC_Exception(`JSON-RPC message body must be of object type!!!`);
 
 		string jsonrpc;
-		if( "jsonrpc" in jMessageBody )
+		if( auto jsonrpcPtr = "jsonrpc" in jMessageBody )
 		{
-			if( jMessageBody["jsonrpc"].type == JSONType.string )
-				jsonrpc = jMessageBody["jsonrpc"].str;
+			if( jsonrpcPtr.type == JSONType.string )
+				jsonrpc = jsonrpcPtr.str;
 		}
 
 		if( jsonrpc != "2.0" )
 			throw new JSON_RPC_Exception(`Only version 2.0 of JSON-RPC protocol is supported!!!`);
 
 		// Версия должна быть по протоколу. Раз мы проверили, что версия 2.0 - уже можно записать её в результат
-		jResponse["jsonrpc"] = "2.0";
+		jResponse["jsonrpc"] = jsonrpc;
 
-		if( "id" in jMessageBody )
+		if( auto idPtr = "id" in jMessageBody )
 		{
-			jResponse["id"] = jMessageBody["id"]; // По протоколу возвращаем обратно идентификатор сообщения
+			jResponse["id"] = *idPtr; // По протоколу возвращаем обратно идентификатор сообщения
 
 			// Костыль для получения идентификатора запроса в случае ошибки...
-			context.response.headers["jsonrpc-id"] = jResponse["id"].toString();
+			context.junk["jsonrpc-id"] = (*idPtr).toString();
 		} else {
 			jResponse["id"] = null; // По протоколу должны вернуть null, если нету в запросе
 		}

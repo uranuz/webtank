@@ -30,7 +30,8 @@ protected:
 public:
 	this(ushort port, IWebService service)
 	{
-		assert(service, `Service object expected`);
+		import std.exception: enforce;
+		enforce(service, `Service object expected`);
 		_port = port;
 		_service = service;
 		_isShared = false;
@@ -38,7 +39,8 @@ public:
 
 	this(socket_t socketHandle, IWebService service)
 	{
-		assert(service, `Service object expected`);
+		import std.exception: enforce;
+		enforce(service, `Service object expected`);
 		_socketHandle = socketHandle;
 		_service = service;
 		_isShared = true;
@@ -71,15 +73,20 @@ public:
 
 		while( !_isStopped ) //Цикл приёма соединений через серверный сокет
 		{
-			Socket currSock = listener.accept(); //Принимаем соединение
-			auto workingThread = new ServerWorkingThread(currSock, _service, this);
-			workingThread.start();
+			//Принимаем соединение
+			Socket currSock = listener.accept();
+			// Запускаем поток обработки
+			(new ServerWorkingThread(currSock, this)).start();
 		}
 
 	}
 
 	override void stop() {
 		_isStopped = true;
+	}
+
+	override IWebService service() @property {
+		return _service;
 	}
 }
 
@@ -88,21 +95,20 @@ class ServerWorkingThread: Thread
 {
 protected:
 	Socket _socket;
-	IWebService _service;
 	IWebServer _server;
 
 public:
-	this(Socket sock, IWebService service, IWebServer server)
+	this(Socket sock, IWebServer server)
 	{
-		assert(sock, `Socket object expected`);
-		assert(service, `Service object expected`);
+		import std.exception: enforce;
+		enforce(sock, `Socket object expected`);
+		enforce(server, `Server object expected`);
 		_socket = sock;
-		_service = service;
 		_server = server;
 		super(&_work);
 	}
 
 	private void _work() {
-		processRequest(_socket, _service, _server);
+		processRequest(_socket, _server);
 	}
 }

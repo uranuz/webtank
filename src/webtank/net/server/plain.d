@@ -30,7 +30,8 @@ protected:
 public:
 	this(ushort port, IWebService service)
 	{
-		assert(service, `Service object expected`);
+		import std.exception: enforce;
+		enforce(service, `Service object expected`);
 		_port = port;
 		_service = service;
 		_isShared = false;
@@ -38,7 +39,8 @@ public:
 
 	this(socket_t socketHandle, IWebService service)
 	{
-		assert(service, `Service object expected`);
+		import std.exception: enforce;
+		enforce(service, `Service object expected`);
 		_socketHandle = socketHandle;
 		_service = service;
 		_isShared = true;
@@ -72,11 +74,15 @@ public:
 		while( !_isStopped ) //Цикл приёма соединений через серверный сокет
 		{
 			Socket currSock = listener.accept(); //Принимаем соединение
-			processRequest(currSock, _service, this);
+			processRequest(currSock, this);
 		}
 	}
 
 	override void stop() {
 		_isStopped = true;
+	}
+
+	override IWebService service() @property {
+		return _service;
 	}
 }

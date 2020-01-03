@@ -8,16 +8,22 @@ class IvyViewService: IWebService, IIvyServiceMixin
 	import webtank.net.service.config: ServiceConfigImpl, RoutingConfigEntry;
 	import webtank.net.http.handler.iface: IHTTPHandler, HTTPHandlingResult;
 	import webtank.net.http.handler.router: HTTPRouter;
+	import webtank.net.http.handler.web_form_api_page_route: joinWebFormAPI;
+	import webtank.net.http.handler;
 	import webtank.net.http.handler.uri_page_router: URIPageRouter;
 	import webtank.net.http.handler.mixins: EventBasedHTTPHandlerImpl;
-	import webtank.security.access_control: IAccessController;
+	import webtank.security.auth.iface.controller: IAuthController;
 	import webtank.security.right.iface.controller: IRightController;
+	import webtank.security.auth.client.controller: AuthClientController;
+	import webtank.security.right.controller: AccessRightController;
+	import webtank.security.right.remote_source: RightRemoteSource;
+	import webtank.ivy.access_rule_factory: IvyAccessRuleFactory;
 	import webtank.ivy.rights: IvyUserRights;
 	import webtank.ivy.user: IvyUserIdentity;
 
 	import ivy.interpreter.data_node: IvyData;
-	import webtank.ivy.service_mixin: IvyServiceMixin, ViewServiceURIPageRoute;
-	import std.json: JSONValue;
+	import webtank.ivy.service_mixin: IvyServiceMixin, ViewServiceURIPageRoute, processViewRequest;
+	import std.json: JSONValue, JSONType;
 	import std.exception: enforce;
 
 	mixin ServiceConfigImpl;
@@ -29,11 +35,13 @@ protected:
 	URIPageRouter _pageRouter;
 	Loger _loger;
 
-	IAccessController _accessController;
+	IAuthController _accessController;
 	IRightController _rights;
 
 	string[] _webpackLibs;
 	size_t[string] _webpackModules;
+
+	RoutingConfigEntry _generalTemplateEntry;
 
 public:
 	this(string serviceName, string pageURIPatternStr)
@@ -43,6 +51,16 @@ public:
 		_serviceName = serviceName;
 		readConfig(); // Читаем конфиг при старте сервиса
 		_startLoging(); // Запускаем логирование сервиса
+
+		// Определяем мастер-шаблон из конфига
+		auto genTplModulePtr = "generalTemplateModule" in _serviceConfig;
+		auto genTplMethodPtr = "generalTemplateMethod" in _serviceConfig;
+		if( genTplModulePtr && genTplModulePtr.type == JSONType.string ) {
+			_generalTemplateEntry.ivyModule = genTplModulePtr.str;
+		}
+		if( genTplMethodPtr && genTplMethodPtr.type == JSONType.string ) {
+			_generalTemplateEntry.ivyMethod = genTplMethodPtr.str;
+		}
 
 		// Стартуем шаблонизатор
 		_initTemplateCache();
@@ -56,9 +74,11 @@ public:
 		_rootRouter.addHandler(_pageRouter);
 
 		_subscribeRoutingEvents();
+
+		_rootRouter.joinWebFormAPI!getCompiledTemplate("/dyn/server/template");
 	}
 
-	this(string serviceName, string pageURIPatternStr, IAccessController accessController, IRightController rights)
+	this(string serviceName, string pageURIPatternStr, IAuthController accessController, IRightController rights)
 	{
 		import std.exception: enforce;
 		enforce(accessController, `Access controller expected`);
@@ -67,6 +87,21 @@ public:
 
 		_accessController = accessController;
 		_rights = rights;
+	}
+
+	this(string serviceName, string pageURIPatternStr, bool isSecured)
+	{
+		import std.exception: enforce;
+		enforce(isSecured, `Insecured view service kind in not implemented yet!`);
+
+		this(serviceName, pageURIPatternStr);
+		auto authNamePtr = `authService` in this.serviceDeps;
+		enforce(authNamePtr !is null && authNamePtr.length > 0, `Authentication service require in serviceDeps config option`);
+
+		_accessController = new AuthClientController;
+		_rights = new AccessRightController(
+			new IvyAccessRuleFactory(this.ivyEngine),
+			new RightRemoteSource(this, *authNamePtr, `accessRight.list`));
 	}
 
 	void _addPageRoutes()
@@ -121,7 +156,7 @@ public:
 		});
 	}
 
-	IAccessController accessController() @property {
+	IAuthController accessController() @property {
 		enforce(_accessController !is null, `View service access controller is not initialized!`);
 		return _accessController;
 	}
@@ -143,9 +178,7 @@ public:
 	/// Вычитываем манифесты для JS-точек входа
 	final void _analyzeWebpackManifests()
 	{
-		import std.algorithm: countUntil, startsWith
-		
-		;
+		import std.algorithm: countUntil, startsWith;
 		import std.file: dirEntries, SpanMode, isFile, exists, read;
 		import std.json: parseJSON, JSONValue, JSONType;
 		import std.range: dropExactly, dropBackExactly;
@@ -200,5 +233,85 @@ public:
 		size_t libIndex = *libIndexPtr;
 		enforce(libIndex < _webpackLibs.length, `Unable to find webpack JS-library with index. Possibly bug in code`);
 		return _webpackLibs[libIndex];
+	}
+
+	override void renderResult(IvyData content, HTTPContext ctx)
+	{
+		import std.range: empty;
+		import std.exception: enforce;
+		import std.algorithm: splitter, map, filter;
+		import std.string: strip, toLower;
+		import std.array: array;
+
+		import webtank.security.right.source_method: getAccessRightList;
+		import webtank.security.right.controller: AccessRightController;
+		import webtank.common.std_json.to: toStdJSON;
+		import webtank.ivy.service_mixin: prepareIvyGlobals;
+		import ivy.interpreter.data_node: NodeEscapeState;
+		import ivy.json: toIvyJSON;
+
+		import ivy.interpreter.data_node: errorToIvyData;
+
+		// Если есть "мусор" в буфере вывода, то попытаемся его убрать
+		ctx.response.tryClearBody();
+
+		// Если не задан мастер-шаблон, либо установлена опция вывода без мастер-шаблона, то выводим без мастер-шаблона. В чем, собственно, логика есть...
+		if( _generalTemplateEntry.ivyModule.empty || ctx.request.queryForm.get("generalTemplate", null).toLower() == "no" )
+		{
+			renderResultToResponse(content, ctx);
+			return;
+		}
+
+		AccessRightController rightController = cast(AccessRightController) ctx.service.rightController;
+		enforce(rightController !is null, `rightController is not of type AccessRightController or null`);
+		auto rights = getAccessRightList(rightController.rightSource);
+		IvyData ivyRights;
+		if( ctx.user.isAuthenticated() )
+		{
+			foreach( name, val; rights )
+			{
+				auto jVal = val.toStdJSON();
+				ivyRights[name] = jVal.toIvyJSON();
+			}
+		}
+		
+		string[] accessRoles = ctx.user.data.get("accessRoles", null)
+			.splitter(';')
+			.map!(strip)
+			.filter!((it) => it.length)
+			.array;
+
+		IvyData payload = [
+			"content": content,
+			"userRightData": IvyData([
+				"user": IvyData([
+					"id": IvyData(ctx.user.id),
+					"name": IvyData(ctx.user.name),
+					"accessRoles": IvyData(accessRoles),
+					"sessionId": (ctx.user.isAuthenticated()? IvyData("dummy"): IvyData())
+				]),
+				"right": ivyRights,
+				"vpaths": IvyData(ctx.service.virtualPaths)
+			]),
+			"webpackLib": IvyData(getWebpackLibPath(ctx.junk.get(`moduleName`, null)))
+		];
+
+		processViewRequest(ctx, _generalTemplateEntry, payload).then(
+			(IvyData ivyRes) {
+				renderResultToResponse(ivyRes, ctx);
+			},
+			(Throwable error) {
+				renderResultToResponse(errorToIvyData(error), ctx);
+			});
+	}
+
+	import webtank.ivy.service_mixin: IIvyServiceMixin;
+
+	static JSONValue getCompiledTemplate(HTTPContext ctx)
+	{
+		import std.exception: enforce;
+		IIvyServiceMixin ivyService = cast(IIvyServiceMixin) ctx.service;
+		enforce(ivyService, `Expected instance of IIvyServiceMixin`);
+		return ivyService.ivyEngine.getByModuleName(ctx.request.form[`moduleName`]).toStdJSON();
 	}
 }

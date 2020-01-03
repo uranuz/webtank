@@ -2,8 +2,7 @@ module webtank.ivy.access_rule;
 
 import webtank.security.right.iface.access_rule: IAccessRule;
 import webtank.security.right.common: RightDataTypes, RightDataVariant;
-import webtank.security.access_control: IUserIdentity;
-import webtank.ivy.service_mixin: IIvyServiceMixin;
+import webtank.security.auth.iface.user_identity: IUserIdentity;
 import ivy.interpreter.data_node: IvyData, IvyDataType;
 import ivy.engine: IvyEngine;
 import webtank.ivy.user: IvyUserIdentity;

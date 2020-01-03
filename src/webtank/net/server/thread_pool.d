@@ -33,7 +33,8 @@ protected:
 public:
 	this(ushort port, IWebService service, size_t threadCount)
 	{
-		assert(service, `Service object expected`);
+		import std.exception: enforce;
+		enforce(service, `Service object expected`);
 		_port = port;
 		_service = service;
 		_threadCount = threadCount;
@@ -42,7 +43,8 @@ public:
 
 	this(socket_t socketHandle, IWebService service, size_t threadCount)
 	{
-		assert(service, `Service object expected`);
+		import std.exception: enforce;
+		enforce(service, `Service object expected`);
 		_socketHandle = socketHandle;
 		_service = service;
 		_threadCount = threadCount;
@@ -62,7 +64,7 @@ public:
 					continue;
 				}
 
-				_taskPool.put(task(&processRequest, client, _service, this));
+				_taskPool.put(task(&processRequest, client, this));
 			}
 			catch(Throwable exc)
 			{
@@ -106,5 +108,9 @@ public:
 
 	override void stop() {
 		_isStopped = true;
+	}
+
+	override IWebService service() @property {
+		return _service;
 	}
 }
