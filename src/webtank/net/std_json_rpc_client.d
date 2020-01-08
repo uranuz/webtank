@@ -135,7 +135,9 @@ private static immutable _allowedHeaders = [
 	HTTPHeader.XForwardedProto,
 	HTTPHeader.XForwardedHost,
 	HTTPHeader.XForwardedPort,
-	HTTPHeader.UserAgent
+	HTTPHeader.UserAgent,
+	HTTPHeader.Cookie,
+	HTTPHeader.SetCookie
 ];
 /// Извлекает разрешенные HTTP заголовки из запроса
 string[][string] getAllowedRequestHeaders(HTTPContext ctx)

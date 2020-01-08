@@ -23,8 +23,9 @@ class HTTPHeaders
 		import std.range: empty;
 
 		_headers = headers;
+
 		Cookie[] cookieList;
-		auto cookieArrPtr = HTTPHeader.Cookie in headers;
+		auto cookieArrPtr = HTTPHeader.Cookie in _headers;
 		if( cookieArrPtr && cookieArrPtr.length > 0 )
 		{
 			enforce(isRequest, `Only HTTP request can use "Cookie" header`);
@@ -36,7 +37,7 @@ class HTTPHeaders
 			}
 		}
 
-		auto setCookieArrPtr = HTTPHeader.SetCookie in headers;
+		auto setCookieArrPtr = HTTPHeader.SetCookie in _headers;
 		if( setCookieArrPtr && setCookieArrPtr.length > 0 )
 		{
 			enforce(!isRequest, `Only HTTP response can use "Set-Cookie" header`);

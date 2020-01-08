@@ -52,8 +52,12 @@ public:
 	{
 		try {
 			return authenticateSessionImpl(context);
-		} catch(AuthException) {
+		} catch(AuthException exc) {
 			// Add debug code here
+			debug {
+				//import std.stdio;
+				//writeln(exc.msg);
+			}
 		}
 		return new AnonymousUser;
 	}
@@ -66,6 +70,7 @@ public:
 		auto req = context.request;
 		string SIDString = req.cookies.get("__sid__", null);
 
+		enforce!AuthException(SIDString.length > 0, `Empty sid string`);
 		enforce!AuthException(SIDString.length == sessionIdStrLength, `Incorrect length of sid string`);
 
 		SessionId sessionId;

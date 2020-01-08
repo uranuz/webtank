@@ -266,13 +266,9 @@ public:
 		enforce(rightController !is null, `rightController is not of type AccessRightController or null`);
 		auto rights = getAccessRightList(rightController.rightSource);
 		IvyData ivyRights;
-		if( ctx.user.isAuthenticated() )
-		{
-			foreach( name, val; rights )
-			{
-				auto jVal = val.toStdJSON();
-				ivyRights[name] = jVal.toIvyJSON();
-			}
+		if( ctx.user.isAuthenticated() ) {
+			auto jRights = rights.toStdJSON();
+			ivyRights = jRights.toIvyJSON();
 		}
 		
 		string[] accessRoles = ctx.user.data.get("accessRoles", null)
