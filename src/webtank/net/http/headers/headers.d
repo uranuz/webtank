@@ -130,10 +130,6 @@ class HTTPHeaders
 			}
 		}
 		result ~= this.cookieHeaderString;
-		debug {
-			import std.stdio;
-			writeln(`Headers: `, result);
-		}
 		return result;
 	}
 
@@ -214,12 +210,6 @@ class HTTPHeaders
 				).filter!(
 					(val) => !val.empty
 				).join(' ');
-				/*
-				debug {
-					import std.stdio: writeln;
-					writeln(`startLine: `, startLine);
-				}
-				*/
 				return [startLine];
 			}
 			default: break;
