@@ -7,7 +7,8 @@ import std.typecons: Tuple;
 
 import webtank.net.http.handler.iface: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
-import webtank.net.http.http: HTTPReasonPhrases, HTTPException;
+import webtank.net.http.http: HTTPException;
+import webtank.net.http.consts: HTTPStatus, HTTPReasonPhrases;
 import webtank.net.http.output: HTTPOutput;
 import webtank.net.http.input: HTTPInput, readHTTPInputFromSocket;
 import webtank.net.service.iface: IWebService;
@@ -16,17 +17,26 @@ import webtank.net.server.iface: IWebServer;
 void makeErrorResponse(Throwable error, HTTPOutput response)
 {
 	import std.conv: text;
+	import std.algorithm: castSwitch;
 
 	import webtank.net.utils: makeErrorMsg;
 	import webtank.net.utils: parseContentType;
 
-	auto errHead = getHTTPErrorHeaders(error);
-	auto contentTypeParts = parseContentType(response.headers.get("content-type", null));
-	string statusCode = text(errHead.statusCode);
+	import webtank.net.http.headers.consts: HTTPHeader;
 
-	response.headers["status-code"] = statusCode;
-	response.headers["reason-phrase"] = errHead.reasonPhrase;
-	response.headers["connection"] = "close";
+	auto headers = response.headers;
+
+	auto contentTypeParts = parseContentType(headers.get(HTTPHeader.ContentType, null));
+
+	ushort statusCode = cast(ushort) castSwitch!(
+		(HTTPException ex) => ex.HTTPStatusCode,
+		(Throwable ex) => HTTPStatus.InternalServerError
+	)(error);
+
+	headers.statusCode = statusCode;
+	headers[HTTPHeader.Connection] = "close";
+
+	
 
 	string messageBody;
 	switch(contentTypeParts.mimeType)
@@ -53,9 +63,10 @@ void makeErrorResponse(Throwable error, HTTPOutput response)
 		}
 		default:
 		{
+			string reasonPhrase = headers[HTTPHeader.ReasonPhrase];
 			// By default print as HTML
-			messageBody = `<html><head><title>` ~ statusCode ~ ` ` ~ errHead.reasonPhrase ~ `</title></head><body>`
-				~ `<h3>` ~ statusCode ~ ` ` ~ errHead.reasonPhrase ~ `</h3>`
+			messageBody = `<html><head><title>` ~ statusCode.text ~ ` ` ~ reasonPhrase ~ `</title></head><body>`
+				~ `<h3>` ~ statusCode.text ~ ` ` ~ reasonPhrase ~ `</h3>`
 				~ `<h4>` ~ makeErrorMsg(error).userError ~ `</h4>`
 				~ `<hr/><p style="text-align: right;">webtank.net.server</p>`
 				~ `</body></html>`;
@@ -67,27 +78,11 @@ void makeErrorResponse(Throwable error, HTTPOutput response)
 	response.write(messageBody);
 }
 
-Tuple!(
-	ushort, `statusCode`,
-	string, `reasonPhrase`
-)
-getHTTPErrorHeaders(Throwable error)
-{
-	import std.algorithm: castSwitch;
-
-	typeof(return) res;
-	res.statusCode = cast(ushort) castSwitch!(
-		(HTTPException ex) => ex.HTTPStatusCode,
-		(Throwable ex) => 500
-	)(error);
-	res.reasonPhrase = HTTPReasonPhrases.get(res.statusCode, "Absolutely unknown status");
-	return res;
-}
-
 // Реализация приема и обработки запроса из сокета
 void processRequest(Socket sock, IWebServer server)
 {
 	import webtank.net.utils: makeErrorMsg;
+	import webtank.net.http.headers.consts: HTTPHeader;
 
 	scope(exit)
 	{
@@ -118,14 +113,14 @@ void processRequest(Socket sock, IWebServer server)
 		}
 
 		// Наш сервер не поддерживает соединение
-		response.headers["connection"] = "close";
-		sock.send(response.getResponseString()); //Главное - отправка результата клиенту
+		response.headers[HTTPHeader.Connection] = "close";
+		sock.send(response.getString()); //Главное - отправка результата клиенту
 	}
 	catch(Exception exc)
 	{
 		server.service.loger.crit(makeErrorMsg(exc).userError); //Хотим знать, что случилось
 		makeErrorResponse(exc, response);
-		sock.send(response.getResponseString());
+		sock.send(response.getString());
 
 		return; // На эксепшоне не падаем - а тихо-мирно завершаемся
 	}
@@ -133,7 +128,7 @@ void processRequest(Socket sock, IWebServer server)
 	{
 		server.service.loger.fatal(makeErrorMsg(exc).userError); //Хотим знать, что случилось
 		makeErrorResponse(exc, response);
-		sock.send(response.getResponseString());
+		sock.send(response.getString());
 
 		throw exc; // С Throwable не связываемся - и просто роняем Thread
 	}

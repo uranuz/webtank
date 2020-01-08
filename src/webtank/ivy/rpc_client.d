@@ -34,29 +34,33 @@ IvyData remoteCall(Result, Address, T...)(Address address, string rpcMethod, aut
 	return remoteCallA!IvyRPCCallResult(address, rpcMethod, paramsObj).result;
 }
 
-IvyRPCCallResult remoteCallWebForm(Result)(
-	string address,
+IvyRPCCallResult remoteCallWebForm(Result, Address)(
+	Address address,
 	string HTTPMethod,
-	string[string] HTTPHeaders = null,
 	string params = null
 )
-	if( is(Result == IvyRPCCallResult) )
+	if( is(Result == IvyRPCCallResult) && (is(Address: string) || is(Address: RemoteCallInfo)) )
 {
 	IvyRPCCallResult res;
-	res.response = sendBlocking(address, HTTPMethod, HTTPHeaders, params);
+
+	static if( is(Address: RemoteCallInfo) ) {
+		res.response = sendBlocking(address.URI, HTTPMethod, address.headers, params);
+	} else {
+		res.response = sendBlocking(address, HTTPMethod, params);
+	}
+	
 	res.result = _parseAndCheckResponse(address, res.response);
 	return res;
 }
 
-IvyData remoteCallWebForm(Result)(
-	string address,
+IvyData remoteCallWebForm(Result, Address)(
+	Address address,
 	string HTTPMethod,
-	string[string] HTTPHeaders = null,
 	string params = null
 )
-	if( is(Result == IvyData) )
+	if( is(Result == IvyData) && (is(Address: string) || is(Address: RemoteCallInfo)) )
 {
-	return remoteCallWebForm!IvyRPCCallResult(address, HTTPMethod, HTTPHeaders, params).result;
+	return remoteCallWebForm!IvyRPCCallResult(address, HTTPMethod, params).result;
 }
 
 class OverridenTraceInfo: object.Throwable.TraceInfo
@@ -103,37 +107,46 @@ private void _checkIvyJSON_RPCErrors(ref IvyData response)
 {
 	import std.algorithm: map;
 	import std.array: array;
-	if( response.type != IvyDataType.AssocArray )
-		throw new Exception(`Expected assoc array as JSON-RPC response`);
+	import std.exception: enforce;
 
-	if( "error" in response )
+	enforce(
+		response.type == IvyDataType.AssocArray,
+		`Expected assoc array as JSON-RPC response`);
+
+	if( auto errorPtr = "error" in response )
 	{
-		if( response["error"].type != IvyDataType.AssocArray ) {
-			throw new Exception(`"error" field in JSON-RPC response must be an object`);
-		}
+		enforce(
+			errorPtr.type == IvyDataType.AssocArray,
+			`"error" field in JSON-RPC response must be an object`);
+
 		string errorMsg;
-		if( "message" in response["error"] ) {
-			errorMsg = response["error"]["message"].type == IvyDataType.String? response["error"]["message"].str: null;
+		if( auto messagePtr = "message" in *errorPtr ) {
+			errorMsg = messagePtr.type == IvyDataType.String? messagePtr.str: null;
 		}
 
-		if( "data" in response["error"] )
+		Exception ex;
+		auto errorDataPtr = "data" in *errorPtr;
+		if( errorDataPtr && errorDataPtr.type == IvyDataType.String )
 		{
-			IvyData errorData = response["error"]["data"];
+			auto errorFilePtr = "file" in *errorDataPtr;
+			auto errorLinePtr = "line" in *errorDataPtr;
+
 			if(
-				"file" in errorData &&
-				"line" in errorData &&
-				errorData["file"].type == IvyDataType.String &&
-				errorData["line"].type == IvyDataType.Integer
+				errorFilePtr && errorFilePtr.type == IvyDataType.String &&
+				errorLinePtr && errorLinePtr.type == IvyDataType.Integer
 			) {
-				Exception ex = new Exception(errorMsg, errorData["file"].str, errorData["line"].integer);
-				if( "backtrace" in errorData && errorData["backtrace"].type == IvyDataType.Array ) {
-					ex.info = new OverridenTraceInfo(errorData["backtrace"].array.map!( (it) => it.str.dup ).array );
-				}
-				throw ex;
+				ex = new Exception(errorMsg, errorFilePtr.str, errorLinePtr.integer);
 			}
+
+			auto backtracePtr = "backtrace" in *errorDataPtr;
+			if( backtracePtr && backtracePtr.type == IvyDataType.Array ) {
+				ex.info = new OverridenTraceInfo(backtracePtr.array.map!( (it) => it.str.dup ).array );
+			}
+		} else {
+			ex = new Exception(errorMsg);
 		}
 
-		throw new Exception(errorMsg);
+		throw ex;
 	}
 
 	if( "result" !in response )

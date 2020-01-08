@@ -1,7 +1,12 @@
 module webtank.net.http.http;
 
-class HTTPException: Exception {
-	this(string msg, ushort statusCode, string file = __FILE__, size_t line = __LINE__) {
+public import webtank.net.http.consts: HTTPStatus, HTTPReasonPhrases;
+
+// HTTP exception
+class HTTPException: Exception
+{
+	this(string msg, ushort statusCode, string file = __FILE__, size_t line = __LINE__)
+	{
 		super(msg, file, line);
 		_HTTPStatusCode = statusCode;
 	}
@@ -14,6 +19,22 @@ protected:
 	ushort _HTTPStatusCode;
 }
 
+// Bad request HTTP exception
+class HTTPBadRequest: HTTPException
+{
+	this(string msg, string file = __FILE__, size_t line = __LINE__) {
+		super(msg, HTTPStatus.BadRequest, file, line);
+	}
+}
+
+// Internal Server Error HTTP Exception
+class HTTPInternalServerError: HTTPException
+{
+	this(string msg, string file = __FILE__, size_t line = __LINE__) {
+		super(msg, HTTPStatus.InternalServerError, file, line);
+	}
+}
+
 // CTL            = <any US-ASCII control character
 //                        (octets 0 - 31) and DEL (127)>
 // std.ascii.isControl
@@ -24,7 +45,8 @@ protected:
 //                | "/" | "[" | "]" | "?" | "="
 //                | "{" | "}" | SP | HT
 bool isHTTPSeparator( dchar c )
-{	import std.algorithm : canFind;
+{
+	import std.algorithm : canFind;
 	return `()<>@,;:\"/[]?={}`d.canFind(c) || c == 32 || c == 9;
 }
 
@@ -33,32 +55,62 @@ bool isHTTPSeparator( dchar c )
 
 //token          = 1*<any CHAR except CTLs or separators>
 bool isHTTPTokenChar(dchar c )
-{	import std.ascii;
+{
+	import std.ascii: isASCII, isControl;
 	return ( isASCII(c) && !isControl(c) && !isHTTPSeparator(c) );
 }
 
-immutable(string[ushort]) HTTPReasonPhrases;
 
-shared static this()
-{	HTTPReasonPhrases = [
-		///1xx: Informational
-		///1xx: Информационные — запрос получен, продолжается процесс
-		100: "Continue", 101: "Switching Protocols", 102: "Processing",
 
-		///2xx: Success
-		///2xx: Успешные коды — действие было успешно получено, принято и обработано
-		200: "OK", 201: "Created", 202: "Accepted", 203: "Non-Authoritative Information", 204: "No Content", 205: "Reset Content", 206: "Partial Content", 207: "Multi-Status", 226: "IM Used",
+// Sun, 06 Nov 1994 08:49:37 GMT  ; RFC 822, updated by RFC 1123
 
-		///3xx: Redirection
-		///3xx: Перенаправление — дальнейшие действия должны быть предприняты для того, чтобы выполнить запрос
-		300: "Multiple Choices", 301: "Moved Permanently", 302: "Found", 303: "See Other", 304: "Not Modified", 305: "Use Proxy", 307: "Temporary Redirect",
-
-		///4xx: Client Error
-		///4xx: Ошибка клиента — запрос имеет плохой синтаксис или не может быть выполнен
-		400: "Bad Request", 401: "Unauthorized", 402: "Payment Required", 403: "Forbidden", 404: "Not Found", 405: "Method Not Allowed", 406: "Not Acceptable", 407: "Proxy Authentication Required", 408: "Request Timeout", 409: "Conflict", 410: "Gone", 411: "Length Required", 412: "Precondition Failed", 414: "Request-URL Too Long", 415: "Unsupported Media Type", 416: "Requested Range Not Satisfiable", 417: "Expectation Failed", 418: "I'm a teapot", 422: "Unprocessable Entity", 423: "Locked", 424: "Failed Dependency", 425: "Unordered Collection", 426: "Upgrade Required", 456: "Unrecoverable Error", 499: "Retry With",
-
-		///5xx: Server Error
-		///5xx: Ошибка сервера — сервер не в состоянии выполнить допустимый запрос
-		500: "Internal Server Error", 501: "Not Implemented", 502: "Bad Gateway", 503: "Service Unavailable", 504: "Gateway Timeout", 505: "HTTP Version Not Supported", 506: "Variant Also Negotiates", 507: "Insufficient Storage", 509: "Bandwidth Limit Exceeded", 510: "Not Extended"
+// HTTP-date    = rfc1123-date | rfc850-date | asctime-date
+//        rfc1123-date = wkday "," SP date1 SP time SP "GMT"
+//        rfc850-date  = weekday "," SP date2 SP time SP "GMT"
+//        asctime-date = wkday SP date3 SP time SP 4DIGIT
+//        date1        = 2DIGIT SP month SP 4DIGIT
+//                       ; day month year (e.g., 02 Jun 1982)
+//        date2        = 2DIGIT "-" month "-" 2DIGIT
+//                       ; day-month-year (e.g., 02-Jun-82)
+//        date3        = month SP ( 2DIGIT | ( SP 1DIGIT ))
+//                       ; month day (e.g., Jun  2)
+//        time         = 2DIGIT ":" 2DIGIT ":" 2DIGIT
+//                       ; 00:00:00 - 23:59:59
+//        wkday        = "Mon" | "Tue" | "Wed"
+//                     | "Thu" | "Fri" | "Sat" | "Sun"
+//        weekday      = "Monday" | "Tuesday" | "Wednesday"
+//                     | "Thursday" | "Friday" | "Saturday" | "Sunday"
+//        month        = "Jan" | "Feb" | "Mar" | "Apr"
+//                     | "May" | "Jun" | "Jul" | "Aug"
+//                     | "Sep" | "Oct" | "Nov" | "Dec"
+private {
+	static immutable monthNames = [
+		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 	];
+
+	static immutable wkdayNames = [
+		"Sun", "Mon", "Tue", "Wed",
+		"Thu", "Fri", "Sat"
+	];
+}
+
+import std.datetime: DateTime, Date, TimeOfDay;
+
+string toRFC1123DateTimeString(ref DateTime date)
+{
+	import std.conv: to;
+	return wkdayNames[date.dayOfWeek] ~ ", "
+		~ ( date.day > 9 ? "" : "0" ) ~ date.day.to!string ~ " "
+		~ monthNames[date.month] ~ " " ~ date.year.to!string ~ " "
+		~ ( date.hour > 9 ? "" : "0" ) ~ date.hour.to!string ~ ":"
+		~ ( date.minute > 9 ? "" : "0" ) ~ date.minute.to!string ~ ":"
+		~ ( date.second > 9 ? "" : "0" ) ~ date.second.to!string ~ " GMT";
+}
+
+DateTime parseHTTPDateTime(T)(ref T input)
+{
+	import std.datetime: parseRFC822DateTime;
+	// TODO: Реализовать разбор других форматов даты/ времени для большей совместимости
+	return cast(DateTime) parseRFC822DateTime(input);
 }

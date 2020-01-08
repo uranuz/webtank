@@ -1,10 +1,10 @@
 module webtank.net.http;
 
 public import
-    webtank.net.http.cookie,
-    webtank.net.http.headers,
-    webtank.net.http.request,
-    webtank.net.http.response,
+    webtank.net.http.headers.cookie,
+    webtank.net.http.headers.headers,
+    webtank.net.http.input,
+    webtank.net.http.output,
     webtank.net.uri,
     webtank.net.http.handler,
     webtank.net.http.context,

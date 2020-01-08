@@ -3,22 +3,22 @@ module webtank.net.http.output;
 ///Класс для формирования ответа от HTTP-сервера, либо запроса от HTTP-клиента
 class HTTPOutput
 {
-	import webtank.net.http.cookie: CookieCollection;
+	import webtank.net.http.headers.cookie: CookieCollection;
 	import webtank.net.uri: URI;
-	import webtank.net.http.headers: HTTPHeaders;
+	import webtank.net.http.headers.headers: HTTPHeaders;
+	import webtank.net.http.headers.consts: HTTPHeader;
+	import webtank.net.http.consts: HTTPStatus, HTTPReasonPhrases;
 
 	import std.array: Appender, appender;
 
 protected:
 	HTTPHeaders _headers;
 	Appender!string _messageBody;
-	CookieCollection _cookies;
 	URI _requestURI;
 
 public:
 	this()
 	{
-		_cookies = new CookieCollection;
 		_headers = new HTTPHeaders;
 	}
 
@@ -29,11 +29,11 @@ public:
 
 	/// HTTP-метод: GET, POST и т.п. Свойство для чтения
 	string method() @property {
-		return _headers["method"];
+		return _headers[HTTPHeader.Method];
 	}
 	/// HTTP-метод: GET, POST и т.п. Свойство для записи
 	void method(string value) @property {
-		_headers["method"] = value;
+		_headers[HTTPHeader.Method] = value;
 	}
 
 	/// Свойство для чтения идентификатора ресурса в виде структуры URI
@@ -43,17 +43,17 @@ public:
 	/// Свойство для записи идентификатора ресурса в виде структуры URI
 	void requestURI(URI value) @property {
 		_requestURI = value;
-		_headers["request-uri"] = value.rawQuery;
+		_headers[HTTPHeader.RequestURI] = value.rawQuery;
 	}
 
 	/// Свойство для чтения идентификатора ресурса в виде строки
 	string rawRequestURI() @property {
-		return _headers["request-uri"];
+		return _headers[HTTPHeader.RequestURI];
 	}
 	/// Свойство для записи идентификатора ресурса в виде строки
 	void rawRequestURI(string value) @property {
 		_requestURI = URI(value);
-		_headers["request-uri"] = value;
+		_headers[HTTPHeader.RequestURI] = value;
 	}
 
 	///Добавляет строку str к сообщению ответа сервера, либо запроса клиента
@@ -70,19 +70,13 @@ public:
 	/// на другой ресурс location
 	void redirect(string location)
 	{
-		_headers["status-code"] = "302";
-		_headers["reason-phrase"] = "Found";
-		_headers["location"] = location;
+		_headers.statusCode = HTTPStatus.Found;
+		_headers[HTTPHeader.Location] = location;
 	}
 
-	/// Возвращает полный ответ сервера на запрос клиента
-	string getResponseString() {
-		return _getResponseHeadersStr() ~ _messageBody.data;
-	}
-
-	/// Возвращает полный запрос, формируемый клиентом
-	string getRequestString() {
-		return _getRequestHeadersStr() ~ _messageBody.data;
+	// Возвращает полный запрос HTTP-клиента, либо ответ HTTP-сервера
+	string getString() {
+		return _getHeadersStr() ~ _messageBody.data;
 	}
 
 	//Пытаемся очистить ответ, возвращает true, если получилось
@@ -90,7 +84,6 @@ public:
 	{
 		_messageBody = appender!string();
 		headers.clear();
-		_cookies.clear();
 		return true;
 	}
 
@@ -100,9 +93,9 @@ public:
 		return true;
 	}
 
-	///Куки
+	/// Возвращает набор HTTP Cookie
 	CookieCollection cookies() @property {
-		return _cookies;
+		return _headers.cookies;
 	}
 
 protected:
@@ -110,7 +103,7 @@ protected:
 	{
 		import std.uni: toLower;
 		import webtank.net.utils: parseContentType;
-		auto res = parseContentType(_headers.get("content-type", null));
+		auto res = parseContentType(_headers.get(HTTPHeader.ContentType, null));
 		if( res.mimeType.length == 0 ) {
 			res.mimeType = "text/html"; // По дефолту text/html
 		}
@@ -123,32 +116,15 @@ protected:
 			res.value = "utf-8";
 		}
 
-		_headers["content-type"] = res.mimeType ~ "; " ~ res.key ~ "=" ~ res.value;
+		_headers[HTTPHeader.ContentType] = res.mimeType ~ "; " ~ res.key ~ "=" ~ res.value;
 	}
 
-	string _getResponseHeadersStr()
+	string _getHeadersStr()
 	{
 		import std.conv: to;
-		_headers["content-length"] = _messageBody.data.length.to!string;
+		_headers[HTTPHeader.ContentLength] = _messageBody.data.length.to!string;
 		_assureContentType();
 
-		return
-			_headers.getStatusLine()
-			~ ( _cookies.length > 0 ? _cookies.toResponseHeadersString() ~ "\r\n" : "" )
-			~ _headers.getString() ~ "\r\n" ;
-	}
-
-	string _getRequestHeadersStr()
-	{
-		import std.conv: to;
-		_headers["content-length"] = _messageBody.data.length.to!string;
-		_assureContentType();
-
-		return
-			_headers.getRequestLine()
-			~ ( _cookies.length > 0 ? _cookies.toRequestHeadersString() ~ "\r\n" : "" )
-			~ _headers.getString() ~ "\r\n" ;
+		return _headers.getString() ~ "\r\n";
 	}
 }
-
-alias ServerResponse = HTTPOutput;

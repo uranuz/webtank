@@ -16,6 +16,7 @@ class JSON_RPC_Router: IHTTPHandler
 	import webtank.net.http.context: HTTPContext;
 	import webtank.net.http.handler.iface: HTTPHandlingResult;
 	import webtank.net.uri_pattern: URIPattern, URIMatchingData;
+	import webtank.net.http.headers.consts: HTTPHeader;
 
 	import std.json: JSONValue, toJSON, JSONType, parseJSON, JSONOptions;
 
@@ -43,13 +44,13 @@ public:
 
 		bool isRequestMatched =
 			uriMatchData.isMatched &&
-			toLower(context.request.headers.get("method", null)) == "post";
+			toLower(context.request.headers.get(HTTPHeader.Method, null)) == "post";
 
 		//-----Конец опроса обработчика события-----
 		onPostPoll.fire(context, isRequestMatched);
 		if( !isRequestMatched )
 			return HTTPHandlingResult.mismatched;
-		context.response.headers["content-type"] = "application/json";
+		context.response.headers[HTTPHeader.ContentType] = "application/json";
 
 		_processRequestInternal(context, jResponse);
 		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);

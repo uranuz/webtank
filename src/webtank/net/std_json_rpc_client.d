@@ -10,7 +10,7 @@ import std.json;
 struct RemoteCallInfo
 {
 	string URI;
-	string[string] headers;
+	string[][string] headers;
 }
 
 struct JSON_RPC_CallResult
@@ -58,18 +58,18 @@ HTTPInput remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto
 JSON_RPC_CallResult remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto ref T paramsObj)
 	if( is(Result: JSON_RPC_CallResult) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
 {
-	HTTPInput response = remoteCall!HTTPInput(addr, rpcMethod, paramsObj);
-	
 	JSON_RPC_CallResult res;
+	res.response = remoteCall!HTTPInput(addr, rpcMethod, paramsObj);
+
 	JSONValue bodyJSON;
 	try {
-		bodyJSON = response.messageBody.parseJSON();
+		bodyJSON = res.response.messageBody.parseJSON();
 	}
 	catch (JSONException ex)
 	{
 		throw new JSONException(
 			"Unable to parse JSON response of remote method \"" ~ rpcMethod 
-			~ "\" from service " ~ addr.getRemoteCallInfoURI() ~ ":\n" ~ response.messageBody);
+			~ "\" from service " ~ addr.getRemoteCallInfoURI() ~ ":\n" ~ res.response.messageBody);
 	}
 
 	_checkJSON_RPCErrors(bodyJSON); // Проверяем на ошибки
@@ -89,27 +89,28 @@ private void _checkJSON_RPCErrors(ref JSONValue response)
 {
 	if( response.type != JSONType.object )
 		throw new Exception(`Expected assoc array as JSON-RPC response`);
-	
-	if( "error" in response )
+
+	auto errorPtr = "error" in response;
+	if( errorPtr )
 	{
-		if( response["error"].type != JSONType.object ) {
+		if( errorPtr.type != JSONType.object ) {
 			throw new Exception(`"error" field in JSON-RPC response must be an object`);
 		}
 		string errorMsg;
-		if( "message" in response["error"] ) {
-			errorMsg = response["error"]["message"].type == JSONType.string? response["error"]["message"].str: null;
+		if( auto messagePtr = "message" in (*errorPtr) ) {
+			errorMsg = messagePtr.type == JSONType.string? messagePtr.str: null;
 		}
 
-		if( "data" in response["error"] )
+		auto errorDataPtr = "data" in *errorPtr;
+		if( errorDataPtr && errorDataPtr.type == JSONType.object )
 		{
-			JSONValue errorData = response["error"]["data"];
+			auto errorFilePtr = "file" in *errorDataPtr;
+			auto errorLinePtr = "line" in *errorDataPtr;
 			if(
-				"file" in errorData &&
-				"line" in errorData &&
-				errorData["file"].type == JSONType.string &&
-				errorData["line"].type == JSONType.uinteger
+				errorFilePtr && errorFilePtr.type == JSONType.string &&
+				errorLinePtr && errorLinePtr.type == JSONType.uinteger
 			) {
-				throw new Exception(errorMsg, errorData["file"].str, errorData["line"].uinteger);
+				throw new Exception(errorMsg, errorFilePtr.str, errorLinePtr.uinteger);
 			}
 		}
 
@@ -121,38 +122,34 @@ private void _checkJSON_RPCErrors(ref JSONValue response)
 }
 
 
-
 import webtank.net.http.context: HTTPContext;
+import webtank.net.http.headers.consts: HTTPHeader;
 private static immutable _allowedHeaders = [
-	`host`,
-	`user-agent`,
-	`accept`,
-	`accept-language`,
-	`connection`,
-	`forwarded`,
-	`x-real-ip`,
-	`x-forwarded-for`,
-	`x-forwarded-proto`,
-	`x-forwarded-host`,
-	`x-forwarded-port`
+	HTTPHeader.Accept,
+	HTTPHeader.AcceptLanguage,
+	HTTPHeader.Connection,
+	HTTPHeader.Forwarded,
+	HTTPHeader.Host,
+	HTTPHeader.XRealIP,
+	HTTPHeader.XForwardedFor,
+	HTTPHeader.XForwardedProto,
+	HTTPHeader.XForwardedHost,
+	HTTPHeader.XForwardedPort,
+	HTTPHeader.UserAgent
 ];
 /// Извлекает разрешенные HTTP заголовки из запроса
-string[string] getAllowedRequestHeaders(HTTPContext ctx)
+string[][string] getAllowedRequestHeaders(HTTPContext ctx)
 {
 	auto headers = ctx.request.headers;
 
-	string[string] result;
+	string[][string] result;
 	foreach( name; _allowedHeaders )
 	{
-		if( name in headers ) {
-			result[name] = headers[name];
+		string[] headerArr = headers.array(name);
+		if( headerArr.length > 0 ) {
+			result[name] = headerArr;
 		}
 	}
-	
-	// Если мы руками записали что-то в Cookie, то новое значение отличается от заголовков.
-	// В связи с этим берем значение заголовка `Cookie` из CookieCollection, а не из заголовков
-	// TODO: Сделать, чтобы при обновлении Cookie значение попадало в заголовки автоматом, или по-другому решить проблему
-	result[`cookie`] = ctx.request.cookies.toOneLineString();
 
 	return result;
 }

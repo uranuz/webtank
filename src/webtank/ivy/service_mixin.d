@@ -230,7 +230,7 @@ IIvyServiceMixin _getServiceMixin(HTTPContext context)
 import ivy.interpreter.interpreter: Interpreter;
 
 static immutable string[] PASS_THROUGH_VIEW_HEADERS = [
-	//`set-cookie`
+	`set-cookie`
 ];
 
 AsyncResult _onIvyModule_init(
@@ -245,6 +245,7 @@ AsyncResult _onIvyModule_init(
 	import std.exception: enforce;
 
 	import webtank.ivy.rpc_client: remoteCallWebForm, IvyRPCCallResult;
+	import webtank.net.std_json_rpc_client: RemoteCallInfo;
 
 	DirValueAttr[string] dirAttrs = interp.getDirAttrs(entry.ivyMethod);
 	auto callOpts = _getCallOpts(dirAttrs, context, entry);
@@ -264,11 +265,8 @@ AsyncResult _onIvyModule_init(
 	if( !callOpts.address.empty )
 	{
 		try {
-			rpcResult = remoteCallWebForm!IvyRPCCallResult(
-				callOpts.address,
-				callOpts.HTTPMethod,
-				callOpts.HTTPHeaders,
-				context.request.messageBody);
+			rpcResult = RemoteCallInfo(callOpts.address, callOpts.HTTPHeaders)
+				.remoteCallWebForm!IvyRPCCallResult(callOpts.HTTPMethod, context.request.messageBody);
 		} catch( Exception ex ) {
 			// Сохраняем информацию об ошибке
 			callError = ex;
@@ -278,29 +276,15 @@ AsyncResult _onIvyModule_init(
 	IvyData methodParams = rpcResult.result;
 	if( rpcResult.response !is null )
 	{
+		auto rpcResultHeaders = rpcResult.response.headers;
 		foreach( header; PASS_THROUGH_VIEW_HEADERS )
 		{
-			if( auto headerPtr = header in rpcResult.response.headers ) {
+			string[] headerArray = rpcResultHeaders.array(header);
+			if( !headerArray.empty  ) {
 				// Вываливаем заданные HTTP-заголовки, возвращенные с бакэнда наружу пользователю
-				context.response.headers[header] = *headerPtr;
+				context.response.headers.array(header, headerArray);
 			}
 		}
-		/*
-		foreach( cook; rpcResult.response.cookies )
-		{
-			debug {
-				import std.stdio;
-				writeln(cook.name, `: `, cook.value);
-			}
-			
-			context.response.cookies ~= cook;
-		}
-		*/
-		debug {
-			import std.stdio;
-			writeln(`Cookie str: `, rpcResult.response.cookies.toOneLineString());
-		}
-		context.response.headers[`set-cookie`] = rpcResult.response.cookies.toOneLineString();
 	}
 
 	// Параметры нужны в первую очередь для мастер-шаблона. Обычно они не нужны
@@ -390,7 +374,7 @@ import std.typecons: Tuple;
 Tuple!(
 	string, `address`,
 	string, `HTTPMethod`,
-	string[string], `HTTPHeaders`
+	string[][string], `HTTPHeaders`
 )
 _getCallOpts(DirValueAttr[string] dirAttrs, HTTPContext context, ref RoutingConfigEntry entry)
 {

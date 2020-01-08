@@ -21,7 +21,7 @@ HTTPInput sendBlocking(HTTPOutput request)
 
 	Socket sock = new TcpSocket( new InternetAddress(requestURI.host, requestURI.port) );
 	
-	sock.send(request.getRequestString());
+	sock.send(request.getString());
 
 	return readHTTPInputFromSocket(sock);
 }
@@ -38,8 +38,20 @@ HTTPInput sendBlocking( string requestURI, string method, string messageBody = n
 }
 
 /// Перегрузка метода с возможностью передать словарь с HTTP-заголовками
-HTTPInput sendBlocking( string requestURI, string method, string[string] headers, string messageBody = null )
-{
+HTTPInput sendBlocking( string requestURI, string method, string[string] headers, string messageBody = null ) {
+	return _sendBlockingImpl(requestURI, method, headers, messageBody);
+}
+
+HTTPInput sendBlocking( string requestURI, string method, string[][string] headers, string messageBody = null ) {
+	return _sendBlockingImpl(requestURI, method, headers, messageBody);
+}
+
+private HTTPInput _sendBlockingImpl(Headers)(
+	string requestURI,
+	string method,
+	Headers headers,
+	string messageBody = null
+) {
 	HTTPOutput request = new HTTPOutput();
 	request.rawRequestURI = requestURI;
 	request.method = method;

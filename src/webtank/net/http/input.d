@@ -3,28 +3,28 @@ module webtank.net.http.input;
 import std.json, std.socket;
 import std.typecons: tuple;
 
-import webtank.net.http.cookie, webtank.net.uri, webtank.net.web_form, webtank.net.http.http, webtank.net.http.headers;
+import webtank.net.uri;
+import webtank.net.web_form;
+import webtank.net.http.http;
+import webtank.net.http.headers;
 import webtank.net.uri_pattern: URIMatchingData;
-
-
-// version = cgi_script;
+import webtank.net.http.headers.cookie;
 
 /// Класс для хранения данных HTTP-запроса на стороне сервера,
 /// либо полученного ответа на стороне клиента
 class HTTPInput
-{	
+{
+	import webtank.net.http.headers.consts: HTTPHeader;
 protected:
 	// Основные поля
 	HTTPHeaders _headers;
 	string _messageBody;
 	Address _remoteAddress;
 	Address _localAddress;
-	
 
 	// Производные поля
 	URI _requestURI;
 	URIMatchingData _uriMatch;
-	CookieCollection _cookies;
 	IFormData _bodyForm;
 	IFormData _queryForm;
 	IFormData _form;
@@ -37,37 +37,23 @@ public:
 		Address localAddress
 	)
 	{
+		import std.exception: enforce;
+		enforce(headers !is null, `Expected instance of HTTPHeaders`);
+
 		_headers = headers;
 		_messageBody = messageBody;
 		_remoteAddress = remoteAddress;
 		_localAddress = localAddress;
 
-		if( auto cookiePtr = "cookie" in _headers ) {
-			// Если видим заголовок "cookie" - значит это запрос
-			_cookies = parseRequestCookies( *cookiePtr );
-		} else if( auto cookiePtr = "set-cookie" in _headers ) {
-			// Cookie ответа сервера
-			_cookies = parseResponseCookies( *cookiePtr );
-		} else {
-			_cookies = new CookieCollection(); // Заглушка, если нет cookie
-		}
-
 		// Для запроса к серверу разбираем идентификатор ресурса
-		if( auto uriPtr = "request-uri" in _headers )
+		if( auto uriPtr = HTTPHeader.RequestURI in _headers )
 		{
 			_requestURI = URI( *uriPtr );
-			if( auto hostPtr = "host" in _headers )
+			if( auto hostPtr = HTTPHeader.Host in _headers )
 				_requestURI.authority = *hostPtr;
 			
 			_requestURI.scheme = "http";
 		}
-	}
-
-	// Возвращает true, если это экземпляр данных о запросе к HTTP-серверу
-	// и false - если это ответ, переданный HTTP-клиенту
-	bool isRequest() @property {
-		// Если в прочитанных заголовках есть строка запроса - значит это запрос
-		return !!("request-line" in _headers);
 	}
 
 	/// Словарь с HTTP-заголовками
@@ -77,7 +63,7 @@ public:
 
 	///"Сырое" (недекодированое) значение идентификатора запрашиваемого ресурса
 	string rawRequestURI() @property {
-		return headers["request-uri"];
+		return headers[HTTPHeader.RequestURI];
 	}
 
 	alias rawURI = rawRequestURI; // Псевдоним для совместимости
@@ -89,7 +75,7 @@ public:
 
 	/// HTTP-метод: GET, POST и т.п.
 	string method() @property {
-		return _headers["method"];
+		return _headers[HTTPHeader.Method];
 	}
 
 	alias uri = requestURI; // Псевдоним для совместимости
@@ -101,12 +87,12 @@ public:
 
 	///Referer - кто знает, тот поймет
 	string referer() @property {
-		return headers["referer"];
+		return headers[HTTPHeader.Referer];
 	}
 
 	///Описание клиентской программы и среды
 	string userAgent() @property {
-		return headers["user-agent"];
+		return headers[HTTPHeader.UserAgent];
 	}
 	
 	///Данные HTTP формы переданные через адресную строку
@@ -144,17 +130,17 @@ public:
 		_uriMatch = data;
 	}
 
-	///Возвращает набор HTTP Cookie для текущего запроса
+	/// Возвращает набор HTTP Cookie
 	CookieCollection cookies() @property {
-		return _cookies;
+		return _headers.cookies;
 	}
 
-	///Возвращает адрес удалённого узла, с которого пришло сообщение
+	/// Возвращает адрес удалённого узла, с которого пришло сообщение
 	Address remoteAddress() @property {
 		return _remoteAddress;
 	}
 	
-	///Возвращает адрес *этого* узла, на который пришло сообщение
+	/// Возвращает адрес *этого* узла, на который пришло сообщение
 	Address localAddress() @property {
 		return _localAddress;
 	}
@@ -168,7 +154,10 @@ immutable(size_t) messageBodyLimit = 4_194_304;
 auto readHTTPDataFromSocket(Socket sock)
 {
 	import std.conv: text;
-	assert( sock, "Socket is null" );
+	import webtank.net.http.headers.parser: HTTPHeadersParser;
+	import webtank.net.http.consts: HTTPStatus;
+
+	assert(sock, "Socket is null");
 
 	char[] startBuf;
 	startBuf.length = startBufLength;
@@ -179,12 +168,6 @@ auto readHTTPDataFromSocket(Socket sock)
 	auto headersParser = new HTTPHeadersParser(cast(string) startBuf[0..startBufBytesRead]);
 	auto headers = headersParser.getHeaders();
 
-	if( headers is null )
-		throw new HTTPException(
-			"Request headers buffer is too large or is empty or malformed!!!",
-			400 //400 Bad Request
-		);
-
 	//Определяем длину сообщения
 	size_t contentLength = headers.contentLength;
 
@@ -192,8 +175,8 @@ auto readHTTPDataFromSocket(Socket sock)
 	if( contentLength > messageBodyLimit )
 	{
 		throw new HTTPException(
-			"Content length is too large!!!",
-			413 //413 Request Entity Too Large
+			"Content length is too large!",
+			HTTPStatus.PayloadTooLarge
 		);
 	}
 
@@ -214,18 +197,14 @@ auto readHTTPDataFromSocket(Socket sock)
 			size_t received = sock.receive(bodyBufSlice);
 			if( received == 0 ) break; // Remote side closed connection
 			if( received == Socket.ERROR ) {
-				throw new HTTPException(
-					"Error on socket",
-					503 // 400 Bad gateway
-				);
+				throw new HTTPException("Error on socket", HTTPStatus.ServiceUnavailable);
 			}
 			allReceived += received;
 		}
 		if( allReceived < bytesToRead ) {
 			throw new HTTPException(
 				`Number of bytes read by server ` ~ allReceived.text ~ ` doesn't match requested ` ~ bytesToRead.text,
-				503 // 400 Bad gateway
-			);
+				HTTPStatus.ServiceUnavailable);
 		}
 		messageBody ~= bodyBuf[0..allReceived];
 	}
@@ -238,6 +217,3 @@ HTTPInput readHTTPInputFromSocket(Socket sock)
 	auto inputData = readHTTPDataFromSocket(sock);
 	return new HTTPInput(inputData.headers, inputData.messageBody, sock.remoteAddress, sock.localAddress);
 }
-
-// Всевдоним класса для совместимости со старым кодом
-alias ServerRequest = HTTPInput;

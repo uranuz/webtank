@@ -11,6 +11,7 @@ class WebFormAPIPageRoute: IHTTPHandler
 {
 	import webtank.net.http.handler.iface: HTTPHandlingResult;
 	import webtank.net.uri_pattern: URIMatchingData;
+	import webtank.net.http.headers.consts: HTTPHeader;
 
 	import std.json: JSONValue;
 protected:
@@ -38,7 +39,7 @@ public:
 			return HTTPHandlingResult.mismatched;
 
 		context.request.requestURIMatch = uriMatchData;
-		context.response.headers["content-type"] = "application/json";
+		context.response.headers[HTTPHeader.ContentType] = "application/json";
 		JSONValue jResponse = [
 			"jsonrpc": JSONValue("2.0"),
 			"id": JSONValue(),

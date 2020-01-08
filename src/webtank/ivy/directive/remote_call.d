@@ -6,6 +6,7 @@ import ivy.interpreter.interpreter: Interpreter;
 import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirValueAttr;
 import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
 import ivy.interpreter.async_result: AsyncResult;
+import webtank.net.std_json_rpc_client: RemoteCallInfo;
 
 import webtank.ivy.rpc_client: remoteCallWebForm;
 
@@ -16,6 +17,7 @@ class RemoteCallInterpreter: INativeDirectiveInterpreter
 		import std.algorithm: canFind;
 		import std.algorithm: map;
 		import std.exception: enforce;
+		import std.array: array;
 		
 		IvyData uriNode = interp.getValue("uri");
 		IvyData methodNode = interp.getValue("method");
@@ -33,23 +35,24 @@ class RemoteCallInterpreter: INativeDirectiveInterpreter
 			[IvyDataType.AssocArray, IvyDataType.Undef, IvyDataType.Null].canFind(forwardHTTPHeadersNode.type),
 			`Expected assoc array as forwardHTTPHeaders global variable`);
 
-		string[string] headers;
+		string[][string] headers;
 		if( forwardHTTPHeadersNode.type == IvyDataType.AssocArray )
 		foreach( name, valNode; forwardHTTPHeadersNode.assocArray )
 		{
-			enforce(valNode.type == IvyDataType.String, `HTTP header value expected to be string`);
-			headers[name] = valNode.str;
+			enforce(valNode.type == IvyDataType.Array, `HTTP header values list expected to be array`);
+			headers[name] = valNode.array.map!( (it) {
+				enforce(it.type == IvyDataType.String, `HTTP header value expected to be string`);
+				return it.str;
+			}).array;
 		}
 
 		AsyncResult fResult = new AsyncResult();
 		try
 		{
-			IvyData methodRes = remoteCallWebForm!IvyData(
-				uriNode.str,
-				(methodNode.type == IvyDataType.String? methodNode.str: null),
-				headers,
-				(dataNode.type == IvyDataType.String? dataNode.str: null)
-			);
+			IvyData methodRes = RemoteCallInfo(uriNode.str, headers)
+				.remoteCallWebForm!IvyData(
+					(methodNode.type == IvyDataType.String? methodNode.str: null),
+					(dataNode.type == IvyDataType.String? dataNode.str: null));
 			fResult.resolve(methodRes);
 		} catch(Exception ex) {
 			fResult.reject(ex);
