@@ -14,7 +14,7 @@ void startDispatchProcess(ushort port, string workerPath, string workerSockAddr 
 	enforce(port > 0, `Port is not set!`);
 	enforce(workerPath.length > 0, `workerPath is not set!`);
 	import std.path: baseName, buildNormalizedPath, withExtension;
-	import std.file: getcwd;
+	import std.file: getcwd, exists, remove, isDir;
 	if( workerSockAddr.length == 0 ) {
 		workerSockAddr = buildNormalizedPath(getcwd(), baseName(workerPath) ~ `.sock`);
 	}
@@ -32,23 +32,35 @@ void startDispatchProcess(ushort port, string workerPath, string workerSockAddr 
 		listener.listen(1);
 		auto pid = spawnProcess([workerPath, `--workerSockAddr`, workerSockAddr]);
 		Thread.sleep( dur!("seconds")(1) );
+		enforce(!isDir(workerSockAddr), `Option's --workerSockAddr value is a directory!`);
+		removeFileIfExists(workerSockAddr);
+
 		Socket workerSock = new Socket(AddressFamily.UNIX, SocketType.STREAM);
+		scope(exit)
+		{
+			workerSock.shutdown(SocketShutdown.BOTH);
+			workerSock.close();
+			removeFileIfExists(workerSockAddr);
+			pid.wait();
+			Thread.sleep( dur!("seconds")(1) ); // Do not spam things
+		}
 		workerSock.blocking = true;
 
 		version(Posix)
 			workerSock.connect(new UnixAddress(workerSockAddr));
 		else enforce(false, `Connecting by UnixAddress is only supported for Posix OS now`);
-		scope(exit)
-		{
-			workerSock.shutdown(SocketShutdown.BOTH);
-			workerSock.close();
-			pid.wait();
-			Thread.sleep( dur!("seconds")(1) ); // Do not spam things
-		}
 
 		version(Posix)
 			workerSock.sendSocketHandle(listener.handle);
 		else enforce(false, `Sending socket handle is only supported for Posix OS now`);
+	}
+}
+
+void removeFileIfExists(string workerSockAddr)
+{
+	import std.file: exists, remove, isDir;
+	if( exists(workerSockAddr) && !isDir(workerSockAddr) ) {
+		remove(workerSockAddr); // Remove old socket file if exist by some reason
 	}
 }
 

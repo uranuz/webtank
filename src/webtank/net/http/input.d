@@ -154,10 +154,13 @@ immutable(size_t) messageBodyLimit = 4_194_304;
 auto readHTTPDataFromSocket(Socket sock)
 {
 	import std.conv: text;
+	import std.exception: enforce;
+
 	import webtank.net.http.headers.parser: HTTPHeadersParser;
 	import webtank.net.http.consts: HTTPStatus;
 
-	assert(sock, "Socket is null");
+	enforce(sock, "Socket is null");
+	enforce(sock.isAlive, `Unable to read HTTP-data from socket because it is dead`);
 
 	char[] startBuf;
 	startBuf.length = startBufLength;

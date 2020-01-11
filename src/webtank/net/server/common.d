@@ -83,6 +83,7 @@ void processRequest(Socket sock, IWebServer server)
 {
 	import webtank.net.utils: makeErrorMsg;
 	import webtank.net.http.headers.consts: HTTPHeader;
+	import std.exception: enforce;
 
 	scope(exit)
 	{
@@ -114,11 +115,13 @@ void processRequest(Socket sock, IWebServer server)
 
 		// Наш сервер не поддерживает соединение
 		response.headers[HTTPHeader.Connection] = "close";
+		enforce(sock.isAlive, `Unable to send response to user because socket is dead`);
 		sock.send(response.getString()); //Главное - отправка результата клиенту
 	}
 	catch(Exception exc)
 	{
 		server.service.loger.crit(makeErrorMsg(exc).userError); //Хотим знать, что случилось
+		enforce(sock.isAlive, `Unable to send error response to user because socket is dead`);
 		makeErrorResponse(exc, response);
 		sock.send(response.getString());
 
@@ -127,12 +130,15 @@ void processRequest(Socket sock, IWebServer server)
 	catch(Throwable exc)
 	{
 		server.service.loger.fatal(makeErrorMsg(exc).userError); //Хотим знать, что случилось
+		enforce(sock.isAlive, `Unable to send critical error response to user because socket is dead`);
 		makeErrorResponse(exc, response);
 		sock.send(response.getString());
 
 		throw exc; // С Throwable не связываемся - и просто роняем Thread
 	}
 }
+
+
 
 void ensureBindSocket(Socket listener, ushort port)
 {

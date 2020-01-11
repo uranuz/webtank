@@ -20,7 +20,8 @@ HTTPInput sendBlocking(HTTPOutput request)
 	enforce(requestURI.port != 0, `Request port is not set!`);
 
 	Socket sock = new TcpSocket( new InternetAddress(requestURI.host, requestURI.port) );
-	
+
+	enforce(sock.isAlive, `Unable to send request because socket is dead`);
 	sock.send(request.getString());
 
 	return readHTTPInputFromSocket(sock);
