@@ -25,4 +25,15 @@ class HTTPRouter: ICompositeHTTPHandler
 
 		return HTTPHandlingResult.unhandled;
 	}
+
+	import std.json: JSONValue;
+
+	override JSONValue toStdJSON()
+	{
+		import webtank.common.std_json.to: toStdJSON;
+		return JSONValue([
+			`kind`: JSONValue(typeof(this).stringof),
+			`children`: handlersToStdJSON()
+		]);
+	}
 }

@@ -86,7 +86,9 @@ struct URIMatchingData
 }
 
 class URIPattern
-{	
+{
+	import std.json: JSONValue;
+
 	this( string URIPatternStr, string[string] regExprs, string[string] defaults )
 	{
 		_lexemes = parseURIPattern(URIPatternStr);
@@ -109,12 +111,20 @@ class URIPattern
 	URIMatchingData match(string URIStr) {
 		return matchURI(URIStr, _lexemes, _regExprs, _defaults);
 	}
+
+	JSONValue toStdJSON()
+	{
+		return JSONValue([
+			`lexemes`: JSONValue(_lexemes),
+			`regExprs`: JSONValue(_regExprs),
+			`defaults`: JSONValue(_defaults)
+		]);
+	}
 	
 protected:
 	string[] _lexemes;
 	string[string] _regExprs;
 	string[string] _defaults;
-
 }
 
 

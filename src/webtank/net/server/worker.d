@@ -74,6 +74,7 @@ void runServer(ref WorkerOpts opts)
 				new ThreadPoolServer(opts.port, opts.service, opts.threadCount));
 		}
 	}
+	opts.service.beforeRunServer(); // Запускаем хук на запуск сервера
 	server.start(); // Запускаем раз уж создали
 }
 

@@ -143,6 +143,8 @@ class ViewServiceURIPageRoute: IHTTPHandler
 
 	import webtank.net.uri: URI;
 
+	import std.json: JSONValue;
+
 	import std.exception: enforce;
 	import std.range: empty;
 protected:
@@ -189,6 +191,15 @@ public:
 			});
 
 		return HTTPHandlingResult.handled; // Запрос обработан
+	}
+
+	override JSONValue toStdJSON()
+	{
+		import webtank.common.std_json.to: toStdJSON;
+		return JSONValue([
+			`kind`: JSONValue(typeof(this).stringof),
+			`entry`: _entry.toStdJSON()
+		]);
 	}
 }
 

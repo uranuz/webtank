@@ -45,6 +45,18 @@ class URIPageRouter: ICompositeHTTPHandler
 
 		return HTTPHandlingResult.mismatched; // Обработчик для запроса не найден
 	}
+
+	import std.json: JSONValue;
+
+	override JSONValue toStdJSON()
+	{
+		import webtank.common.std_json.to: toStdJSON;
+		return JSONValue([
+			`kind`: JSONValue(typeof(this).stringof),
+			`uriPattern`: _uriPattern.toStdJSON(),
+			`children`: handlersToStdJSON()
+		]);
+	}
 protected:
 	URIPattern _uriPattern;
 }

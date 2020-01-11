@@ -13,10 +13,15 @@ enum HTTPHandlingResult {
 /// Интерфейс обработчика HTTP-запросов приложения
 interface IHTTPHandler
 {
+	import std.json: JSONValue;
+	
 	/// Метод обработки запроса. Возвращает true, если запрос обработан.
 	/// Возвращает false, если запрос не соответствует обработчику
 	/// В случае ошибки кидает исключение
 	HTTPHandlingResult processRequest(HTTPContext context);
+
+	// Возвращает информацию об обработчике в формате JSON
+	JSONValue toStdJSON();
 }
 
 /// Интерфейс составного обработчика HTTP-запросов

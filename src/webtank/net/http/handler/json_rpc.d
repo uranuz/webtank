@@ -135,6 +135,16 @@ public:
 		return this;
 	}
 
+	override JSONValue toStdJSON()
+	{
+		import webtank.common.std_json.to: toStdJSON;
+		return JSONValue([
+			`kind`: JSONValue(typeof(this).stringof),
+			`uriPattern`: _uriPattern.toStdJSON(),
+			`methods`: _methods.keys.toStdJSON()
+		]);
+	}
+
 protected:
 
 	JSON_RPC_WrapperMethod[string] _methods;

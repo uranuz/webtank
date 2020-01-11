@@ -6,6 +6,7 @@ import webtank.ivy.service_mixin: IIvyServiceMixin;
 class IvyViewService: IWebService, IIvyServiceMixin
 {
 	import webtank.net.service.config: ServiceConfigImpl, RoutingConfigEntry;
+	import webtank.net.service.api_info_mixin: ServiceAPIInfoMixin;
 	import webtank.net.http.handler.iface: IHTTPHandler, HTTPHandlingResult;
 	import webtank.net.http.handler.router: HTTPRouter;
 	import webtank.net.http.handler.web_form_api_page_route: joinWebFormAPI;
@@ -28,6 +29,7 @@ class IvyViewService: IWebService, IIvyServiceMixin
 
 	mixin ServiceConfigImpl;
 	mixin IvyServiceMixin;
+	mixin ServiceAPIInfoMixin;
 protected:
 
 	string _serviceName;
@@ -102,6 +104,10 @@ public:
 		_rights = new AccessRightController(
 			new IvyAccessRuleFactory(this.ivyEngine),
 			new RightRemoteSource(this, *authNamePtr, `accessRight.list`));
+	}
+
+	override void beforeRunServer() {
+		_initAPIMixin();
 	}
 
 	void _addPageRoutes()

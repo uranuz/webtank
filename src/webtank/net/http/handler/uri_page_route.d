@@ -35,4 +35,15 @@ public:
 		_handler(context);
 		return HTTPHandlingResult.handled; // Запрос обработан
 	}
+
+	import std.json: JSONValue;
+
+	override JSONValue toStdJSON()
+	{
+		import webtank.common.std_json.to: toStdJSON;
+		return JSONValue([
+			`kind`: JSONValue(typeof(this).stringof),
+			`uriPattern`: _uriPattern.toStdJSON()
+		]);
+	}
 }

@@ -83,4 +83,13 @@ mixin template BaseCompositeHTTPHandlerImpl()
 		_handlers ~= handler;
 		return this;
 	}
+
+	import std.json: JSONValue;
+
+	JSONValue handlersToStdJSON()
+	{
+		import std.algorithm: map;
+		import std.array: array;
+		return JSONValue(_handlers.map!( (it) => it.toStdJSON() ).array);
+	}
 }

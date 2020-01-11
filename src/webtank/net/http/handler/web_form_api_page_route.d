@@ -49,6 +49,15 @@ public:
 
 		return HTTPHandlingResult.handled; // Запрос обработан
 	}
+
+	override JSONValue toStdJSON()
+	{
+		import webtank.common.std_json.to: toStdJSON;
+		return JSONValue([
+			`kind`: JSONValue(typeof(this).stringof),
+			`uriPattern`: _uriPattern.toStdJSON()
+		]);
+	}
 }
 
 import std.traits: isSomeFunction;

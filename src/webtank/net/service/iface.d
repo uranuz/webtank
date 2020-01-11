@@ -18,5 +18,6 @@ interface IWebService
 	ICompositeHTTPHandler rootRouter() @property;
 	IAuthController accessController() @property;
 	IRightController rightController() @property;
+	void beforeRunServer();
 	void stop();
 }

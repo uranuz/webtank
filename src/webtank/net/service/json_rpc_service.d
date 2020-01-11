@@ -8,6 +8,7 @@ import webtank.net.service.iface: IWebService;
 class JSON_RPCService: IWebService
 {
 	import webtank.net.service.config: ServiceConfigImpl, RoutingConfigEntry;
+	import webtank.net.service.api_info_mixin: ServiceAPIInfoMixin;
 	import webtank.net.http.handler.router: HTTPRouter;
 	import webtank.net.http.handler.json_rpc: JSON_RPC_Router;
 	import webtank.net.http.handler.uri_page_router: URIPageRouter;
@@ -20,6 +21,7 @@ class JSON_RPCService: IWebService
 	import std.json: JSONValue, parseJSON;
 
 	mixin ServiceConfigImpl;
+	mixin ServiceAPIInfoMixin;
 protected:
 	string _serviceName;
 
@@ -67,6 +69,10 @@ public:
 		this(serviceName);
 		_accessController = accessController;
 		_rights = rights;
+	}
+
+	override void beforeRunServer() {
+		_initAPIMixin();
 	}
 
 	private void _startLoging()
