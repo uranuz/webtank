@@ -257,18 +257,18 @@ AsyncResult _onIvyModule_init(
 
 	import webtank.ivy.rpc_client: remoteCallWebForm, IvyRPCCallResult;
 	import webtank.net.std_json_rpc_client: RemoteCallInfo;
+	import webtank.net.http.consts: JunkField;
 
 	DirValueAttr[string] dirAttrs = interp.getDirAttrs(entry.ivyMethod);
 	auto callOpts = _getCallOpts(dirAttrs, context, entry);
 	//context.junk[`ivyModule`] = entry.ivyModule.empty;
 	//context.junk[`ivyMethod`] = entry.ivyMethod;
-	if( auto moduleNamePtr = `moduleName` in dirAttrs )
+	if( auto moduleNamePtr = JunkField.ModuleName in dirAttrs )
 	{
 		enforce(
 			moduleNamePtr && moduleNamePtr.defaultValue.type == IvyDataType.String,
-			`Expected non-empty string as "moduleName" attribute`
-		);
-		context.junk[`moduleName`] = moduleNamePtr.defaultValue.str;
+			`Expected non-empty string as "` ~ JunkField.ModuleName ~ `" attribute`);
+		context.junk[JunkField.ModuleName] = moduleNamePtr.defaultValue.str;
 	}
 
 	IvyRPCCallResult rpcResult;

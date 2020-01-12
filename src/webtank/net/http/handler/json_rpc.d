@@ -60,10 +60,14 @@ public:
 
 	private void _processRequestInternal(HTTPContext context, ref JSONValue jResponse)
 	{
-		auto jMessageBody = context.request.messageBody.parseJSON();
+		import std.exception: enforce;
+		import std.algorithm: canFind;
+		import webtank.net.http.consts: JunkField;
 
-		if( jMessageBody.type != JSONType.object )
-			throw new JSON_RPC_Exception(`JSON-RPC message body must be of object type!!!`);
+		auto jMessageBody = context.request.messageBody.parseJSON();
+		enforce!JSON_RPC_Exception(
+			jMessageBody.type == JSONType.object,
+			`JSON-RPC message body must be of object type!!!`);
 
 		string jsonrpc;
 		if( auto jsonrpcPtr = "jsonrpc" in jMessageBody )
@@ -72,8 +76,9 @@ public:
 				jsonrpc = jsonrpcPtr.str;
 		}
 
-		if( jsonrpc != "2.0" )
-			throw new JSON_RPC_Exception(`Only version 2.0 of JSON-RPC protocol is supported!!!`);
+		enforce!JSON_RPC_Exception(
+			jsonrpc == "2.0",
+			`Only version 2.0 of JSON-RPC protocol is supported!!!`);
 
 		// Версия должна быть по протоколу. Раз мы проверили, что версия 2.0 - уже можно записать её в результат
 		jResponse["jsonrpc"] = jsonrpc;
@@ -83,42 +88,33 @@ public:
 			jResponse["id"] = *idPtr; // По протоколу возвращаем обратно идентификатор сообщения
 
 			// Костыль для получения идентификатора запроса в случае ошибки...
-			context.junk["jsonrpc-id"] = (*idPtr).toString();
+			context.junk[JunkField.JsonRpcId] = (*idPtr).toString();
 		} else {
 			jResponse["id"] = null; // По протоколу должны вернуть null, если нету в запросе
 		}
 
-		string methodName;
-		if( "method" in jMessageBody )
-		{
-			if( jMessageBody["method"].type == JSONType.string )
-				methodName = jMessageBody["method"].str;
-		}
-
-		if( methodName.length == 0 )
-			throw new JSON_RPC_Exception(`JSON-RPC method name must not be empty!!!`);
+		auto jMethodPtr = "method" in jMessageBody;
+		string methodName = (jMethodPtr && jMethodPtr.type == JSONType.string)? jMethodPtr.str: null;
+		enforce!JSON_RPC_Exception(
+			methodName.length > 0,
+			`Expected JSON-RPC method name`);
 
 		auto method = _methods.get(methodName, null);
+		enforce!JSON_RPC_Exception(
+			method !is null,
+			`JSON-RPC method "` ~ methodName ~ `" is not found by server!!!`);
 
-		if( method is null )
-			throw new JSON_RPC_Exception(`JSON-RPC method "` ~ methodName ~ `" is not found by server!!!`);
+		auto paramsPtr = "params" in jMessageBody;
 
-		//Запрос должен иметь элемент params, даже если параметров
-		//не передаётся. В последнем случае должно передаваться
-		//либо null в качестве параметра, либо пустой объект {}
-		if( "params" in jMessageBody )
-		{
-			auto paramsType = jMessageBody["params"].type;
+		enforce!JSON_RPC_Exception(
+			paramsPtr !is null,
+			`Expected JSON-RPC params field`);
 
-			//В текущей реализации принимаем либо объект (список поименованных параметров)
-			//либо null, символизирующий их отсутствие
-			if( paramsType != JSONType.object && paramsType != JSONType.null_ )
-				throw new JSON_RPC_Exception(`JSON-RPC "params" property should be of null or object type!!!`);
-		}
-		else
-			throw new JSON_RPC_Exception(`JSON-RPC "params" property should be in JSON request object!!!`);
+		enforce!JSON_RPC_Exception(
+			[JSONType.object, JSONType.null_].canFind(paramsPtr.type),
+			`JSON-RPC params field shoul be object or null`);
 
-		jResponse["result"] = method(jMessageBody["params"], context); // Вызов метода
+		jResponse["result"] = method(*paramsPtr, context); // Вызов метода
 	}
 
 	import std.traits: isSomeFunction, fullyQualifiedName;
@@ -162,6 +158,7 @@ template callJSON_RPC_Method(alias Method)
 	import std.json: JSONValue, JSONType;
 	import std.conv: to;
 	import std.typecons: Tuple;
+	import std.exception: enforce;
 
 	alias ParamTypes = Parameters!(Method);
 	alias ResultType = ReturnType!(Method);
@@ -170,20 +167,17 @@ template callJSON_RPC_Method(alias Method)
 
 	JSONValue callJSON_RPC_Method(ref const(JSONValue) jParams, HTTPContext context)
 	{
-		JSONValue result = null; // По-умолчанию в качестве результата null
-
 		Tuple!(ParamTypes) argTuple;
 		foreach( i, type; ParamTypes )
 		{
 			static if( is(type : HTTPContext) )
 			{
+				// В методе может использоваться производный класс HTTP-контекста
 				auto typedContext = cast(type) context;
-				if( !typedContext ) {
-					throw new JSON_RPC_Exception(
-						`Error in attempt to convert parameter "` ~ ParamNames[i] ~ `" to type "` ~ type.stringof ~ `". Context reference is null!`
-					);
-				}
-				argTuple[i] = typedContext; //Передаём контекст при необходимости
+				enforce!JSON_RPC_Exception(
+					typedContext !is null,
+					`Error in attempt to convert parameter "` ~ ParamNames[i] ~ `" to type "` ~ type.stringof ~ `". Context reference is null!`);
+				argTuple[i] = typedContext; // Передаём контекст при необходимости
 				continue;
 			}
 			else
@@ -195,11 +189,10 @@ template callJSON_RPC_Method(alias Method)
 				{
 					static if( is( MethDefaults[i] == void ) ) {
 						// Значения по умолчанию нет - значит отсутствие значения - ошибка
-						throw new JSON_RPC_Exception(
-							`Expected JSON-RPC parameter ` ~ ParamNames[i] ~ ` is not found in params object!!!`
-						);
+						enforce!JSON_RPC_Exception(false,
+							`Expected JSON-RPC parameter ` ~ ParamNames[i] ~ ` is not found in params object!!!`);
 					} else {
-						// Если метод имеет значение по умолчанию, то учитываем его
+						// Если параметр метода имеет значение по умолчанию, то учитываем его
 						argTuple[i] = MethDefaults[i];
 					}
 				}
@@ -208,11 +201,10 @@ template callJSON_RPC_Method(alias Method)
 
 		static if( is( ResultType == void ) ) {
 			Method(argTuple.expand);
+			return JSONValue();
 		} else {
-			result = toStdJSON( Method(argTuple.expand) );
+			return toStdJSON( Method(argTuple.expand) );
 		}
-
-		return result;
 	}
 }
 

@@ -141,3 +141,9 @@ shared static this()
 		HTTPStatus.NotExtended: "Not Extended"
 	];
 }
+
+// Известные названия полей в словаре HTTPContext.junk
+enum JunkField: string {
+	JsonRpcId = `jsonrpc-id`, // Идентификатор запроса по протоколу JSON-RPC
+	ModuleName = `moduleName` // Имя JavaScript-модуля интерфейсного компонента
+}
