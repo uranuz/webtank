@@ -14,7 +14,6 @@ else
 {
 	alias socket_t = size_t; // Workaround to compile on Windows
 }
-import core.thread: Thread;
 
 // Простой web-сервер без потоков обрабатывающий одно соединение на процесс
 class PlainServer: IWebServer

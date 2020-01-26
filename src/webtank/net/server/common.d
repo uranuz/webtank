@@ -103,7 +103,7 @@ void processRequest(Socket sock, IWebServer server)
 			return;
 		}
 
-		auto context = new HTTPContext(request, response, server);
+		auto context = server.service.createContext(request, response, server);
 
 		try {
 			//Запуск обработки HTTP-запроса

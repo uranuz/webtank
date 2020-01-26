@@ -36,19 +36,19 @@ interface ICompositeHTTPHandler: IHTTPHandler
 
 ///Тип обработчика: ошибка при обработке HTTP-запроса
 ///		error - перехваченное исключение, которое нужно обработать
-alias bool delegate(Throwable error, HTTPContext context) ErrorHandler;
+alias ErrorHandler = bool delegate(Throwable error, HTTPContext context);
 
 ///Тип обработчика: начало опроса обработчика HTTP-запроса
-alias void delegate(HTTPContext context) PrePollHandler;
+alias PrePollHandler = void delegate(HTTPContext context);
 
 ///Тип обработчика: начало опроса обработчика HTTP-запроса
 ///		isMatched - имеет значение true, если запрос соответствует данному обработчику, т.е
 ///			он по формальным критериям определил, что хочет/может его обработать. Иначе - false
-alias void delegate(HTTPContext context, bool isMatched) PostPollHandler;
+alias PostPollHandler = void delegate(HTTPContext context, bool isMatched);
 
 // ///Тип обработчика: начало обработки HTTP-запроса
 // alias void delegate(HTTPContext context) PreProcessHandler;
 
 ///Тип обработчика: завершение обработки HTTP-запроса
 ///		result - результат обработки запроса обработчиком
-alias void delegate(HTTPContext context, HTTPHandlingResult result) PostProcessHandler;
+alias PostProcessHandler = void delegate(HTTPContext context, HTTPHandlingResult result);

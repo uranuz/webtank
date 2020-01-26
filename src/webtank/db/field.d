@@ -1,18 +1,23 @@
-module webtank.db.database_field;
+module webtank.db.field;
 
-import std.json, std.conv, std.traits, std.datetime;
+import webtank.datctrl.iface.data_field: IDataField, IBaseDataField;
+import webtank.db.iface.query_result: IDBQueryResult;
 
-import webtank.datctrl.iface.data_field;
-import webtank.db.database;
-import webtank.datctrl.record_format;
-import webtank.datctrl.enum_format;
 
-import webtank.common.conv;
-import std.exception: enforce;
-
-///Класс ключевого поля
-class DatabaseField(FormatT) : IDataField!( FormatT )
+/// Поле данных, работющее на чтение напрямую с результатом запроса из базы данных
+class DatabaseField(FormatT): IDataField!FormatT
 {
+	import webtank.common.conv: conv;
+	import std.exception: enforce;
+
+	import std.json, std.conv, std.traits, std.datetime;
+
+	import webtank.datctrl.iface.data_field;
+	import webtank.db;
+	import webtank.datctrl.record_format;
+	import webtank.datctrl.enum_format;
+	
+	
 	alias FormatType = FormatT;
 	alias ValueType = DataFieldValueType!(FormatType);
 
@@ -184,15 +189,17 @@ public:
 	} //override
 }
 
-IBaseDataField[] makePostgreSQLDataFields(RecordFormatType)(IDBQueryResult queryResult, RecordFormatType format)
+IBaseDataField[] makeDataFields(RecordFormatType)(IDBQueryResult queryResult, RecordFormatType format)
 {
-	import std.exception: enforce;
-	import std.conv: text;
 	import webtank.datctrl.memory_data_field: MemoryDataField;
+	import webtank.datctrl.enum_format: isEnumFormat;
 	import webtank.common.optional: Optional;
 
+	import std.exception: enforce;
+	import std.conv: text;
+
 	alias fieldNames = RecordFormatType.tupleOfNames;
-	enforce(queryResult !is null, `Expectes instance of IDBQueryResult`);
+	enforce(queryResult !is null, `Expected instance of IDBQueryResult`);
 	enforce(
 		fieldNames.length <= queryResult.fieldCount,
 		`Expected at least ` ~ fieldNames.length.text
@@ -259,8 +266,8 @@ unittest
 		PrimaryKey!(size_t, "num"),
 		string, "name"
 	)();
-	IDBQueryResult pgResult;
-	IBaseDataField[] dataFields = makePostgreSQLDataFields(pgResult, recFormat);
+	IDBQueryResult queryResult;
+	IBaseDataField[] dataFields = makeDataFields(queryResult, recFormat);
 	auto baseRS = new RecordSet(dataFields);
 	auto rs = TypedRecordSet!(typeof(recFormat), IBaseRecordSet)(baseRS);
 }

@@ -28,21 +28,21 @@ protected:
 	bool _isStopped = false;
 
 public:
-	this(ushort port, IWebService service)
+	this(ushort port, IWebService srv)
 	{
 		import std.exception: enforce;
-		enforce(service, `Service object expected`);
+		enforce(srv, `Service object expected`);
 		_port = port;
-		_service = service;
+		_service = srv;
 		_isShared = false;
 	}
 
-	this(socket_t socketHandle, IWebService service)
+	this(socket_t socketHandle, IWebService srv)
 	{
 		import std.exception: enforce;
-		enforce(service, `Service object expected`);
+		enforce(srv, `Service object expected`);
 		_socketHandle = socketHandle;
-		_service = service;
+		_service = srv;
 		_isShared = true;
 	}
 
@@ -98,13 +98,13 @@ protected:
 	IWebServer _server;
 
 public:
-	this(Socket sock, IWebServer server)
+	this(Socket sock, IWebServer srv)
 	{
 		import std.exception: enforce;
 		enforce(sock, `Socket object expected`);
-		enforce(server, `Server object expected`);
+		enforce(srv, `Server object expected`);
 		_socket = sock;
-		_server = server;
+		_server = srv;
 		super(&_work);
 	}
 

@@ -1,11 +1,12 @@
 module webtank.net.service.json_rpc_service;
 
 import webtank.net.service.iface: IWebService;
+import webtank.db.iface.factory: IDatabaseFactory;
 
 // Класс основного сервиса работающего по протоколу JSON-RPC.
 // Служит для чтения и хранения конфигурации, единого доступа к логам,
 // маршрутизации и выполнения аутентификации запросов
-class JSON_RPCService: IWebService
+class JSON_RPCService: IWebService, IDatabaseFactory
 {
 	import webtank.net.service.config: ServiceConfigImpl, RoutingConfigEntry;
 	import webtank.net.service.api_info_mixin: ServiceAPIInfoMixin;
@@ -17,10 +18,15 @@ class JSON_RPCService: IWebService
 	import webtank.net.utils: makeErrorMsg;
 	import webtank.security.auth.iface.controller: IAuthController;
 	import webtank.security.right.iface.controller: IRightController;
+	import webtank.db.per_thread_pool_mixin: DBPerThreadPoolMixin;
+	import webtank.net.http.input: HTTPInput;
+	import webtank.net.http.output: HTTPOutput;
+	import webtank.net.server.iface: IWebServer;
 
 	import std.json: JSONValue, parseJSON;
 
 	mixin ServiceConfigImpl;
+	mixin DBPerThreadPoolMixin;
 	mixin ServiceAPIInfoMixin;
 protected:
 	string _serviceName;
@@ -47,6 +53,8 @@ public:
 		_serviceName = serviceName;
 		readConfig();
 		_startLoging();
+
+		_initDBPool();
 
 		_rootRouter = new HTTPRouter;
 		enforce("siteJSON_RPC" in virtualPaths, `Failed to get JSON-RPC virtual path!`);
@@ -100,14 +108,20 @@ public:
 		return _loger;
 	}
 
-	import webtank.db.database: DBLogInfo, DBLogInfoType;
+	override HTTPContext createContext(HTTPInput request, HTTPOutput response, IWebServer server) {
+		return new HTTPContext(request, response, server);
+	}
+
+	import webtank.db.iface.database: DBLogInfo;
+
 	// Метод перенаправляющий логи БД в файл
 	void databaseLogerMethod(DBLogInfo logInfo)
 	{
-		import std.datetime;
-		import std.conv: text;
-		
-		if( !_databaseLoger ) {
+		import webtank.db.consts: DBLogInfoType;
+
+		import std.datetime: Clock;
+
+		if( _databaseLoger is null ) {
 			return;
 		}
 		LogEvent wtLogEvent;
@@ -118,34 +132,27 @@ public:
 		}
 
 		wtLogEvent.text = `Database driver: ` ~ logInfo.msg;
-		wtLogEvent.timestamp = std.datetime.Clock.currTime();
+		wtLogEvent.timestamp = Clock.currTime();
 
 		_databaseLoger.writeEvent(wtLogEvent);
 	}
 
 	private void _subscribeRoutingEvents()
 	{
-		import std.exception: assumeUnique;
-		import std.conv;
-
 		// Логирование приходящих JSON-RPC запросов для отладки
-		_jsonRPCRouter.onPostPoll ~= ( (HTTPContext context, bool) {
-			import std.conv: to;
-			string msg = "Received JSON-RPC request. Headers:\r\n" ~ context.request.headers.toAA().to!string;
-			//debug
-			msg ~=  "\r\nMessage body:\r\n" ~ context.request.messageBody;
-
-			_loger.info(msg);
-		});
+		_jsonRPCRouter.onPostPoll ~= &_logRequest;
 
 		// Логирование приходящих web-form API запросов для отладки
-		_pageRouter.onPostPoll ~= ( (HTTPContext context, bool) {
-			import std.conv: to;
-			string msg = "Received JSON-RPC request. Headers:\r\n" ~ context.request.headers.toAA().to!string;
-			debug msg ~=  "\r\nMessage body:\r\n" ~ context.request.messageBody;
+		_pageRouter.onPostPoll ~= &_logRequest;
+	}
 
-			_loger.info(msg);
-		});
+	void _logRequest(HTTPContext context, bool)
+	{
+		import std.conv: to;
+		string msg = "Received JSON-RPC request. Headers:\r\n" ~ context.request.headers.toAA().to!string;
+		debug msg ~=  "\r\nMessage body:\r\n" ~ context.request.messageBody;
+
+		_loger.info(msg);
 	}
 
 	override HTTPRouter rootRouter() @property

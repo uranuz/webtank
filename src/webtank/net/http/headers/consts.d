@@ -1,5 +1,7 @@
 module webtank.net.http.headers.consts;
 
+public import webtank.net.http.headers.cookie.consts;
+
 enum HTTPHeader
 {
 	// Заголовки используемые библиотекой

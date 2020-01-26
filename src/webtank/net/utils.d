@@ -1,24 +1,6 @@
  module webtank.net.utils;
 
- import std.utf, std.conv;
-
-//Функция возвращает переданную строку с заменой экранированными кавычками для БД postgresql
-string PGEscapeStr(string srcStr, string quoteSubst = "''" )
-{	dstring result;
-	immutable dQuoteSubst = toUTF32(quoteSubst);
-	auto str = toUTF32(srcStr);
-	size_t i = 0;
-	size_t lastQuotePos = size_t.max;
-	for( ; i < str.length; i++ )
-	{	if( str[i] == '\'' )
-		{	result ~= str[ (lastQuotePos + 1) .. i ] ~ dQuoteSubst ;
-			lastQuotePos = i;
-		}
-	}
-	result ~= str[ (lastQuotePos + 1) .. $ ];
-	return toUTF8(result);
-}
-
+import std.utf, std.conv;
 
 ///Функция "очистки" текста от HTML-тэгов
 string HTMLEscapeText(string srcStr)

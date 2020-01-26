@@ -13,12 +13,12 @@ import webtank.security.right.iface.data_source:
 	roleRecFormat,
 	rightRecFormat,
 	groupObjectsRecFormat;
-import webtank.net.service.iface: IWebService;
+import webtank.net.service.iface: IServiceConfig;
 
 class RightRemoteSource: IRightDataSource
 {
 private:
-	IWebService _thisService;
+	IServiceConfig _config;
 	string _serviceName;
 	string _methodName;
 	import std.meta: AliasSeq;
@@ -41,16 +41,16 @@ private:
 	TypedRecordSet!(typeof(rightRecFormat), IBaseRecordSet) _rights;
 	TypedRecordSet!(typeof(groupObjectsRecFormat), IBaseRecordSet) _groupObjects;
 public:
-	this(IWebService thisService, string serviceName, string methodName)
+	this(IServiceConfig config, string serviceName, string methodName)
 	{
 		import std.exception: enforce;
-		enforce(thisService, `Expected current service link for getting configuration`);
+		enforce(config, `Expected current service config object`);
 		enforce(serviceName.length, `Expected rights source endpoint name`);
 		enforce(methodName.length, `Expected rights source method name`);
 
 		_serviceName = serviceName;
 		_methodName = methodName;
-		_thisService = thisService;
+		_config = config;
 	}
 
 	void _assureLoaded()
@@ -65,7 +65,7 @@ public:
 		import webtank.net.std_json_rpc_client: remoteCall;
 		import std.exception: enforce;
 
-		JSONValue jRightsData = _thisService.endpoint(_serviceName).remoteCall!JSONValue(_methodName);
+		JSONValue jRightsData = _config.endpoint(_serviceName).remoteCall!JSONValue(_methodName);
 
 		import webtank.common.std_json.from: fromStdJSON;
 		foreach( Meta; RightObjMetas )

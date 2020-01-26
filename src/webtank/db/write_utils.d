@@ -69,7 +69,7 @@ template WalkFields(string recordVar, string payload)
 	}).format(recordVar, payload);
 }
 
-import webtank.db.database: IDatabase;
+import webtank.db: IDatabase;
 import webtank.common.optional: Optional;
 
 Optional!size_t insertOrUpdateTableByNum(
@@ -87,7 +87,7 @@ Optional!size_t insertOrUpdateTableByNum(
 	import std.array: join;
 	import std.conv: text, to;
 
-	import webtank.db.database: IDBQueryResult;
+	import webtank.db.iface.query_result: IDBQueryResult;
 
 	enforce(fieldNames.length == fieldValues.length, `Field names and values count must be equal`);
 	enforce(safeFieldNames.length == safeFieldValues.length, `Safe field names and values count must be equal`);

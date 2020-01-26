@@ -1,4 +1,4 @@
-module webtank.db.datctrl_joint;
+module webtank.db.datctrl;
 ///Функционал, объединяющий работу с БД и с набором записей
 
 import std.conv;
@@ -9,8 +9,10 @@ import webtank.datctrl.record_set;
 import webtank.datctrl.iface.record_set;
 import webtank.datctrl.typed_record_set;
 import webtank.datctrl.enum_format;
-import webtank.db.database;
-import webtank.db.database_field;
+import webtank.db;
+import webtank.db.field;
+
+import webtank.db.iface.query_result: IDBQueryResult;
 
 auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT format)
 {
@@ -24,7 +26,7 @@ auto getRecordSet(RecordFormatT)(IDBQueryResult queryResult, RecordFormatT forma
 	
 	return TypedRecordSet!(RecordFormatT, RecordSetIface)(
 		new RecordSetT(
-			makePostgreSQLDataFields(queryResult, format),
+			makeDataFields(queryResult, format),
 			RecordFormatT.getKeyFieldIndex!()));
 }
 

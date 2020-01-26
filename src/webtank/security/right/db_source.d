@@ -2,8 +2,8 @@ module webtank.security.right.db_source;
 
 import webtank.datctrl.record_format: RecordFormat;
 import webtank.datctrl.iface.data_field: PrimaryKey;
-import webtank.db.datctrl_joint: getRecordSet;
-import webtank.db.database: IDatabase;
+import webtank.db.datctrl: getRecordSet;
+import webtank.db.iface.factory: IDatabaseFactory;
 import webtank.datctrl.iface.record_set: IBaseRecordSet;
 import webtank.datctrl.typed_record_set: TypedRecordSet;
 
@@ -17,16 +17,14 @@ import webtank.security.right.iface.data_source:
 
 class RightDatabaseSource: IRightDataSource
 {
-private:
-	alias GetDBFunc = IDatabase delegate();
-	GetDBFunc _getDBFunc;
+	private IDatabaseFactory _dbFactory;
 
 public:
-	this(GetDBFunc getDBFunc)
+	this(IDatabaseFactory dbFactory)
 	{
 		import std.exception: enforce;
-		enforce(getDBFunc !is null, `Expected database connection function!`);
-		_getDBFunc = getDBFunc;
+		enforce(dbFactory !is null, `Expected database connection function!`);
+		_dbFactory = dbFactory;
 	}
 
 	public override {
@@ -68,5 +66,9 @@ public:
 			from access_group_object
 			`).getRecordSet(groupObjectsRecFormat);
 		}
+	}
+
+	auto _getDBFunc() {
+		return _dbFactory.getDB(`authDB`);
 	}
 }

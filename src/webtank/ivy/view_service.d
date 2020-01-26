@@ -21,6 +21,9 @@ class IvyViewService: IWebService, IIvyServiceMixin
 	import webtank.ivy.access_rule_factory: IvyAccessRuleFactory;
 	import webtank.ivy.rights: IvyUserRights;
 	import webtank.ivy.user: IvyUserIdentity;
+	import webtank.net.http.input: HTTPInput;
+	import webtank.net.http.output: HTTPOutput;
+	import webtank.net.server.iface: IWebServer;
 
 	import ivy.interpreter.data_node: IvyData;
 	import webtank.ivy.service_mixin: IvyServiceMixin, ViewServiceURIPageRoute, processViewRequest;
@@ -80,15 +83,15 @@ public:
 		_rootRouter.joinWebFormAPI!getCompiledTemplate("/dyn/server/template");
 	}
 
-	this(string serviceName, string pageURIPatternStr, IAuthController accessController, IRightController rights)
+	this(string serviceName, string pageURIPatternStr, AuthClientController ac, AccessRightController rc)
 	{
 		import std.exception: enforce;
-		enforce(accessController, `Access controller expected`);
-		enforce(rights, `Right controller expected`);
+		enforce(ac, `Access controller expected`);
+		enforce(rc, `Right controller expected`);
 		this(serviceName, pageURIPatternStr);
 
-		_accessController = accessController;
-		_rights = rights;
+		_accessController = ac;
+		_rights = rc;
 	}
 
 	this(string serviceName, string pageURIPatternStr, bool isSecured)
@@ -98,9 +101,9 @@ public:
 
 		this(serviceName, pageURIPatternStr);
 		auto authNamePtr = `authService` in this.serviceDeps;
-		enforce(authNamePtr !is null && authNamePtr.length > 0, `Authentication service require in serviceDeps config option`);
+		enforce(authNamePtr !is null && authNamePtr.length > 0, `Authentication service required in serviceDeps config option`);
 
-		_accessController = new AuthClientController;
+		_accessController = new AuthClientController(this);
 		_rights = new AccessRightController(
 			new IvyAccessRuleFactory(this.ivyEngine),
 			new RightRemoteSource(this, *authNamePtr, `accessRight.list`));
@@ -130,6 +133,10 @@ public:
 		return _loger;
 	}
 
+	override HTTPContext createContext(HTTPInput request, HTTPOutput response, IWebServer server) {
+		return new HTTPContext(request, response, server);
+	}
+
 	private void _startLoging()
 	{
 		import std.path: buildNormalizedPath;
@@ -151,25 +158,29 @@ public:
 	private void _subscribeRoutingEvents()
 	{
 		import webtank.net.utils: makeErrorMsg;
+		import webtank.net.http.consts: HTTPStatus;
 		_pageRouter.onError.join( (Exception ex, HTTPContext context)
 		{
 			auto messages = makeErrorMsg(ex);
 			loger.error(messages.details);
 			renderResult(IvyData(messages.userError), context);
-			context.response.headers[`status-code`] = `500`;
-			context.response.headers[`reason-phrase`] = `Internal Server Error`;
+			context.response.headers.statusCode = HTTPStatus.InternalServerError;
 			return true; // Ошибка обработана
 		});
 	}
 
-	IAuthController accessController() @property {
-		enforce(_accessController !is null, `View service access controller is not initialized!`);
-		return _accessController;
+	override AuthClientController accessController() @property
+	{
+		auto ac = cast(AuthClientController) _accessController;
+		enforce(ac !is null, `Expected AuthClientController`);
+		return ac;
 	}
 
-	override IRightController rightController() @property {
-		enforce(_rights !is null, `View service rights controller is not initialized!`);
-		return _rights;
+	override AccessRightController rightController() @property
+	{
+		auto rc = cast(AccessRightController) _rights;
+		enforce(rc !is null, `Expected AccessRightController`);
+		return rc;
 	}
 
 	override void stop()
@@ -268,8 +279,6 @@ public:
 			return;
 		}
 
-		AccessRightController rightController = cast(AccessRightController) ctx.service.rightController;
-		enforce(rightController !is null, `rightController is not of type AccessRightController or null`);
 		auto rights = getAccessRightList(rightController.rightSource);
 		IvyData ivyRights;
 		if( ctx.user.isAuthenticated() ) {

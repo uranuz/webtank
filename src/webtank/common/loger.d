@@ -184,6 +184,22 @@ public:
 		writeEvent( event );
 	}
 
+	void write(Throwable exc, LogEventType eventType)
+	{
+		import std.datetime;
+		import core.thread: Thread, ThreadID;
+		LogEvent event;
+		event.type = eventType;
+		event.text = exc.msg;
+		event.title = typeid(exc).toString();
+		event.file = exc.file;
+		event.line = exc.line;
+		event.timestamp = std.datetime.Clock.currTime();
+		event.threadId = Thread.getThis().id;
+
+		writeEvent( event );
+	}
+
 
 	/++
 	$(LANG_EN
@@ -252,6 +268,60 @@ public:
 		string funcName = __FUNCTION__, string prettyFuncName = __PRETTY_FUNCTION__,
 		string mod = __MODULE__ )
 	{	write( LogEventType.trace, text, title, file, line, funcName, prettyFuncName, mod ); }
+
+	/++
+	$(LANG_EN
+		Write exception info to log
+	)
+	$(LANG_RU
+		Записать информацию об исключении в журнал
+	)
+	+/
+	void fatal(Throwable exc) {
+		write(exc, LogEventType.fatal);
+	}
+
+	/++
+		ditto
+	+/
+	void crit(Throwable exc) {
+		write(exc, LogEventType.crit);
+	}
+
+	/++
+		ditto
+	+/
+	void error(Throwable exc) {
+		write(exc, LogEventType.error);
+	}
+
+	/++
+		ditto
+	+/
+	void warn(Throwable exc) {
+		write(exc, LogEventType.warn);
+	}
+
+	/++
+		ditto
+	+/
+	void info(Throwable exc) {
+		write(exc, LogEventType.info);
+	}
+
+	/++
+		ditto
+	+/
+	void dbg(Throwable exc) {
+		write(exc, LogEventType.dbg);
+	}
+
+	/++
+		ditto
+	+/
+	void trace(Throwable exc) {
+		write(exc, LogEventType.trace);
+	}
 
 	abstract void stop();
 }

@@ -1,5 +1,7 @@
 module webtank.net.http.consts;
 
+public import webtank.net.http.headers.consts;
+
 enum HTTPStatus: ushort
 {
 	///1xx: Informational

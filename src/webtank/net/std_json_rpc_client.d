@@ -123,6 +123,7 @@ private void _checkJSON_RPCErrors(ref JSONValue response)
 
 
 import webtank.net.http.context: HTTPContext;
+import webtank.net.http.input: HTTPInput;
 import webtank.net.http.headers.consts: HTTPHeader;
 private static immutable _allowedHeaders = [
 	HTTPHeader.Accept,
@@ -140,9 +141,9 @@ private static immutable _allowedHeaders = [
 	HTTPHeader.SetCookie
 ];
 /// Извлекает разрешенные HTTP заголовки из запроса
-string[][string] getAllowedRequestHeaders(HTTPContext ctx)
+string[][string] getAllowedRequestHeaders(HTTPInput request)
 {
-	auto headers = ctx.request.headers;
+	auto headers = request.headers;
 
 	string[][string] result;
 	foreach( name; _allowedHeaders )
@@ -154,6 +155,10 @@ string[][string] getAllowedRequestHeaders(HTTPContext ctx)
 	}
 
 	return result;
+}
+
+string[][string] getAllowedRequestHeaders(HTTPContext ctx) {
+	return ctx.request.getAllowedRequestHeaders();
 }
 
 /++

@@ -31,22 +31,22 @@ protected:
 	bool _isStopped = false;
 
 public:
-	this(ushort port, IWebService service, size_t threadCount)
+	this(ushort port, IWebService srv, size_t threadCount)
 	{
 		import std.exception: enforce;
-		enforce(service, `Service object expected`);
+		enforce(srv !is null, `Service object expected`);
 		_port = port;
-		_service = service;
+		_service = srv;
 		_threadCount = threadCount;
 		_isShared = false;
 	}
 
-	this(socket_t socketHandle, IWebService service, size_t threadCount)
+	this(socket_t socketHandle, IWebService srv, size_t threadCount)
 	{
 		import std.exception: enforce;
-		enforce(service, `Service object expected`);
+		enforce(srv !is null, `Service object expected`);
 		_socketHandle = socketHandle;
-		_service = service;
+		_service = srv;
 		_threadCount = threadCount;
 		_isShared = true;
 	}
@@ -55,8 +55,8 @@ public:
 	{
 		while( !_isStopped )
 		{
-			try
-			{
+			//try
+			//{
 				Socket client = _listener.accept();
 				if( client is null )
 				{
@@ -65,12 +65,12 @@ public:
 				}
 
 				_taskPool.put(task(&processRequest, client, this));
-			}
-			catch(Throwable exc)
-			{
-				_service.loger.fatal( makeErrorMsg(exc).userError );
-				throw exc;
-			}
+			//}
+			//catch(Throwable exc)
+			//{
+			//	_service.loger.fatal( makeErrorMsg(exc).userError );
+			//	throw exc;
+			//}
 		}
 	}
 

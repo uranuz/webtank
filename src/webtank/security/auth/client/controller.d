@@ -1,61 +1,61 @@
 module webtank.security.auth.client.controller;
 
 import webtank.security.auth.iface.controller: IAuthController;
-import webtank.security.auth.iface.user_identity: IUserIdentity;
-
-import webtank.security.auth.common.anonymous_user: AnonymousUser;
-import webtank.security.auth.common.user_identity: CoreUserIdentity;
-import webtank.security.auth.common.session_id: SessionId;
-
-import webtank.net.http.context: HTTPContext;
-import webtank.net.utils;
-
-
-//import mkk.common.service;
-import webtank.net.std_json_rpc_client;
 
 ///Класс управляет выдачей билетов для доступа
 class AuthClientController: IAuthController
 {
-	this() {}
-public:
-	///Реализация метода аутентификации контролёра доступа
-	override IUserIdentity authenticate(Object context)
+	import webtank.net.service.iface: IServiceConfig;
+	import webtank.net.std_json_rpc_client: RemoteCallInfo, getAllowedRequestHeaders, remoteCall;
+	import webtank.net.http.input: HTTPInput;
+	import webtank.security.auth.iface.user_identity: IUserIdentity;
+
+	import webtank.security.auth.common.anonymous_user: AnonymousUser;
+	import webtank.security.auth.common.user_identity: CoreUserIdentity;
+	import webtank.security.auth.common.session_id: SessionId;
+
+	import webtank.net.http.headers.cookie.consts: CookieName;
+	import webtank.security.auth.common.exception: AuthException;
+
+	import std.exception: enforce;
+
+	this(IServiceConfig config)
 	{
-		auto httpCtx = cast(HTTPContext) context;
-
-		if( httpCtx !is null ) {
-			return authenticateSession(httpCtx);
-		}
-		return new AnonymousUser;
+		enforce(config !is null, `Expected instance of IServiceConfig`);
+		_config = config;
 	}
+private:
+	IServiceConfig _config;
 
+public:
 	///Метод выполняет аутентификацию сессии для HTTP контекста
 	///Возвращает удостоверение пользователя
-	IUserIdentity authenticateSession(HTTPContext ctx)
+	override IUserIdentity authenticate(HTTPInput request)
 	{
-		//debug import std.stdio: writeln;
-		//debug writeln(`TRACE authenticateSession 1`);
 		import std.json: JSONType, JSONValue;
-		// Запрос получает минимальную информацию о пользователе по Ид. сессии в контексте
-		auto jUserInfo = ctx.endpoint(`authService`).remoteCall!JSONValue(`auth.baseUserInfo`);
-
-		//debug writeln(`TRACE authenticateSession jUserInfo: `, jUserInfo);
-
-		import std.exception: enforce;
-		enforce(jUserInfo.type == JSONType.object, `Base user info expected to be object!`);
-
-		if( `userNum` !in jUserInfo || jUserInfo[`userNum`].type != JSONType.integer ) {
-			return new AnonymousUser;
-		}
-		//debug writeln(`TRACE authenticateSession 2`);
-
 		import std.base64: Base64URL;
-		SessionId sid;
-		Base64URL.decode(ctx.request.cookies.get(`__sid__`), sid[]);
-
 		import std.algorithm: splitter, filter;
 		import std.array: array;
+		import std.exception: enforce;
+
+		// Запрос получает минимальную информацию о пользователе по Ид. сессии в контексте
+		auto callInfo = RemoteCallInfo(_config.endpoint(`authService`), getAllowedRequestHeaders(request));
+		JSONValue jUserInfo = callInfo.remoteCall!JSONValue(`auth.baseUserInfo`);
+
+		enforce!AuthException(
+			jUserInfo.type == JSONType.object,
+			`Base user info expected to be object!`);
+
+		auto userNumPtr = `userNum` in jUserInfo;
+		enforce!AuthException(
+			userNumPtr !is null,
+			`Expected "userNum" field in base user info`);
+		enforce!AuthException(
+			userNumPtr.type == JSONType.integer,
+			`Expected "userNum" field expected to be integer`);
+
+		SessionId sid;
+		Base64URL.decode(request.cookies.get(CookieName.SessionId), sid[]);
 
 		//Получаем информацию о пользователе из результата запроса: логин, имя, роли доступа
 		string login; string name; string[] accessRoles;
@@ -68,7 +68,6 @@ public:
 		if( auto it = `accessRoles` in jUserInfo ) {
 			accessRoles = it.type == JSONType.string? it.str.splitter(`;`).filter!( (it) => it.length > 0 ).array: null;
 		}
-		//debug writeln(`TRACE authenticateSession 3`);
 		return new CoreUserIdentity(login, name, accessRoles, /*data=*/null, sid);
 	}
 }

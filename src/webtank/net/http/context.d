@@ -9,17 +9,28 @@ class HTTPContext
 	import webtank.net.http.input: HTTPInput;
 	import webtank.net.http.output: HTTPOutput;
 	import webtank.security.auth.iface.user_identity: IUserIdentity;
+	import webtank.security.auth.common.anonymous_user: AnonymousUser;
 
 public:
-	this(HTTPInput request, HTTPOutput response, IWebServer server)
+	this(HTTPInput req, HTTPOutput resp, IWebServer srv)
 	{
-		import std.exception: enforce;
-		enforce(request, `Expected instance of HTTPInput`);
-		enforce(response, `Expected instance of HTTPOutput`);
-		enforce(server, `Expected instance of IWebServer`);
-		_request = request;
-		_response = response;
-		_server = server;
+		import std.exception: enforce, ifThrown;
+		_request = req;
+		_response = resp;
+		_server = srv;
+
+		// Проверяем, что все API работает
+		enforce(request !is null, `Expected instance of HTTPInput`);
+		enforce(response !is null, `Expected instance of HTTPOutput`);
+		enforce(server !is null, `Expected instance of IWebServer`);
+		enforce(service !is null, `Expected instance of IWebService`);
+		enforce(service.accessController !is null, `Expected instance of IAuthController`);
+
+		_userIdentity = ifThrown(service.accessController.authenticate(request), null);
+		if( _userIdentity is null ) {
+			_userIdentity = new AnonymousUser;
+		}
+		enforce(user !is null, `Expected instance of IUserIdentity`);
 	}
 
 	///Запрос к серверу по протоколу HTTP
@@ -43,18 +54,11 @@ public:
 	}
 
 	///Удостоверение пользователя
-	IUserIdentity user() @property
-	{
-		if( _userIdentity is null && service.accessController !is null ) {
-			_userIdentity = service.accessController.authenticate(this);
-		}
+	IUserIdentity user() @property {
 		return _userIdentity;
 	}
 
-	void user(IUserIdentity userIdentity) @property
-	{
-		import std.exception: enforce;
-		enforce(userIdentity !is null, `User identity must not be null`);
+	void user(IUserIdentity userIdentity) @property {
 		_userIdentity = userIdentity;
 	}
 
@@ -71,29 +75,23 @@ public:
 	}
 
 	void _setCurrentHandler(IHTTPHandler handler) {
-		_handlerList ~= handler;
+		_handlers ~= handler;
 	}
 
 	void _unsetCurrentHandler(IHTTPHandler handler)
 	{
-		if( _handlerList.length > 0 )
-		{	if( handler is _handlerList[$-1] )
-				_handlerList.length--;
-			else
-				throw new Exception("Mismatched current HTTP handler!!!");
-		}
-		else
-			throw new Exception("HTTP handler list is empty!!!");
+		import std.exception: enforce;
+		import std.range: back, empty, popBack;
+		enforce(!_handlers.empty, "HTTP handler list is empty!!!");
+		enforce(handler is _handlers.back, "Mismatched current HTTP handler!!!");
+		_handlers.popBack(); // drop handler from list
 	}
 
-	///Текущий выполняемый обработчик для HTTP-запроса
-	IHTTPHandler currentHandler() @property {
-		return _handlerList.length > 0? _handlerList[$-1]: null;
-	}
-
-	///Предыдущий обработчик HTTP-запроса
-	IHTTPHandler previousHandler() @property {
-		return _handlerList.length > 1? _handlerList[$-2]: null;
+	/// Текущий выполняемый обработчик для HTTP-запроса
+	IHTTPHandler currentHandler() @property
+	{
+		import std.range: back, empty;
+		return !_handlers.empty? _handlers.back: null;
 	}
 
 protected:
@@ -102,6 +100,6 @@ protected:
 	IWebServer _server;
 	IUserIdentity _userIdentity;
 
-	IHTTPHandler[] _handlerList;
+	IHTTPHandler[] _handlers;
 	string[string] _junk;
 }

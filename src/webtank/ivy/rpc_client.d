@@ -126,7 +126,7 @@ private void _checkIvyJSON_RPCErrors(ref IvyData response)
 
 		Exception ex;
 		auto errorDataPtr = "data" in *errorPtr;
-		if( errorDataPtr && errorDataPtr.type == IvyDataType.String )
+		if( errorDataPtr && errorDataPtr.type == IvyDataType.AssocArray )
 		{
 			auto errorFilePtr = "file" in *errorDataPtr;
 			auto errorLinePtr = "line" in *errorDataPtr;
@@ -140,7 +140,7 @@ private void _checkIvyJSON_RPCErrors(ref IvyData response)
 
 			auto backtracePtr = "backtrace" in *errorDataPtr;
 			if( backtracePtr && backtracePtr.type == IvyDataType.Array ) {
-				ex.info = new OverridenTraceInfo(backtracePtr.array.map!( (it) => it.str.dup ).array );
+				ex.info = new OverridenTraceInfo((*backtracePtr).array.map!( (it) => it.str.dup ).array );
 			}
 		} else {
 			ex = new Exception(errorMsg);

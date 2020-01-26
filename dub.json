@@ -19,9 +19,7 @@
 			"buildRequirements": [
 				"allowWarnings"
 			],
-			"excludedSourceFiles": [
-				"src/webtank/security/auth/client/*"
-			],
+			"excludedSourceFiles": [],
 			"dflags": [
 				"-lowmem"
 			]

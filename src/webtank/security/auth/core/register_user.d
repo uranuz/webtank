@@ -4,12 +4,11 @@ import std.datetime: DateTime;
 import std.algorithm: endsWith;
 import std.uuid: randomUUID;
 
-import webtank.security.auth.core.controller: minLoginLength, minPasswordLength;
+import webtank.security.auth.core.consts: minLoginLength, minPasswordLength;
 import webtank.security.auth.core.crypto: makePasswordHashCompat;
 import webtank.common.conv: fromPGTimestamp;
-import webtank.net.utils: PGEscapeStr;
-import webtank.db.datctrl_joint: getRecordSet;
-import webtank.db.database: queryParams;
+import webtank.db.datctrl: getRecordSet;
+import webtank.db: queryParams;
 import webtank.datctrl.record_format: RecordFormat, PrimaryKey, Writeable;
 import std.typecons: Tuple;
 import std.uuid: randomUUID, sha1UUID, UUID;
@@ -64,24 +63,13 @@ RegUserResult registerUser(alias getAuthDB)(
 	UUID confirmUUID = sha1UUID(randomUUID().toString(), sha1UUID(login));
 	string email_confirm_uuid = confirmUUID.toString();
 
-	import std.array: join;
-	string[] fieldNames;
-	string[] fieldValues;
-	static foreach( field; [`login`, `name`, `email`, `email_confirm_uuid`] )
-	{
-		fieldNames ~= field;
-		mixin(`fieldValues ~= "'" ~ PGEscapeStr(` ~ field ~ `) ~ "'";`);
-	}
-	
-	fieldNames ~= `reg_timestamp`;
-	fieldValues ~= `current_timestamp at time zone 'UTC'`;
-
 	// Сначала устанавливаем общую информацию о пользователе,
 	// и заставляем БД саму установить дату регистрации, чтобы не иметь проблем с временными зонами
-	auto addUserResult = getAuthDB().query(
-		`insert into site_user (` ~ fieldNames.join(`, `) ~ `) `
-		~ ` values(` ~ fieldValues.join(`, `) ~ `) `
-		~ ` returning num, 'user added' "status", reg_timestamp`
+	auto addUserResult = getAuthDB().queryParams(
+`insert into site_user (login, name, email, email_confirm_uuid, reg_timestamp)
+values($1, $2, $3, $4, current_timestamp at time zone 'UTC')
+returning num, 'user added' "status", reg_timestamp`,
+	login, name, email, email_confirm_uuid
 	).getRecordSet(addUserResultFmt);
 
 	if( addUserResult.length != 1 || addUserResult.front.get!"status"() != `user added` ) {
@@ -121,7 +109,6 @@ void checkEmailAddress(string emailAddress)
 
 void addUserRoles(alias getAuthDB)(size_t userId, string[] roles, bool overwrite = false)
 {
-	import std.algorithm: map;
 	import std.array: join;
 	import std.conv: text;
 	// При установке флага на перезапись ролей пользователя (overwrite)
@@ -143,9 +130,9 @@ void addUserRoles(alias getAuthDB)(size_t userId, string[] roles, bool overwrite
 	where new_ua_role.num in (select num from for_delete)
 	returning new_ua_role.num, 'delete' status`;
 
-	getAuthDB().query(`
+	getAuthDB().queryParams(`
 	with rolz(rol) as(
-		select unnest(ARRAY[` ~ roles.map!( (it) => "'" ~ PGEscapeStr(it) ~ "'" ).join(", ") ~ `]::text[])
+		select unnest($1::text[])
 	),
 	for_insert as(
 		select ` ~ userId.text ~ ` user_num, a_role.num role_num
@@ -159,5 +146,5 @@ void addUserRoles(alias getAuthDB)(size_t userId, string[] roles, bool overwrite
 	insert into user_access_role as new_ua_role (user_num, role_num)
 	select * from for_insert
 	returning new_ua_role.num, 'insert' status
-	` ~ (overwrite? deleteQuery: null));
+	` ~ (overwrite? deleteQuery: null), roles);
 }
