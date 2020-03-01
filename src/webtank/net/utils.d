@@ -84,13 +84,17 @@ string buildNormalPath(T...)(T args)
 	return result;
 }
 
-auto makeErrorMsg(Throwable error)
+Tuple!(
+	string, "userError",
+	string, "details"
+)
+makeErrorMsg(Throwable error)
 {
 	import std.typecons: Tuple;
-	import std.conv: text;
-	Tuple!(string, "userError", string, "details") res;
+	import std.conv: to;
+	typeof(return) res;
 
-	string debugInfo = "\r\nIn module " ~ error.file ~ ":" ~ error.line.text ~ ". Traceback:\r\n" ~ error.info.text;
+	string debugInfo = "\r\nIn module " ~ error.file ~ ":" ~ error.line.text ~ ". Backtrace:\r\n" ~ getBacktrace(error).to!string;
 	res.details = error.msg ~ debugInfo;
 	debug res.userError = res.details;
 	else res.userError = error.msg;
@@ -98,25 +102,32 @@ auto makeErrorMsg(Throwable error)
 	return res;
 }
 
+string[] getBacktrace(Throwable ex)
+{
+	import std.conv: to;
+	import core.exception: OutOfMemoryError;
+
+	string[] backTrace;
+	try {
+		foreach( inf; ex.info )
+			backTrace ~= inf.to!string;
+	} catch( OutOfMemoryError exc ) {} // Workaround for some bug in DefaultTraceInfo.opApply
+	return backTrace;
+}
+
 auto errorToJSON(Throwable ex)
 {
 	import std.json: JSONValue;
-	import std.array: appender;
 
-	JSONValue jErr = [
+	return JSONValue([
 		"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
 		"message": JSONValue(ex.msg),
 		"data": JSONValue([
 			"file": JSONValue(ex.file),
-			"line": JSONValue(ex.line)
+			"line": JSONValue(ex.line),
+			"backtrace": JSONValue(getBacktrace(ex))
 		])
-	];
-	
-	auto backTrace = appender!(string[])();
-	foreach( inf; ex.info )
-		backTrace ~= inf.idup;
-	jErr["data"]["backtrace"] = JSONValue(backTrace.data);
-	return jErr;
+	]);
 }
 
 import std.typecons: Tuple;
