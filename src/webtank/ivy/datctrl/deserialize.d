@@ -1,6 +1,6 @@
 module webtank.ivy.datctrl.deserialize;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
+import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.interpreter.data_node;
 import webtank.ivy.datctrl.record_adapter;
 import webtank.ivy.datctrl.recordset_adapter;
 import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;

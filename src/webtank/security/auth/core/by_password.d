@@ -13,7 +13,7 @@ import webtank.security.auth.iface.user_identity: IUserIdentity;
 // Бросается исключениями AuthException, если вход не выполнен, но процесс проходит штатно.
 // Другие типы исключений, вероятно, свидетельствуют об ошибке в алгоритме.
 // При успешном входе возвращает удостоверение пользователя
-IUserIdentity authenticateByPassword(
+IUserIdentity authByPasswordInternal(
 	IDatabaseFactory dbFactory,
 	string login,
 	string password,
@@ -135,32 +135,57 @@ returning 'authenticated'`,
 }
 
 import webtank.ivy.main_service: MainServiceContext;
+import std.typecons: Tuple;
+
 // Аутентификация по логину и паролю с установкой удостоверения пользователя в контекст,
 // а также обновления данных сессии в запросе и ответе.
 // Если вход не выполнен, но проходит штатно, то в контексте устанавливается удостоверение анонимного пользователя
 // Неожиданные ошибки входа будут выброшены наружу
-void authenticateByPassword(MainServiceContext ctx, string login, string password)
-{
+Tuple!(
+	string, `userLogin`,
+	bool, `isAuthFailed`,
+	bool, `isAuthenticated`
+)
+authByPassword(
+	MainServiceContext ctx,
+	string userLogin = null,
+	string userPassword = null,
+	string redirectTo = null
+) {
 	import webtank.net.http.headers.consts: CookieName, HTTPHeader;
 	import webtank.security.auth.common.user_identity: CoreUserIdentity;
 	import webtank.security.auth.common.anonymous_user: AnonymousUser;
 	import webtank.security.auth.common.exception: AuthException;
+	import webtank.net.uri: URI;
 
 	import std.base64: Base64URL;
 	import std.exception: ifThrown;
+	import std.range: empty;
+
+	typeof(return) res;
+
+	// Если логин или пароль пустые, то просто ничё ни делаем.
+	// Не считаем это даже за попытку аутентификации.
+	// Если пользователь до этого был залогинен, то у него ничего не меняется
+	if( userLogin.empty || userPassword.empty )
+		return res;
+	res.userLogin = userLogin;
 
 	string userIP = ctx.request.headers[HTTPHeader.XRealIP];
 	string userAgent = ctx.request.headers[HTTPHeader.UserAgent];
 
 	try {
-		ctx.user = authenticateByPassword(ctx.service, login, password, userIP, userAgent);
+		ctx.user = authByPasswordInternal(ctx.service, userLogin, userPassword, userIP, userAgent);
 	} catch(Exception exc) {
 		ctx.service.loger.warn(exc);
 	}
 
 	if( ctx.user is null ) {
+		res.isAuthFailed = true;
 		ctx.user = new AnonymousUser;
 	}
+
+	res.isAuthenticated = ctx.user.isAuthenticated && !res.isAuthFailed;
 
 	if( CoreUserIdentity mkkIdentity = cast(CoreUserIdentity) ctx.user )
 	{
@@ -184,4 +209,5 @@ void authenticateByPassword(MainServiceContext ctx, string login, string passwor
 		ctx.request.cookies[CookieName.SessionId] = null;
 		ctx.response.cookies[CookieName.SessionId] = null;
 	}
+	return res;
 }

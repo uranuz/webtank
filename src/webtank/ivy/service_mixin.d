@@ -23,7 +23,7 @@ mixin template IvyServiceMixin()
 	import ivy.programme: ExecutableProgramme, SaveStateResult;
 	import ivy.interpreter.interpreter: Interpreter;
 	import ivy.interpreter.data_node: IvyData;
-	import ivy.common: LogInfo, LogInfoType;
+	import ivy.loger: LogInfo, LogInfoType;
 	import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
 	
 	import ivy.interpreter.async_result: AsyncResult;
@@ -214,18 +214,24 @@ AsyncResult processViewRequest(
 	import std.exception: enforce;
 	import std.range: empty;
 
-	enforce(!entry.ivyModule.empty, `Ivy module name required`);
-	enforce(!entry.ivyMethod.empty, `Ivy method name required`);
-
-	IIvyServiceMixin ivyService = _getServiceMixin(context);
-	ExecutableProgramme ivyProg = ivyService.ivyEngine.getByModuleName(entry.ivyModule);
-	auto modRes = ivyProg.runSaveState(IvyData(), prepareIvyGlobals(context));
-
 	AsyncResult asyncRes = new AsyncResult();
+	try
+	{
+		enforce(!entry.ivyModule.empty, `Ivy module name required`);
+		enforce(!entry.ivyMethod.empty, `Ivy method name required`);
 
-	modRes.asyncResult.then((IvyData) {
-		_onIvyModule_init(context, modRes.interp, entry, asyncRes, coreParams);
-	}, &asyncRes.reject);
+		IIvyServiceMixin ivyService = _getServiceMixin(context);
+		ExecutableProgramme ivyProg = ivyService.ivyEngine.getByModuleName(entry.ivyModule);
+		auto modRes = ivyProg.runSaveState(IvyData(), prepareIvyGlobals(context));
+
+		modRes.asyncResult.then((IvyData) {
+			_onIvyModule_init(context, modRes.interp, entry, coreParams).then(asyncRes);
+		}, &asyncRes.reject);
+	}
+	catch( Throwable exc ) {
+		asyncRes.reject(exc);
+	}
+
 	return asyncRes;
 }
 
@@ -248,8 +254,24 @@ AsyncResult _onIvyModule_init(
 	HTTPContext context,
 	Interpreter interp,
 	ref RoutingConfigEntry entry,
-	AsyncResult asyncRes,
 	IvyData coreParams
+)
+{
+	AsyncResult asyncRes = new AsyncResult();
+	try {
+		_onIvyModule_initImpl(context, interp, entry, coreParams, asyncRes);
+	} catch(Throwable exc) {
+		asyncRes.reject(exc);
+	}
+	return asyncRes;
+}
+
+void _onIvyModule_initImpl(
+	HTTPContext context,
+	Interpreter interp,
+	ref RoutingConfigEntry entry,
+	IvyData coreParams,
+	AsyncResult asyncRes
 ) {
 	import ivy.interpreter.data_node: errorToIvyData;
 	import std.range: empty;
@@ -258,6 +280,7 @@ AsyncResult _onIvyModule_init(
 	import webtank.ivy.rpc_client: remoteCallWebForm, IvyRPCCallResult;
 	import webtank.net.std_json_rpc_client: RemoteCallInfo;
 	import webtank.net.http.consts: JunkField;
+	import webtank.net.http.headers.consts: HTTPHeader;
 
 	DirValueAttr[string] dirAttrs = interp.getDirAttrs(entry.ivyMethod);
 	auto callOpts = _getCallOpts(dirAttrs, context, entry);
@@ -311,8 +334,8 @@ AsyncResult _onIvyModule_init(
 		// Ошибки нет - выводим результат
 		_addViewParams(context, methodParams, dirAttrs);
 		interp.runModuleDirective(entry.ivyMethod, methodParams)
-			.then(&asyncRes.resolve, &asyncRes.reject);
-		return asyncRes;
+			.then(asyncRes);
+		return;
 	}
 
 	// Есть ошибка вызова метода
@@ -326,12 +349,11 @@ AsyncResult _onIvyModule_init(
 		ivyService.ivyEngine
 			.getByModuleName(entry.ivyModule)
 			.runMethod(entry.ivyMethod, errorParams, prepareIvyGlobals(context))
-			.then(&asyncRes.resolve, &asyncRes.reject);
+			.then(asyncRes);
 	} else {
 		// Шаблон ошибки не задан, то вываливаем ошибку как есть
 		asyncRes.reject(callError);
 	}
-	return asyncRes;
 }
 
 // Добавляем параметры, которые нужно передать напрямую в шаблон

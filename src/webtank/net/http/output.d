@@ -70,6 +70,14 @@ public:
 	/// на другой ресурс location
 	void redirect(string location)
 	{
+		import webtank.net.uri: URI;
+		import std.exception: enforce;
+		if( location.length == 0 )
+			return;
+
+		enforce(
+			URI.isValid(location),
+			`Нельзя сформировать HTTP-перенаправление на некорректный URI: ` ~ location);
 		_headers.statusCode = HTTPStatus.Found;
 		_headers[HTTPHeader.Location] = location;
 	}

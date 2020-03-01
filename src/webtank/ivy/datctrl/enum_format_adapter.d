@@ -1,6 +1,6 @@
 module webtank.ivy.datctrl.enum_format_adapter;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.common, ivy.interpreter.data_node;
+import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.interpreter.data_node;
 import webtank.ivy.datctrl.deserialize;
 
 import std.exception: enforce;

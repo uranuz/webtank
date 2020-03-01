@@ -92,6 +92,8 @@ makeErrorMsg(Throwable error)
 {
 	import std.typecons: Tuple;
 	import std.conv: to;
+	import trifle.backtrace: getBacktrace;
+
 	typeof(return) res;
 
 	string debugInfo = "\r\nIn module " ~ error.file ~ ":" ~ error.line.text ~ ". Backtrace:\r\n" ~ getBacktrace(error).to!string;
@@ -102,22 +104,10 @@ makeErrorMsg(Throwable error)
 	return res;
 }
 
-string[] getBacktrace(Throwable ex)
-{
-	import std.conv: to;
-	import core.exception: OutOfMemoryError;
-
-	string[] backTrace;
-	try {
-		foreach( inf; ex.info )
-			backTrace ~= inf.to!string;
-	} catch( OutOfMemoryError exc ) {} // Workaround for some bug in DefaultTraceInfo.opApply
-	return backTrace;
-}
-
 auto errorToJSON(Throwable ex)
 {
 	import std.json: JSONValue;
+	import trifle.backtrace: getBacktrace;
 
 	return JSONValue([
 		"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1

@@ -14,7 +14,7 @@ class HTTPContext
 public:
 	this(HTTPInput req, HTTPOutput resp, IWebServer srv)
 	{
-		import std.exception: enforce, ifThrown;
+		import std.exception: enforce;
 		_request = req;
 		_response = resp;
 		_server = srv;
@@ -25,12 +25,6 @@ public:
 		enforce(server !is null, `Expected instance of IWebServer`);
 		enforce(service !is null, `Expected instance of IWebService`);
 		enforce(service.accessController !is null, `Expected instance of IAuthController`);
-
-		_userIdentity = ifThrown(service.accessController.authenticate(request), null);
-		if( _userIdentity is null ) {
-			_userIdentity = new AnonymousUser;
-		}
-		enforce(user !is null, `Expected instance of IUserIdentity`);
 	}
 
 	///Запрос к серверу по протоколу HTTP
@@ -54,7 +48,19 @@ public:
 	}
 
 	///Удостоверение пользователя
-	IUserIdentity user() @property {
+	IUserIdentity user() @property
+	{
+		import std.exception: ifThrown;
+
+		// Удостоверение пользователя получаем по первому требованию,
+		// поскольку оно не всегда нужно
+		if( _userIdentity !is null ) {
+			return _userIdentity;
+		}
+		_userIdentity = ifThrown(service.accessController.authenticate(request), null);
+		if( _userIdentity is null ) {
+			_userIdentity = new AnonymousUser;
+		}
 		return _userIdentity;
 	}
 

@@ -1018,8 +1018,7 @@ template encodeURICustom(string allowedSpecChars = null, bool isFormEncoding = f
 	
 	string encodeURICustom(T : string)(T source) pure
 	{	
-		//import std.utf : toUTF8;
-		import std.array : appender;
+		import std.array: appender;
 
 		//auto source = toUTF8(src);
 		
@@ -1047,11 +1046,8 @@ template decodeURICustom(string allowedSpecChars = null, bool isFormEncoding = f
 	
 	string decodeURICustom(T : string)(T source) pure
 	{
-		//import std.utf : toUTF8;
-		import std.array : appender;
+		import std.array: appender;
 
-		//auto source = toUTF8(src);
-		
 		auto result = appender!string();
 		result.reserve(source.length);
 
@@ -1063,8 +1059,9 @@ template decodeURICustom(string allowedSpecChars = null, bool isFormEncoding = f
 				static if( isFormEncoding )
 					result ~= ' ';
 			}
-			else if( isUnreserved(c) || allowedSpecChars.contains(c) )
-			{	result ~= c; }
+			else if( isUnreserved(c) || allowedSpecChars.contains(c) ) {
+				result ~= c;
+			}
 			else if( c == '%' )
 			{
 				if( i + 2 < source.length )

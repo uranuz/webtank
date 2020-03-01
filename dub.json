@@ -13,6 +13,7 @@
 		{
 			"name": "with_ivy_and_db",
 			"dependencies": {
+				"trifle": ">=0.0.0",
 				"ivy": ">=0.0.0",
 				"openssl": ">=0.0.0"
 			},
@@ -26,6 +27,7 @@
 		}, {
 			"name": "with_ivy",
 			"dependencies": {
+				"trifle": ">=0.0.0",
 				"ivy": ">=0.0.0"
 			},
 			"buildRequirements": [
