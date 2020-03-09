@@ -53,7 +53,7 @@ public:
 		context.response.headers[HTTPHeader.ContentType] = "application/json";
 
 		_processRequestInternal(context, jResponse);
-		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
+		context.response.put(toJSON(jResponse, false, JSONOptions.specialFloatLiterals));
 
 		return HTTPHandlingResult.handled;
 	}

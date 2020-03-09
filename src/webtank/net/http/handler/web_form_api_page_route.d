@@ -45,7 +45,7 @@ public:
 			"id": JSONValue(),
 			"result": _handler(context)
 		];
-		context.response ~= toJSON(jResponse, false, JSONOptions.specialFloatLiterals);
+		context.response.put(toJSON(jResponse, false, JSONOptions.specialFloatLiterals));
 
 		return HTTPHandlingResult.handled; // Запрос обработан
 	}

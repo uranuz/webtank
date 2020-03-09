@@ -33,7 +33,7 @@ HTTPInput sendBlocking( string requestURI, string method, string messageBody = n
 	HTTPOutput request = new HTTPOutput();
 	request.rawRequestURI = requestURI;
 	request.method = method;
-	request.write(messageBody);
+	request.put(messageBody);
 	
 	return sendBlocking( request );
 }
@@ -56,7 +56,7 @@ private HTTPInput _sendBlockingImpl(Headers)(
 	HTTPOutput request = new HTTPOutput();
 	request.rawRequestURI = requestURI;
 	request.method = method;
-	request.write(messageBody);
+	request.put(messageBody);
 
 	foreach( key, value; headers ) {
 		request.headers[key] = value;

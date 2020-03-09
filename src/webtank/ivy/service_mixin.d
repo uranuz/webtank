@@ -43,16 +43,8 @@ public:
 
 	void renderResultToResponse(IvyData content, HTTPContext context)
 	{
-		static struct OutRange
-		{
-			private HTTPOutput _resp;
-			void put(T)(T data) {
-				import std.conv: text;
-				_resp.write(data.text);
-			}
-		}
-
-		renderDataNode!(DataRenderType.HTML)(content, OutRange(context.response));
+		HTTPOutput response = context.response;
+		renderDataNode!(DataRenderType.HTML)(response, content);
 	}
 
 

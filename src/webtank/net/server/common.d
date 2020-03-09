@@ -75,7 +75,7 @@ void makeErrorResponse(Throwable error, HTTPOutput response)
 	}
 
 	response.tryClearBody();
-	response.write(messageBody);
+	response.put(messageBody);
 }
 
 // Реализация приема и обработки запроса из сокета

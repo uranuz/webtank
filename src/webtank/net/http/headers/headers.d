@@ -2,6 +2,7 @@ module webtank.net.http.headers.headers;
 
 import webtank.net.http.headers.consts: HTTPHeader, internalHeaderNames;
 import webtank.net.http.headers.cookie: CookieCollection, Cookie;
+import webtank.net.http.headers.forwarded: HTTPForwardedList;
 import webtank.net.http.consts: HTTPStatus, HTTPReasonPhrases;
 
 
@@ -10,6 +11,7 @@ import webtank.net.http.consts: HTTPStatus, HTTPReasonPhrases;
 class HTTPHeaders
 {
 	import webtank.net.http.headers.cookie.parser: parseCookieHeaderValue, parseSetCookieHeaderValue;
+	import webtank.net.http.headers.forwarded: parseForwardedItems;
 	import webtank.net.http.http: HTTPInternalServerError;
 	
 	///HTTP request headers constructor
@@ -49,12 +51,14 @@ class HTTPHeaders
 			}
 		}
 		_cookies = new CookieCollection(cookieList);
+		_forwarded = new HTTPForwardedList(_headers.get(HTTPHeader.Forwarded, null));
 
-		// Куки у нас хранятся в _cookies, и в словаре заголовков их не должно быть
+		// Удаляем из общего словаря заголовков поля, которые обрабатываются спец. образом
 		_headers.remove(HTTPHeader.Cookie);
 		_headers.remove(HTTPHeader.SetCookie);
 		_headers.remove(HTTPHeader.StatusLine);
 		_headers.remove(HTTPHeader.RequestLine);
+		_headers.remove(HTTPHeader.Forwarded);
 
 		foreach( string key, values; headers )
 		{
@@ -213,6 +217,9 @@ class HTTPHeaders
 				).join(' ');
 				return [startLine];
 			}
+			case HTTPHeader.Forwarded: {
+				return _forwarded.toStringArray();
+			}
 			default: break;
 		}
 		// I just could used "get", but this workaround for `inout hell`
@@ -257,6 +264,10 @@ class HTTPHeaders
 				}
 				_cookies.fill(cookieList);
 				return; // Don't put cookie in _headers
+			}
+			case HTTPHeader.Forwarded: {
+				_forwarded.fill(parseForwardedItems(arr));
+				return; // Don't put forwarded in _headers
 			}
 			default:
 				break; 
@@ -340,6 +351,7 @@ protected:
 	string[][string] _headers;
 	bool _isRequest;
 	CookieCollection _cookies;
+	HTTPForwardedList _forwarded;
 }
 
 size_t extractContentLength(string[][string] headers)

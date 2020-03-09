@@ -57,13 +57,12 @@ public:
 	}
 
 	///Добавляет строку str к сообщению ответа сервера, либо запроса клиента
-	void write(string str) {
-		_messageBody ~= str;
+	final void put(string str) {
+		_messageBody.put(str);
 	}
 
-	///Добавляет строку str к сообщению ответа сервера, либо запроса клиента
-	void opOpAssign(string op: "~")(string str) {
-		_messageBody ~= str;
+	final void put(char ch) {
+		_messageBody.put(ch);
 	}
 
 	/// Устанавливает заголовки для перенаправления запроса HTTP-клиента
