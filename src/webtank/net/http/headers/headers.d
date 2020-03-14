@@ -319,6 +319,10 @@ class HTTPHeaders
 		return _cookies;
 	}
 
+	HTTPForwardedList forwarded() @property {
+		return _forwarded;
+	}
+
 	private string _cookieRequestString()
 	{
 		if( _cookies is null )

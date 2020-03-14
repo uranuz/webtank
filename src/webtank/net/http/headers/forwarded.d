@@ -153,15 +153,28 @@ HTTPForwardedElement[] parseForwardedItems(string[] items)
 	return res;
 }
 
-HTTPForwardedElement _parseForwardedElement(string src)
+void skipWhite(ref string src)
+{
+	import std.algorithm: canFind;
+	for( ; !src.empty; src.popFront() )
+	{
+		if( !" \t".canFind(src.front) ) {
+			break;
+		}
+	}
+}
+
+HTTPForwardedElement _parseForwardedElement(ref string src)
 {
 	string[string] vals;
 
 	while( !src.empty )
 	{
+		skipWhite(src);
 		string key = _parseToken(src);
 		enforce(!src.empty, `Expected forwarded pair delimiter, but got end of input`);
 		enforce(src.front == '=', `Expected forwarded pair delimiter`);
+		src.popFront(); // Skip =
 		enforce(key !in vals, `Duplicate forwarded element fields are not allowed`);
 		vals[key] = _parseValue(src);
 
@@ -175,7 +188,7 @@ HTTPForwardedElement _parseForwardedElement(string src)
 			break;
 		}
 
-		enforce(src.front == ';', `Expected forwarded elements or items delimeter`);
+		enforce(src.front == ';', `Expected forwarded elements or items delimeter, but got: ` ~ src.front);
 		src.popFront(); // Skip ;
 	}
 	return HTTPForwardedElement(vals);
@@ -186,7 +199,7 @@ string _parseToken(ref string src)
 	auto tmp = src.save;
 	size_t len = 0;
 
-	for( ; !src.empty; ++len )
+	for( ; !src.empty; src.popFront(), ++len )
 	{
 		if( !isHTTPTokenChar(src.front) ) {
 			break;
