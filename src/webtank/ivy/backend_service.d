@@ -10,6 +10,7 @@ class IvyBackendService: JSON_RPCService, IIvyServiceMixin
 	import webtank.security.right.controller: AccessRightController;
 	import webtank.security.right.remote_source: RightRemoteSource;
 	import webtank.ivy.access_rule_factory: IvyAccessRuleFactory;
+	import webtank.net.service.consts: ServiceRole;
 
 	import std.exception: enforce;
 
@@ -24,7 +25,7 @@ class IvyBackendService: JSON_RPCService, IIvyServiceMixin
 
 		_rights = new AccessRightController(
 			new IvyAccessRuleFactory(this.ivyEngine),
-			new RightRemoteSource(this, `yarMKKMain`, `accessRight.list`));
+			new RightRemoteSource(this, ServiceRole.auth, `accessRight.list`));
 		_accessController = new AuthClientController(this);
 	}
 

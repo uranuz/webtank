@@ -16,6 +16,7 @@ class AuthClientController: IAuthController
 
 	import webtank.net.http.headers.cookie.consts: CookieName;
 	import webtank.security.auth.common.exception: AuthException;
+	import webtank.net.service.consts: ServiceRole;
 
 	import std.exception: enforce;
 
@@ -39,7 +40,7 @@ public:
 		import std.exception: enforce;
 
 		// Запрос получает минимальную информацию о пользователе по Ид. сессии в контексте
-		auto callInfo = RemoteCallInfo(_config.endpoint(`authService`), getAllowedRequestHeaders(request));
+		auto callInfo = RemoteCallInfo(_config.endpoint(ServiceRole.auth), getAllowedRequestHeaders(request));
 		JSONValue jUserInfo = callInfo.remoteCall!JSONValue(`auth.baseUserInfo`);
 
 		enforce!AuthException(

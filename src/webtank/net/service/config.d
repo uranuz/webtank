@@ -290,17 +290,17 @@ string[string] getServiceFileSystemPaths(JSONValue jsonCurrService)
 	return resolveConfigPaths!(true)(jsonFSPaths, defaultFileSystemPaths, "siteRoot");
 }
 
-string[string] getServiceDeps(JSONValue jsonCurrService)
+string[string] getServiceRoles(JSONValue jsonCurrService)
 {
 	import std.exception: enforce;
-	auto serviceDepsPtr = "serviceDeps" in jsonCurrService;
+	auto serviceRolesPtr = "serviceRoles" in jsonCurrService;
 	string[string] res;
-	if( serviceDepsPtr is null ) {
+	if( serviceRolesPtr is null ) {
 		return res;
 	}
-	foreach( string serviceRole, JSONValue jServiceName; serviceDepsPtr.object )
+	foreach( string serviceRole, JSONValue jServiceName; serviceRolesPtr.object )
 	{
-		enforce(jServiceName.type == JSONType.string, "Expected string as service name in serviceDeps");
+		enforce(jServiceName.type == JSONType.string, "Expected string as service name in serviceRoles");
 		res[serviceRole] = jServiceName.str;
 	}
 	return res;
@@ -356,7 +356,7 @@ mixin template ServiceConfigImpl()
 		getPageRoutingConfig,
 		getServicesConfig,
 		getServiceVirtualPaths,
-		getServiceDeps;
+		getServiceRoles;
 protected:
 	JSONValue _allConfig;
 
@@ -370,7 +370,7 @@ protected:
 	// а не указывать конкретное имя сервиса. Например, один и тот же сервис может *играть несколько ролей*,
 	// а может быть так, что эти роли разнесены по нескольким разным сервисам.
 	// В этом словаре храним соответствие имени роли реальному названию сервиса (берется из конфига).
-	string[string] _serviceDeps;
+	string[string] _serviceRoles;
 
 	string[string] _fileSystemPaths;
 	string[string] _dbConnStrings;
@@ -389,8 +389,8 @@ public:
 		return _dbConnStrings;
 	}
 
-	override string[string] serviceDeps() @property {
-		return _serviceDeps;
+	override string[string] serviceRoles() @property {
+		return _serviceRoles;
 	}
 
 	override JSONValue rawConfig() @property {
@@ -420,12 +420,12 @@ public:
 		}
 
 		// Get service role aliases
-		_serviceDeps = getServiceDeps(_serviceConfig);
+		_serviceRoles = getServiceRoles(_serviceConfig);
 	}
 
 	override string endpoint(string serviceName, string endpointName)
 	{
-		if( auto realNamePtr = serviceName in _serviceDeps ) {
+		if( auto realNamePtr = serviceName in _serviceRoles ) {
 			// Происходит доступ по роли сервиса
 			return _getServiceEndpoint(*realNamePtr, endpointName);
 		}

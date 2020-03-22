@@ -8,6 +8,7 @@ string toPGString(T)(T value)
 	import std.conv: to;
 	import std.range: ElementType;
 	import std.array: replace;
+	import std.json: JSONValue;
 	import webtank.common.optional: isOptional;
 
 	static if( is(T == typeof(null)) )
@@ -54,6 +55,10 @@ string toPGString(T)(T value)
 			arrayData ~= item;
 		}
 		return "{" ~ arrayData ~ "}";
+	}
+	else static if( is( T: JSONValue ) )
+	{
+		return value.toString();
 	}
 	else static assert(false, `Unexpected type of parameter to safely represent in PostgreSQL query`);
 }

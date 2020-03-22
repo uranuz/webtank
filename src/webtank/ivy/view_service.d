@@ -2,6 +2,11 @@ module webtank.ivy.view_service;
 
 import webtank.net.service.iface: IWebService;
 import webtank.ivy.service_mixin: IIvyServiceMixin;
+import webtank.net.http.context: HTTPContext;
+import webtank.net.http.input: HTTPInput;
+import webtank.net.http.output: HTTPOutput;
+import webtank.net.server.iface: IWebServer;
+
 
 class IvyViewService: IWebService, IIvyServiceMixin
 {
@@ -21,9 +26,7 @@ class IvyViewService: IWebService, IIvyServiceMixin
 	import webtank.ivy.access_rule_factory: IvyAccessRuleFactory;
 	import webtank.ivy.rights: IvyUserRights;
 	import webtank.ivy.user: IvyUserIdentity;
-	import webtank.net.http.input: HTTPInput;
-	import webtank.net.http.output: HTTPOutput;
-	import webtank.net.server.iface: IWebServer;
+	import webtank.net.service.consts: ServiceRole;
 
 	import ivy.interpreter.data_node: IvyData;
 	import webtank.ivy.service_mixin: IvyServiceMixin, ViewServiceURIPageRoute, processViewRequest;
@@ -100,8 +103,8 @@ public:
 		enforce(isSecured, `Insecured view service kind in not implemented yet!`);
 
 		this(serviceName, pageURIPatternStr);
-		auto authNamePtr = `authService` in this.serviceDeps;
-		enforce(authNamePtr !is null && authNamePtr.length > 0, `Authentication service required in serviceDeps config option`);
+		auto authNamePtr = ServiceRole.auth in this.serviceRoles;
+		enforce(authNamePtr !is null && authNamePtr.length > 0, `Authentication service required in serviceRoles config option`);
 
 		_accessController = new AuthClientController(this);
 		_rights = new AccessRightController(
@@ -133,8 +136,8 @@ public:
 		return _loger;
 	}
 
-	override HTTPContext createContext(HTTPInput request, HTTPOutput response, IWebServer server) {
-		return new HTTPContext(request, response, server);
+	override IvyViewServiceContext createContext(HTTPInput request, HTTPOutput response, IWebServer server) {
+		return new IvyViewServiceContext(request, response, server);
 	}
 
 	private void _startLoging()
@@ -324,5 +327,20 @@ public:
 		IIvyServiceMixin ivyService = cast(IIvyServiceMixin) ctx.service;
 		enforce(ivyService, `Expected instance of IIvyServiceMixin`);
 		return ivyService.ivyEngine.getByModuleName(ctx.request.form[`moduleName`]).toStdJSON();
+	}
+}
+
+class IvyViewServiceContext: HTTPContext
+{
+	this(HTTPInput req, HTTPOutput resp, IWebServer srv)
+	{
+		import std.exception: enforce;
+		super(req, resp, srv);
+		enforce(this.service !is null, `Expected instance of IvyViewService`);
+	}
+	
+	///Экземпляр сервиса, с общими для процесса данными
+	override IvyViewService service() @property {
+		return cast(IvyViewService) _server.service;
 	}
 }

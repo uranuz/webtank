@@ -25,4 +25,7 @@ enum WriteMode {
 	ReadOnly, ReadWrite
 }
 
-enum string AUTH_DB = `authDB`;
+enum DBRole {
+	auth = `authDB`,
+	history = `historyDB`
+}

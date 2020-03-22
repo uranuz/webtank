@@ -1,6 +1,6 @@
 module webtank.ivy.main_service;
 
-import webtank.net.service.json_rpc_service: JSON_RPCService;
+import webtank.net.service.json_rpc_service: JSON_RPCService, JSON_RPCServiceContext;
 import webtank.ivy.service_mixin: IvyServiceMixin, IIvyServiceMixin;
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
@@ -16,7 +16,7 @@ class IvyMainService: JSON_RPCService, IIvyServiceMixin
 	import webtank.security.right.source_method: getAccessRightList;
 
 	mixin IvyServiceMixin;
-
+public:
 	this(string serviceName)
 	{
 		super(serviceName);
@@ -55,7 +55,7 @@ class IvyMainService: JSON_RPCService, IIvyServiceMixin
 }
 
 // Kind of HTTP-context that exposes details about IvyMainService
-class MainServiceContext: HTTPContext
+class MainServiceContext: JSON_RPCServiceContext
 {
 	this(HTTPInput req, HTTPOutput resp, IWebServer srv)
 	{

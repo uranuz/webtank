@@ -409,6 +409,8 @@ _getCallOpts(DirValueAttr[string] dirAttrs, HTTPContext context, ref RoutingConf
 
 	import webtank.net.uri: URI;
 	import webtank.net.std_json_rpc_client: getAllowedRequestHeaders;
+	import webtank.net.service.consts: ServiceRole;
+	
 
 	string defaultRequestURI;
 	if( auto reqUriPtr = `requestURI` in dirAttrs )
@@ -433,8 +435,8 @@ _getCallOpts(DirValueAttr[string] dirAttrs, HTTPContext context, ref RoutingConf
 	if( requestURI.host.empty || requestURI.scheme.empty )
 	{
 		// If backend service name is specified in routing config then use it
-		// If it is not specified use a service with role `backendService`
-		string service = entry.service.empty? `backendService`: entry.service;
+		// If it is not specified use a service with role ServiceRole.backend
+		string service = entry.service.empty? ServiceRole.backend: entry.service;
 
 		// If vpath name is specified the use it
 		// If it is not specified use default constant

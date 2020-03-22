@@ -8,7 +8,7 @@ interface IServiceConfig
 	string[string] virtualPaths() @property;
 	string[string] fileSystemPaths() @property;
 	string[string] dbConnStrings() @property;
-	string[string] serviceDeps() @property;
+	string[string] serviceRoles() @property;
 	JSONValue rawConfig() @property;
 	string endpoint(string serviceName, string endpointName = null);
 }

@@ -2,6 +2,10 @@ module webtank.net.service.json_rpc_service;
 
 import webtank.net.service.iface: IWebService;
 import webtank.db.iface.factory: IDatabaseFactory;
+import webtank.net.http.context: HTTPContext;
+import webtank.net.http.input: HTTPInput;
+import webtank.net.http.output: HTTPOutput;
+import webtank.net.server.iface: IWebServer;
 
 // Класс основного сервиса работающего по протоколу JSON-RPC.
 // Служит для чтения и хранения конфигурации, единого доступа к логам,
@@ -13,15 +17,11 @@ class JSON_RPCService: IWebService, IDatabaseFactory
 	import webtank.net.http.handler.router: HTTPRouter;
 	import webtank.net.http.handler.json_rpc: JSON_RPC_Router;
 	import webtank.net.http.handler.uri_page_router: URIPageRouter;
-	import webtank.net.http.context: HTTPContext;
 	import webtank.common.loger: Loger, FileLoger, ThreadedLoger, LogEvent, LogEventType, LogLevel;
 	import webtank.net.utils: makeErrorMsg;
 	import webtank.security.auth.iface.controller: IAuthController;
 	import webtank.security.right.iface.controller: IRightController;
 	import webtank.db.per_thread_pool_mixin: DBPerThreadPoolMixin;
-	import webtank.net.http.input: HTTPInput;
-	import webtank.net.http.output: HTTPOutput;
-	import webtank.net.server.iface: IWebServer;
 
 	import std.json: JSONValue, parseJSON;
 
@@ -108,8 +108,8 @@ public:
 		return _loger;
 	}
 
-	override HTTPContext createContext(HTTPInput request, HTTPOutput response, IWebServer server) {
-		return new HTTPContext(request, response, server);
+	override JSON_RPCServiceContext createContext(HTTPInput request, HTTPOutput response, IWebServer server) {
+		return new JSON_RPCServiceContext(request, response, server);
 	}
 
 	import webtank.db.iface.database: DBLogInfo;
@@ -194,5 +194,20 @@ public:
 		if( _databaseLoger ) {
 			_databaseLoger.stop();
 		}
+	}
+}
+
+class JSON_RPCServiceContext: HTTPContext
+{
+	this(HTTPInput req, HTTPOutput resp, IWebServer srv)
+	{
+		import std.exception: enforce;
+		super(req, resp, srv);
+		enforce(this.service !is null, `Expected instance of JSON_RPCService`);
+	}
+	
+	///Экземпляр сервиса, с общими для процесса данными
+	override JSON_RPCService service() @property {
+		return cast(JSON_RPCService) _server.service;
 	}
 }
