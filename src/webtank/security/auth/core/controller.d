@@ -56,7 +56,10 @@ public:
 		// По сессии узнаем информацию о пользователе
 		auto userRec = authDB.queryParams(
 `select
-	su.num, su.email, su.login, su.name,
+	su.num,
+	su.email,
+	su.login,
+	su.name,
 	to_json(coalesce(
 		(
 			select
@@ -67,10 +70,12 @@ public:
 			from user_access_role UR
 			join access_role R
 				on R.num = UR.role_num
-			where on UR.user_num = su.num
+			where
+				UR.user_num = su.num
 		), ARRAY[]::text[]
 	)) "roles",
-	ss.client_address, ss.user_agent
+	ss.client_address,
+	ss.user_agent
 from(
 	-- Находим сессию и проверяем, что она не "протухла"
 	select
@@ -81,12 +86,12 @@ from(
 	where
 		sss.sid = $1::text
 		and
-		current_timestamp at time zone 'UTC' <= (created + '` ~ sessionLifetime.text ~ ` minutes')
+		sss.created > (current_timestamp at time zone 'UTC' - ($2::text || ' minutes')::interval)
 	limit 1
 ) ss
 join site_user su
 	on su.num = ss.site_user_num
-limit 1`, Base64URL.encode(sessionId)
+limit 1`, Base64URL.encode(sessionId), sessionLifetime
 		).getRecord(RecordFormat!(
 			PrimaryKey!(size_t, "num"),
 			string, "email",
