@@ -3,14 +3,14 @@ module webtank.db.postgresql.serialize;
 ///Функция преобразования параметров в строковое представление для PostgreSQL
 string toPGString(T)(T value)
 {
-	import std.traits: isNumeric, isSomeString, isArray;
+	import std.traits: isNumeric, isSomeString;
 	import std.datetime: DateTime, SysTime, Date, TimeOfDay;
 	import std.uuid: UUID;
 	import std.conv: to;
-	import std.range: ElementType;
+	import std.range: ElementType, isInputRange, empty, front, popFront;
 	import std.array: replace;
 	import std.json: JSONValue;
-	import webtank.common.optional: isOptional;
+	import webtank.common.optional: isOptional, isNullableType;
 
 	static if( is(T == typeof(null)) )
 	{
@@ -32,20 +32,27 @@ string toPGString(T)(T value)
 	{
 		return value.toISOExtString();
 	}
-	else static if( isArray!(T) )
+	else static if( is( T: JSONValue ) )
 	{
+		return value.toString();
+	}
+	else static if( isInputRange!(T) )
+	{
+		// Принимаем массивы и диапазоны для возможности уменьшения аллокаций
 		alias ElemType = ElementType!T;
-		if( value is null ) {
-			return null;
+		static if( isNullableType!T ) {
+			if( value is null ) {
+				return null;
+			}
 		}
 
 		string arrayData;
-		foreach( i, elem; value )
+		for( ; !value.empty; value.popFront() )
 		{
+			string item = toPGString(value.front);
 			if( arrayData.length > 0 ) {
 				arrayData ~= ", ";
 			}
-			string item = toPGString(elem);
 			if( item is null ) {
 				arrayData ~= `null`;
 				continue;
@@ -56,10 +63,6 @@ string toPGString(T)(T value)
 			arrayData ~= item;
 		}
 		return "{" ~ arrayData ~ "}";
-	}
-	else static if( is( T: JSONValue ) )
-	{
-		return value.toString();
 	}
 	else static assert(false, `Unexpected type of parameter to safely represent in PostgreSQL query`);
 }
