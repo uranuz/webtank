@@ -19,14 +19,14 @@ public:
 	{
 		_rawEnum = rawEnum;
 
-		auto typePtr = WT_TYPE_FIELD in _rawEnum;
-		auto enumPtr = WT_ENUM_FIELD in _rawEnum;
+		auto typePtr = SrlField.type in _rawEnum;
+		auto enumPtr = SrlField.enum_ in _rawEnum;
 
-		enforce(typePtr, `Expected type field "` ~ WT_TYPE_FIELD ~ `" in enum raw data!`);
-		enforce(enumPtr, `Expected "` ~ WT_ENUM_FIELD ~ `" field in enum raw data!`);
+		enforce(typePtr, `Expected type field "` ~ SrlField.type ~ `" in enum raw data!`);
+		enforce(enumPtr, `Expected "` ~ SrlField.enum_ ~ `" field in enum raw data!`);
 		enforce(
-			typePtr.type == IvyDataType.String && typePtr.str == WT_TYPE_ENUM,
-			`Expected "` ~ WT_TYPE_ENUM ~ `" value in "` ~ WT_TYPE_FIELD ~ `" field`);
+			typePtr.type == IvyDataType.String && typePtr.str == SrlEntityType.enum_,
+			`Expected "` ~ SrlEntityType.enum_ ~ `" value in "` ~ SrlField.type ~ `" field`);
 		enforce(_rawItems.type == IvyDataType.Array, `Expected array as enum items`);
 
 		_names = new NameByValue(this);
@@ -34,7 +34,7 @@ public:
 	}
 
 	IvyData _rawItems() @property {
-		return _rawEnum[WT_ENUM_FIELD];
+		return _rawEnum[SrlField.enum_];
 	}
 
 	NameByValue names() @property {

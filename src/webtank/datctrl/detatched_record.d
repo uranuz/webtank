@@ -3,8 +3,6 @@ module webtank.datctrl.detatched_record;
 import webtank.datctrl.iface.record;
 import webtank.datctrl.iface.data_field;
 
-import webtank.datctrl.consts;
-
 class DetatchedRecord: IBaseWriteableRecord
 {
 protected:
@@ -13,7 +11,8 @@ protected:
 	size_t[string] _fieldIndexes;
 
 public:
-	this(IBaseWriteableDataField[] dataFields, size_t keyFieldIndex = 0) {
+	this(IBaseWriteableDataField[] dataFields, size_t keyFieldIndex = 0)
+	{
 		_dataFields = dataFields;
 		_keyFieldIndex = keyFieldIndex;
 		foreach( dataField; _dataFields )
@@ -84,9 +83,10 @@ public:
 
 		JSONValue toStdJSON()
 		{
+			import webtank.datctrl.consts: SrlField, SrlEntityType;
 			auto jValues = this.getStdJSONFormat();
-			jValues[WT_DATA_FIELD] = this.getStdJSONData(recordIndex);
-			jValues[WT_TYPE_FIELD] = WT_TYPE_RECORD;
+			jValues[SrlField.data] = this.getStdJSONData(recordIndex);
+			jValues[SrlField.type] = SrlEntityType.record;
 			return jValues;
 		}
 
@@ -108,7 +108,7 @@ public:
 
 		_extractFromJSON(jRecord, jFormat, jData, type, kfi);
 
-		enforce(type == WT_TYPE_RECORD, `Expected record type`);
+		enforce(type == SrlEntityType.record, `Expected record type`);
 
 		// Fill with init format for now
 		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init);
@@ -132,6 +132,7 @@ public:
 		import webtank.datctrl.memory_data_field: makeMemoryDataFieldsDyn;
 		import webtank.datctrl.common: _extractFromJSON;
 		import webtank.common.optional: Optional;
+		import webtank.datctrl.consts: SrlEntityType;
 
 		JSONValue jFormat;
 		JSONValue jData;
@@ -141,7 +142,7 @@ public:
 		_extractFromJSON(jRecord, jFormat, jData, type, kfi);
 
 		enforce(kfi.isSet, `Expected key field index`);
-		enforce(type == WT_TYPE_RECORD, `Expected recordset type`);
+		enforce(type == SrlEntityType.record, `Expected recordset type`);
 
 		IBaseWriteableDataField[] dataFields = makeMemoryDataFieldsDyn(jFormat, JSONValue([jData]));
 		auto newRec = new DetatchedRecord(dataFields, kfi.value);

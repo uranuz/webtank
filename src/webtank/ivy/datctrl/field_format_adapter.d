@@ -1,14 +1,15 @@
 module webtank.ivy.datctrl.field_format_adapter;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.interpreter.data_node;
+import ivy, ivy.compiler.compiler;
+import ivy.interpreter.interpreter;
+import ivy.interpreter.data_node;
+
 import webtank.ivy.datctrl.deserialize;
-
-import std.exception: enforce;
-
-import webtank.datctrl.consts;
 
 class FieldFormatAdapter: IClassNode
 {
+	import std.exception: enforce;
+	import webtank.datctrl.consts;
 private:
 	IvyData _rawField;
 public:
@@ -16,8 +17,8 @@ public:
 	{
 		_rawField = rawField;
 
-		enforce(WT_TYPE_FIELD in _rawField, `Expected type field "` ~ WT_TYPE_FIELD ~ `" in field format raw data!`);
-		enforce(WT_NAME_FIELD in _rawField, `Expected name field "` ~ WT_NAME_FIELD ~ `" in field format raw data!`);
+		enforce(SrlField.type in _rawField, `Expected type field "` ~ SrlField.type ~ `" in field format raw data!`);
+		enforce(SrlField.name in _rawField, `Expected name field "` ~ SrlField.name ~ `" in field format raw data!`);
 	}
 
 	override {
@@ -37,8 +38,8 @@ public:
 		{
 			switch(attrName)
 			{
-				case "name": return _rawField[WT_NAME_FIELD];
-				case "typeStr": return _rawField[WT_TYPE_FIELD];
+				case "name": return _rawField[SrlField.name];
+				case "typeStr": return _rawField[SrlField.type];
 				default: break;
 			}
 			throw new Exception(`Unexpected attribute name for FieldFormatAdapter`);
@@ -60,6 +61,6 @@ public:
 	}
 
 	string typeStr() @property {
-		return _rawField[WT_TYPE_FIELD].str;
+		return _rawField[SrlField.type].str;
 	}
 }

@@ -1,6 +1,8 @@
 module webtank.ivy.datctrl.recordset_adapter;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.interpreter.data_node;
+import ivy, ivy.compiler.compiler;
+import ivy.interpreter.interpreter;
+import ivy.interpreter.data_node;
 import webtank.ivy.datctrl.record_adapter;
 import webtank.ivy.datctrl.recordset_adapter_slice;
 
@@ -8,10 +10,9 @@ import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
 
 import std.exception: enforce;
 
-import webtank.datctrl.consts;
-
 class RecordSetAdapter: IClassNode
 {
+	import webtank.datctrl.consts;
 private:
 	RecordAdapter[] _items;
 	RecordFormatAdapter _fmt;
@@ -19,17 +20,17 @@ private:
 public:
 	this(IvyData rawRS)
 	{
-		auto typePtr = WT_TYPE_FIELD in rawRS;
-		auto dataPtr = WT_DATA_FIELD in rawRS;
-		auto fmtPtr = WT_FORMAT_FIELD in rawRS;
+		auto typePtr = SrlField.type in rawRS;
+		auto dataPtr = SrlField.data in rawRS;
+		auto fmtPtr = SrlField.format in rawRS;
 		
-		enforce(typePtr, `Expected type field "` ~ WT_TYPE_FIELD ~ `" in recordset raw data!`);
-		enforce(dataPtr, `Expected data field "` ~ WT_DATA_FIELD ~ `" in recordset raw data!`);
-		enforce(dataPtr.type == IvyDataType.Array, `Data field "` ~ WT_DATA_FIELD ~ `" expected to be array`);
-		enforce(fmtPtr, `Expected format field "` ~ WT_FORMAT_FIELD ~ `" in recordset raw data!`);
+		enforce(typePtr, `Expected type field "` ~ SrlField.type ~ `" in recordset raw data!`);
+		enforce(dataPtr, `Expected data field "` ~ SrlField.data ~ `" in recordset raw data!`);
+		enforce(dataPtr.type == IvyDataType.Array, `Data field "` ~ SrlField.data ~ `" expected to be array`);
+		enforce(fmtPtr, `Expected format field "` ~ SrlField.format ~ `" in recordset raw data!`);
 		enforce(
-			typePtr.type == IvyDataType.String && typePtr.str == WT_TYPE_RECORDSET,
-			`Expected "` ~ WT_TYPE_RECORDSET ~ `" value in "` ~ WT_FORMAT_FIELD ~ `" field`);
+			typePtr.type == IvyDataType.String && typePtr.str == SrlEntityType.recordSet,
+			`Expected "` ~ SrlEntityType.recordSet ~ `" value in "` ~ SrlField.format ~ `" field`);
 
 		_fmt = new RecordFormatAdapter(rawRS);
 
@@ -118,13 +119,13 @@ public:
 		IvyData __serialize__()
 		{
 			IvyData res = _fmt.__serialize__();
-			res[WT_TYPE_FIELD] = WT_TYPE_RECORDSET;
+			res[SrlField.type] = SrlEntityType.recordSet;
 
 			IvyData[] itemsData;
 			foreach( record; _items ) {
 				itemsData ~= record._serializeData();
 			}
-			res[WT_DATA_FIELD] = itemsData;
+			res[SrlField.data] = itemsData;
 			
 			return res;
 		}
@@ -137,13 +138,13 @@ public:
 	IvyData serializeSlice(size_t begin, size_t end)
 	{
 		IvyData res = _fmt.__serialize__();
-		res[WT_TYPE_FIELD] = WT_TYPE_RECORDSET;
+		res[SrlField.type] = SrlEntityType.recordSet;
 
 		IvyData[] itemsData;
 		foreach( record; _items[begin..end] ) {
 			itemsData ~= record._serializeData();
 		}
-		res[WT_DATA_FIELD] = itemsData;
+		res[SrlField.data] = itemsData;
 		
 		return res;
 	}

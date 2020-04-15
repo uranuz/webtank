@@ -228,7 +228,7 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 	import std.exception: enforce;
 	import std.algorithm: map, canFind;
 	import std.array: array;
-	import std.datetime: DateTime, Date;
+	import std.datetime: DateTime, Date, TimeOfDay;
 	import std.typecons: tuple;
 	import std.conv: to;
 
@@ -238,21 +238,21 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 	IBaseWriteableDataField[] fields;
 	foreach( size_t fieldIndex, JSONValue jField; jFormat.array )
 	{
-		auto jTypePtr = WT_TYPE_FIELD in jField;
-		auto jNamePtr = WT_NAME_FIELD in jField;
+		auto jTypePtr = SrlField.type in jField;
+		auto jNamePtr = SrlField.name in jField;
 		
-		enforce(jTypePtr !is null, `Expected "` ~ WT_TYPE_FIELD ~ `" field in field format JSON`);
-		enforce(jTypePtr.type == JSONType.string, `Field format field "` ~ WT_TYPE_FIELD ~ `" expected to be a string`);
+		enforce(jTypePtr !is null, `Expected "` ~ SrlField.type ~ `" field in field format JSON`);
+		enforce(jTypePtr.type == JSONType.string, `Field format field "` ~ SrlField.type ~ `" expected to be a string`);
 
-		enforce(jNamePtr !is null, `Expected "` ~ WT_NAME_FIELD ~ `" field in field format JSON`);
-		enforce(jNamePtr.type == JSONType.string, `Field format field "` ~ WT_NAME_FIELD ~ `" expected to be a string`);
+		enforce(jNamePtr !is null, `Expected "` ~ SrlField.name ~ `" field in field format JSON`);
+		enforce(jNamePtr.type == JSONType.string, `Field format field "` ~ SrlField.name ~ `" expected to be a string`);
 
 		Optional!size_t theSize;
-		if( auto jSizePtr = WT_SIZE_FIELD in jField )
+		if( auto jSizePtr = SrlField.size in jField )
 		{
 			enforce(
 				[JSONType.uinteger, JSONType.integer].canFind(jSizePtr.type),
-				`Expected integer as "` ~ WT_SIZE_FIELD ~ `" field`);
+				`Expected integer as "` ~ SrlField.size ~ `" field`);
 			theSize = (
 				jSizePtr.type == JSONType.uinteger?
 				jSizePtr.uinteger.to!size_t:
@@ -287,8 +287,8 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 			case `array`:
 			{
 				string arrayKind;
-				if( auto jArrayKindPtr = WT_VALUE_TYPE_FIELD in jField ) {
-					enforce(jArrayKindPtr.type == JSONType.string, `Expected string as "` ~ WT_VALUE_TYPE_FIELD ~ `" field`);
+				if( auto jArrayKindPtr = SrlField.valueType in jField ) {
+					enforce(jArrayKindPtr.type == JSONType.string, `Expected string as "` ~ SrlField.valueType ~ `" field`);
 					arrayKind = jArrayKindPtr.str;
 				}
 				switch( arrayKind )
@@ -324,6 +324,10 @@ IBaseWriteableDataField[] makeMemoryDataFieldsDyn(JSONValue jFormat, JSONValue j
 			}
 			case `date`: {
 				_addField!Date(fArgs);
+				break;
+			}
+			case `time`: {
+				_addField!TimeOfDay(fArgs);
 				break;
 			}
 			default: enforce(false, `Unsupported type of field`);

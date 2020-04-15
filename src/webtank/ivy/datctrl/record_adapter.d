@@ -18,17 +18,17 @@ private:
 public:
 	this(IvyData rawRec)
 	{
-		auto typePtr = WT_TYPE_FIELD in rawRec;
-		auto dataPtr = WT_DATA_FIELD in rawRec;
-		auto fmtPtr = WT_FORMAT_FIELD in rawRec;
+		auto typePtr = SrlField.type in rawRec;
+		auto dataPtr = SrlField.data in rawRec;
+		auto fmtPtr = SrlField.format in rawRec;
 
-		enforce(typePtr, `Expected type field "` ~ WT_TYPE_FIELD ~ `" in record raw data!`);
-		enforce(dataPtr, `Expected data field "` ~ WT_DATA_FIELD ~ `" in record raw data!`);
-		enforce(dataPtr.type == IvyDataType.Array, `Data field "` ~ WT_DATA_FIELD ~ `" expected to be array`);
-		enforce(fmtPtr, `Expected format field "` ~ WT_FORMAT_FIELD ~ `" in record raw data!`);
+		enforce(typePtr, `Expected type field "` ~ SrlField.type ~ `" in record raw data!`);
+		enforce(dataPtr, `Expected data field "` ~ SrlField.data ~ `" in record raw data!`);
+		enforce(dataPtr.type == IvyDataType.Array, `Data field "` ~ SrlField.data ~ `" expected to be array`);
+		enforce(fmtPtr, `Expected format field "` ~ SrlField.format ~ `" in record raw data!`);
 		enforce(
-			typePtr.type == IvyDataType.String && typePtr.str == WT_TYPE_RECORD,
-			`Expected "` ~ WT_TYPE_RECORD ~ `" value in "` ~ WT_TYPE_FIELD ~ `" field`);
+			typePtr.type == IvyDataType.String && typePtr.str == SrlEntityType.record,
+			`Expected "` ~ SrlEntityType.record ~ `" value in "` ~ SrlField.type ~ `" field`);
 	
 		_fmt = new RecordFormatAdapter(rawRec);
 		_items = _deserialize(rawRec);
@@ -46,7 +46,7 @@ public:
 	IvyData[] _deserialize(IvyData rawRec)
 	{
 		import webtank.ivy.datctrl.deserialize: _deserializeRecordData;
-		IvyData rawItems = rawRec[WT_DATA_FIELD];
+		IvyData rawItems = rawRec[SrlField.data];
 		IvyData[] res;
 		foreach( i, ref fieldData; rawItems.array ) {
 			res ~= _deserializeRecordData(fieldData, _fmt[IvyData(i)]);
@@ -126,8 +126,8 @@ public:
 		IvyData __serialize__()
 		{
 			IvyData res = _fmt.__serialize__();
-			res[WT_DATA_FIELD] = _serializeData();
-			res[WT_TYPE_FIELD] = WT_TYPE_RECORD;
+			res[SrlField.data] = _serializeData();
+			res[SrlField.type] = SrlEntityType.record;
 
 			return res;
 		}

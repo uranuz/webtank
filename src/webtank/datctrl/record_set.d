@@ -75,6 +75,8 @@ public:
 		import webtank.datctrl.memory_data_field: makeMemoryDataFields;
 		import webtank.datctrl.common: _makeRecordFieldIndex, _extractFromJSON, _fillDataIntoRec;
 		import webtank.common.optional: Optional;
+		import webtank.datctrl.consts: SrlEntityType;
+
 
 		JSONValue jFormat;
 		JSONValue jData;
@@ -82,7 +84,7 @@ public:
 		Optional!size_t kfi;
 
 		_extractFromJSON(jRecordSet, jFormat, jData, type, kfi);
-		enforce(type == `recordset`, `Expected recordset type`);
+		enforce(type == SrlEntityType.recordSet, `Expected recordset type`);
 
 		size_t[string] fieldToIndex = _makeRecordFieldIndex(jFormat);
 
@@ -109,6 +111,7 @@ public:
 		import webtank.datctrl.memory_data_field: makeMemoryDataFieldsDyn;
 		import webtank.datctrl.common: _extractFromJSON;
 		import webtank.common.optional: Optional;
+		import webtank.datctrl.consts: SrlEntityType;
 
 		JSONValue jFormat;
 		JSONValue jData;
@@ -118,7 +121,7 @@ public:
 		_extractFromJSON(jRecordSet, jFormat, jData, type, kfi);
 
 		enforce(kfi.isSet, `Expected key field index`);
-		enforce(type == `recordset`, `Expected recordset type`);
+		enforce(type == SrlEntityType.recordSet, `Expected recordset type`);
 
 		IBaseWriteableDataField[] dataFields = makeMemoryDataFieldsDyn(jFormat, jData);
 		auto newRS = new WriteableRecordSet(dataFields, kfi.value);

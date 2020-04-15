@@ -29,11 +29,11 @@ IvyData _deserializeRecordData(ref IvyData fieldData, IvyData format)
 
 	switch(fmt.typeStr)
 	{
-		case WT_TYPE_DATE:
-		case WT_TYPE_DATETIME:
+		case SrlEntityType.date:
+		case SrlEntityType.dateTime:
 			if( fieldData.type == IvyDataType.String ) {
 				return IvyData(
-					fmt.typeStr == WT_TYPE_DATE?
+					fmt.typeStr == SrlEntityType.date?
 					SysTime(Date.fromISOExtString(fieldData.str)):
 					SysTime.fromISOExtString(fieldData.str)
 				);
@@ -50,8 +50,8 @@ IvyData _deserializeRecordData(ref IvyData fieldData, IvyData format)
 bool _isContainerRawData(ref IvyData srcNode) {
 	return
 		srcNode.type == IvyDataType.AssocArray
-		&& WT_TYPE_FIELD in srcNode 
-		&& srcNode[WT_TYPE_FIELD].type == IvyDataType.String;
+		&& SrlField.type in srcNode 
+		&& srcNode[SrlField.type].type == IvyDataType.String;
 }
 
 IvyData tryExtractContainer(ref IvyData srcNode)
@@ -60,15 +60,15 @@ IvyData tryExtractContainer(ref IvyData srcNode)
 		return srcNode;
 	}
 
-	switch( srcNode[WT_TYPE_FIELD].str )
+	switch( srcNode[SrlField.type].str )
 	{
-		case WT_TYPE_RECORDSET:
+		case SrlEntityType.recordSet:
 			return IvyData(new RecordSetAdapter(srcNode));
-		case WT_TYPE_RECORD:
+		case SrlEntityType.record:
 			return IvyData(new RecordAdapter(srcNode));
-		case WT_TYPE_ENUM:
+		case SrlEntityType.enum_:
 			return (
-				WT_DATA_FIELD in srcNode.assocArray?
+				SrlField.data in srcNode.assocArray?
 				IvyData(new EnumAdapter(srcNode)):
 				IvyData(new EnumFormatAdapter(srcNode))
 			);

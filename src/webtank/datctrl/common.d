@@ -1,7 +1,5 @@
 module webtank.datctrl.common;
 
-import webtank.datctrl.consts;
-
 mixin template GetStdJSONFormatImpl()
 {
 	import std.json: JSONValue;
@@ -9,8 +7,8 @@ mixin template GetStdJSONFormatImpl()
 	JSONValue getStdJSONFormat() inout
 	{
 		JSONValue jValues;
-		jValues[WT_KEY_FIELD_INDEX] = _keyFieldIndex; // Номер ключевого поля
-		jValues[WT_TYPE_FIELD] = WT_TYPE_RECORDSET; // Тип данных - набор записей
+		jValues[SrlField.keyFieldIndex] = _keyFieldIndex; // Номер ключевого поля
+		jValues[SrlField.type] = SrlEntityType.recordSet; // Тип данных - набор записей
 
 		//Образуем JSON-массив форматов полей
 		JSONValue[] jFieldFormats;
@@ -19,7 +17,7 @@ mixin template GetStdJSONFormatImpl()
 		foreach( i, field; _dataFields ) {
 			jFieldFormats[i] = field.getStdJSONFormat();
 		}
-		jValues[WT_FORMAT_FIELD] = jFieldFormats;
+		jValues[SrlField.format] = jFieldFormats;
 
 		return jValues;
 	}
@@ -54,8 +52,8 @@ mixin template RecordSetToStdJSONImpl()
 			jData[i] = this.getStdJSONData(i);
 		}
 
-		jValues[WT_DATA_FIELD] = jData;
-		jValues[WT_TYPE_FIELD] = WT_TYPE_RECORDSET;
+		jValues[SrlField.data] = jData;
+		jValues[SrlField.type] = SrlEntityType.recordSet;
 
 		return jValues;
 	}
@@ -75,23 +73,23 @@ mixin template GetStdJSONFieldFormatImpl()
 			res = _enumFormat.toStdJSON();
 		} else {
 			import std.traits: isIntegral, isFloatingPoint, isArray, isAssociativeArray, isSomeString;
-			res[WT_TYPE_FIELD] = getFieldTypeString!ValueType; // Вывод типа поля
-			res[WT_DLANG_TYPE_FIELD] = ValueType.stringof; // D-шный тип поля
+			res[SrlField.type] = getFieldTypeString!ValueType; // Вывод типа поля
+			res[SrlField.dLangType] = ValueType.stringof; // D-шный тип поля
 
 			static if( isIntegral!(ValueType) || isFloatingPoint!(ValueType) ) {
-				res[WT_SIZE_FIELD] = ValueType.sizeof; // Размер чисел в байтах
+				res[SrlField.size] = ValueType.sizeof; // Размер чисел в байтах
 			}
 
 			static if( isArray!ValueType && !isSomeString!ValueType ) {
 				import std.range: ElementType;
-				res[WT_VALUE_TYPE_FIELD] = getFieldTypeString!(ElementType!ValueType);
+				res[SrlField.valueType] = getFieldTypeString!(ElementType!ValueType);
 			} else static if( isAssociativeArray!(ValueType) ) {
 				import std.traits: TKeyType = KeyType, TValueType = ValueType;
-				res[WT_VALUE_TYPE_FIELD] = getFieldTypeString!(TValueType!ValueType);
-				res[WT_KEY_TYPE_FIELD] = getFieldTypeString!(TKeyType!ValueType);
+				res[SrlField.valueType] = getFieldTypeString!(TValueType!ValueType);
+				res[SrlField.keyType] = getFieldTypeString!(TKeyType!ValueType);
 			}
 		}
-		res[WT_NAME_FIELD] = _name; // Вывод имени поля
+		res[SrlField.name] = _name; // Вывод имени поля
 
 		return res;
 	}
@@ -110,31 +108,36 @@ mixin template GetStdJSONFieldValueImpl()
 	}
 }
 
-string getFieldTypeString(T)()
+string getFieldTypeString(QualT)()
 {
-	import std.traits;
-	import std.datetime: SysTime, DateTime, Date;
+	import std.traits: Unqual, isIntegral, isFloatingPoint, isSomeString, isArray, isAssociativeArray;
+	import std.datetime: SysTime, DateTime, Date, TimeOfDay;
+	import webtank.datctrl.consts: SrlFieldType;
+
+	alias T = Unqual!QualT;
 
 	static if( is(T: void) ) {
-		return "void";
+		return SrlFieldType.void_;
 	} else static if( is(T: bool) ) {
-		return "bool";
+		return SrlFieldType.boolean;
 	} else static if( isIntegral!(T) ) {
-		return "int";
+		return SrlFieldType.integer;
 	} else static if( isFloatingPoint!(T) ) {
-		return "float";
+		return SrlFieldType.floating;
 	} else static if( isSomeString!(T) ) {
-		return "str";
+		return SrlFieldType.string;
 	} else static if( isArray!(T) ) {
-		return "array";
+		return SrlFieldType.array;
 	} else static if( isAssociativeArray!(T) ) {
-		return "assocArray";
-	} else static if( is( Unqual!T == SysTime ) || is( Unqual!T == DateTime) ) {
-		return "dateTime";
-	} else static if( is( Unqual!T == Date ) ) {
-		return "date";
+		return SrlFieldType.assocArray;
+	} else static if( is(T == SysTime) || is(T == DateTime) ) {
+		return SrlFieldType.dateTime;
+	} else static if( is(T == Date) ) {
+		return SrlFieldType.date;
+	} else static if( is(T == TimeOfDay) ) {
+		return SrlFieldType.time;
 	} else {
-		return "<unknown>";
+		return SrlFieldType.unknown;
 	}
 }
 
@@ -148,27 +151,28 @@ void _extractFromJSON(
 	ref string type,
 	ref Optional!size_t kfi
 ) {
+	import webtank.datctrl.consts: SrlField;
 	import std.exception: enforce;
 	import std.algorithm: canFind;
 	import std.conv: to;
 
 	enforce(jContainer.type == JSONType.object, `Expected JSON object as container serialized data!!!`);
-	auto jFormatPtr = WT_FORMAT_FIELD in jContainer;
-	auto jDataPtr = WT_DATA_FIELD in jContainer;
-	auto jTypePtr = WT_TYPE_FIELD in jContainer;
-	auto jKfiPtr = WT_KEY_FIELD_INDEX in jContainer;
+	auto jFormatPtr = SrlField.format in jContainer;
+	auto jDataPtr = SrlField.data in jContainer;
+	auto jTypePtr = SrlField.type in jContainer;
+	auto jKfiPtr = SrlField.keyFieldIndex in jContainer;
 
-	enforce(jFormatPtr, `Expected "` ~ WT_FORMAT_FIELD ~ `" field in container serialized data!!!`);
-	enforce(jDataPtr, `Expected "` ~ WT_DATA_FIELD ~ `" field in container serialized data!!!`);
-	enforce(jTypePtr, `Expected "` ~ WT_TYPE_FIELD ~ `" field in container serialized data!!!`);
-	enforce(jKfiPtr, `Expected "` ~ WT_KEY_FIELD_INDEX ~ `" field in container serialized data!!!`);
+	enforce(jFormatPtr, `Expected "` ~ SrlField.format ~ `" field in container serialized data!!!`);
+	enforce(jDataPtr, `Expected "` ~ SrlField.data ~ `" field in container serialized data!!!`);
+	enforce(jTypePtr, `Expected "` ~ SrlField.type ~ `" field in container serialized data!!!`);
+	enforce(jKfiPtr, `Expected "` ~ SrlField.keyFieldIndex ~ `" field in container serialized data!!!`);
 
-	enforce(jFormatPtr.type == JSONType.array, `Format field "` ~ WT_FORMAT_FIELD ~ `" must be JSON array!!!`);
-	enforce(jDataPtr.type == JSONType.array, `Data field "` ~ WT_DATA_FIELD ~ `" must be JSON array!!!`);
-	enforce(jTypePtr.type == JSONType.string, `Type field "` ~ WT_TYPE_FIELD ~ `" must be JSON string!!!`);
+	enforce(jFormatPtr.type == JSONType.array, `Format field "` ~ SrlField.format ~ `" must be JSON array!!!`);
+	enforce(jDataPtr.type == JSONType.array, `Data field "` ~ SrlField.data ~ `" must be JSON array!!!`);
+	enforce(jTypePtr.type == JSONType.string, `Type field "` ~ SrlField.type ~ `" must be JSON string!!!`);
 	enforce(
 		[JSONType.uinteger, JSONType.integer].canFind(jKfiPtr.type),
-		`Expected integer as "` ~ WT_KEY_FIELD_INDEX ~ `" field in container JSON`);
+		`Expected integer as "` ~ SrlField.keyFieldIndex ~ `" field in container JSON`);
 
 	jFormat = (*jFormatPtr);
 	jData = (*jDataPtr);
@@ -182,14 +186,15 @@ void _extractFromJSON(
 
 auto _makeRecordFieldIndex(JSONValue jFormat)
 {
+	import webtank.datctrl.consts: SrlField;
 	import std.exception: enforce;
 
 	size_t[string] fieldToIndex;
 	foreach( size_t index, JSONValue jField; jFormat )
 	{
 		enforce(jField.type == JSONType.object, `RecordSet serialized field format must be object!!!`);
-		auto jNamePtr = WT_NAME_FIELD in jField;
-		enforce(jNamePtr !is null, `RecordSet serialized field format must have "` ~ WT_NAME_FIELD ~ `" field`);
+		auto jNamePtr = SrlField.name in jField;
+		enforce(jNamePtr !is null, `RecordSet serialized field format must have "` ~ SrlField.name ~ `" field`);
 		enforce(jNamePtr.type == JSONType.string, `RecordSet serialized field name must be JSON string!!!`);
 		enforce(jNamePtr.str !in fieldToIndex, `RecordSet field name must be unique!!!`);
 		fieldToIndex[jNamePtr.str] = index;

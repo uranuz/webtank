@@ -19,3 +19,19 @@ enum ExecStatusType
 	PGRES_COPY_BOTH, /* Copy In/Out data transfer in progress */
 	PGRES_SINGLE_TUPLE /* single tuple from larger resultset */
 }
+
+enum PGTypeName
+{
+	boolean = `boolean`,
+	smallint = `smallint`,
+	integer = `integer`,
+	bigint = `bigint`,
+	float_ = `real`,
+	double_ = `double precision`,
+	text = `text`,
+	timestamp = `timestamp`,
+	date = `date`,
+	time = `time`,
+	uuid = `uuid`,
+	jsonb = `jsonb`
+}

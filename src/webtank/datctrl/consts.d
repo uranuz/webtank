@@ -1,18 +1,68 @@
 module webtank.datctrl.consts;
 
-enum WT_KEY_FIELD_INDEX = `kfi`; // Поле с номером ключевого поля в рекорде/ рекордсете
-enum WT_TYPE_FIELD = `t`; // Поле, содержащее тип объекта: дата, запись, перечислимое и т.п.
-enum WT_NAME_FIELD = `n`; // Название сужности
-enum WT_FORMAT_FIELD = `f`; // Формат записи, набора записей
-enum WT_DATA_FIELD = `d`; // Данные записи, набора записей
-enum WT_ENUM_FIELD = `enum`; // Формат перечислимого типа
-enum WT_SIZE_FIELD = `sz`; // Размер значения
-enum WT_DLANG_TYPE_FIELD = `dt`; // Тип значения в языке D
-enum WT_VALUE_TYPE_FIELD = `vt`; // Тип значения
-enum WT_KEY_TYPE_FIELD = `kt`; // Тип ключа
+/// Названия полей JSON-объектов, в форме которых представляются (сериализуются) данные при передаче
+enum SrlField
+{
+	/// Номер ключевого поля в рекорде/ рекордсете
+	keyFieldIndex = `kfi`,
 
-enum WT_TYPE_RECORDSET = `recordset`; // Тип - набор записей
-enum WT_TYPE_RECORD = `record`; // Тип - запись
-enum WT_TYPE_ENUM = `enum`; // Тип - перечислимое
-enum WT_TYPE_DATE = `date`; // Тип - дата
-enum WT_TYPE_DATETIME = `dateTime`; // Тип - дата/время
+	/// Тип объекта: дата, запись, перечислимое и т.п.
+	type = `t`,
+
+	/// Название поля, либо еще какой-то сущности
+	name = `n`,
+
+	/// Формат записи, набора записей
+	format = `f`,
+
+	/// Данные записи, набора записей
+	data = `d`,
+
+	/// Формат для значения перечислимого типа
+	enum_ = `enum`,
+
+	/// Размер значения (например, для числел)
+	size = `sz`,
+
+	/// Тип значения в языке D
+	dLangType = `dt`,
+
+	/// Тип значения в виде строковой константы
+	valueType = `vt`,
+
+	/// Тип значения ключа
+	keyType = `kt`
+}
+
+/// Типы сериализуемых сущностей
+enum SrlEntityType
+{
+	/// Набор записей
+	recordSet = `recordset`,
+	/// Запись
+	record = `record`,
+	/// Перечислимое
+	enum_ = `enum`,
+	/// Дата
+	date = `date`,
+	/// Время
+	time = `time`,
+	/// Дата и время
+	dateTime = `dateTime`
+}
+
+/// Типы полей в сериализуемых данных
+enum SrlFieldType
+{
+	unknown = `<unknown>`,
+	void_ = `void`,
+	boolean = `bool`,
+	integer = `int`,
+	floating = `float`,
+	string = `str`,
+	array = `array`,
+	assocArray = `assocArray`,
+	date = `date`,
+	time = `time`,
+	dateTime = `dateTime`
+}

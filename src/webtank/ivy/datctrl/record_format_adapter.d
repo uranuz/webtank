@@ -1,15 +1,16 @@
 module webtank.ivy.datctrl.record_format_adapter;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.interpreter.data_node;
+import ivy, ivy.compiler.compiler;
+import ivy.interpreter.interpreter;
+import ivy.interpreter.data_node;
 
-import std.exception: enforce;
 import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
 import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
 
-import webtank.datctrl.consts;
-
 class RecordFormatAdapter: IClassNode
 {
+	import webtank.datctrl.consts;
+	import std.exception: enforce;
 private:
 	IClassNode[] _items;
 	size_t[string] _namesMapping;
@@ -19,27 +20,27 @@ public:
 	this(IvyData rawData)
 	{
 		enforce(rawData.type == IvyDataType.AssocArray, `Record format raw data must be object`);
-		auto fmtPtr = WT_FORMAT_FIELD in rawData;
-		enforce(fmtPtr, `Expected format field "` ~ WT_FORMAT_FIELD ~ `" in record raw data!`);
-		enforce(fmtPtr.type == IvyDataType.Array, `Format field "` ~ WT_FORMAT_FIELD ~ `" expected to be array`);
+		auto fmtPtr = SrlField.format in rawData;
+		enforce(fmtPtr, `Expected format field "` ~ SrlField.format ~ `" in record raw data!`);
+		enforce(fmtPtr.type == IvyDataType.Array, `Format field "` ~ SrlField.format ~ `" expected to be array`);
 
 		foreach( i, fmt; fmtPtr.array )
 		{
 			enforce(fmt.type == IvyDataType.AssocArray, `Expected assoc array as field format raw data`);
 
-			auto namePtr = WT_NAME_FIELD in fmt;
-			auto typePtr = WT_TYPE_FIELD in fmt;
-			enforce(namePtr, `Expected name field "` ~ WT_NAME_FIELD ~ `" for field in raw record format`);
-			enforce(typePtr, `Expected type field "` ~ WT_TYPE_FIELD ~ `" for field in raw record format`);
+			auto namePtr = SrlField.name in fmt;
+			auto typePtr = SrlField.type in fmt;
+			enforce(namePtr, `Expected name field "` ~ SrlField.name ~ `" for field in raw record format`);
+			enforce(typePtr, `Expected type field "` ~ SrlField.type ~ `" for field in raw record format`);
 
 			_namesMapping[namePtr.str] = i;
-			if( typePtr.str == WT_ENUM_FIELD ) {
+			if( typePtr.str == SrlField.enum_ ) {
 				_items ~= new EnumFormatAdapter(fmt);
 			} else {
 				_items ~= new FieldFormatAdapter(fmt);
 			}
 		}
-		if( auto keyFieldIndexPtr = WT_KEY_FIELD_INDEX in rawData.assocArray )
+		if( auto keyFieldIndexPtr = SrlField.keyFieldIndex in rawData.assocArray )
 		{
 			enforce(keyFieldIndexPtr.type == IvyDataType.Integer, `Key field index field expected to be integer`);
 			_keyFieldIndex = keyFieldIndexPtr.integer;
@@ -121,8 +122,8 @@ public:
 			}
 
 			return IvyData([
-				WT_FORMAT_FIELD: IvyData(formats),
-				WT_KEY_FIELD_INDEX: IvyData(_keyFieldIndex)
+				SrlField.format: IvyData(formats),
+				SrlField.keyFieldIndex: IvyData(_keyFieldIndex)
 			]);
 		}
 

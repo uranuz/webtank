@@ -1,6 +1,7 @@
 module webtank.common.conv;
 
 import std.traits: Unqual;
+import std.datetime: Date, DateTime, TimeOfDay, SysTime;
 
 enum bool isStdDateOrTime(T) =
 	is(Unqual!T == Date)
@@ -242,7 +243,7 @@ bool toBool(S)(S src)
 	throw new std.conv.ConvException("Can't convert string \"" ~ src ~ "\" to boolean type!!!");
 }
 
-import std.datetime;
+
 /++
 $(LANG_EN
 	Function converts string of PostgreSQL timestamp into D std.datetime.DateTime
@@ -251,25 +252,28 @@ $(LANG_EN
 	Функция преобразует строку штампа времени PostgreSQL в формат дата/время языка D
 )
 +/
-auto fromPGTimestamp(T)(const(char)[] value)
+auto fromPGTimestamp(QualT)(const(char)[] value)
 {
+	import std.datetime: DateTime, SysTime, Date, TimeOfDay;
 	import std.algorithm: splitter;
+	alias T = Unqual!QualT;
+
 	auto spl = value.splitter!( (ch) { return ch == 'T' || ch == ' '; } );
 	assert( !spl.empty, `Splitted date or time string is empty!` );
 
-	static if( is(Unqual!T == DateTime) || is(Unqual!T == SysTime) )
+	static if( is(T == DateTime) || is(T == SysTime) )
 	{
 		assert( spl.front.length == 10 );
 		auto tmp = spl.front;
 		spl.popFront();
 		assert( spl.front.length >= 8 );
-		static if( is(Unqual!T == DateTime) ) {
+		static if( is(T == DateTime) ) {
 			tmp ~= "T" ~ spl.front[0..8]; // Trim the rest of string (milliseconds and timezone). Is it correct?
 		} else {
 			tmp ~= "T" ~ spl.front;
 		}
 	}
-	else static if( is(Unqual!T == TimeOfDay) )
+	else static if( is(T == TimeOfDay) )
 	{
 		auto tmp = spl.front; // Maybe it has date part and we will skip it
 		spl.popFront();
@@ -279,7 +283,7 @@ auto fromPGTimestamp(T)(const(char)[] value)
 		assert( tmp.length >= 8 );
 		tmp = tmp[0..8];
 	}
-	else static if( is(Unqual!T == Date) )
+	else static if( is(T == Date) )
 	{
 		assert( spl.front.length == 10 );
 		auto tmp = spl.front;
@@ -291,10 +295,11 @@ auto fromPGTimestamp(T)(const(char)[] value)
 
 unittest
 {
+	import std.datetime: DateTime, SysTime, Date, TimeOfDay;
+
 	string timestamp1 = "2017-10-21 12:59:34.196246+04";
 	assert(timestamp1.fromPGTimestamp!DateTime().toISOExtString() == "2017-10-21T12:59:34");
 	assert(timestamp1.fromPGTimestamp!Date().toISOExtString() == "2017-10-21");
 	assert(timestamp1.fromPGTimestamp!SysTime().toISOExtString() == "2017-10-21T12:59:34.196246+04:00");
 	assert(timestamp1.fromPGTimestamp!TimeOfDay().toISOExtString() == "12:59:34");
-
 }

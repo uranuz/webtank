@@ -20,8 +20,8 @@ public:
 	{
 		
 		_fmt = new EnumFormatAdapter(rawEnum);
-		auto valPtr = WT_DATA_FIELD in rawEnum;
-		enforce(valPtr, `Expected field "` ~ WT_DATA_FIELD ~ `" as enum value`);
+		auto valPtr = SrlField.data in rawEnum;
+		enforce(valPtr, `Expected field "` ~ SrlField.data ~ `" as enum value`);
 		enforce(hasValueOrEmpty(*valPtr), `There is such no value in enum`);
 		_value = *valPtr; // Just for validation
 	}
@@ -73,7 +73,7 @@ public:
 		IvyData __serialize__()
 		{
 			IvyData res = _fmt.__serialize__();
-			res[WT_DATA_FIELD] = _value;
+			res[SrlField.data] = _value;
 			return res;
 		}
 

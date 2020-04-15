@@ -8,8 +8,6 @@ import webtank.datctrl.iface.record: IBaseRecord;
 import webtank.datctrl.iface.data_field: IBaseDataField;
 import webtank.datctrl.cursor_record: CursorRecord;
 
-import webtank.datctrl.consts;
-
 /++
 $(LANG_EN Struct represents format for enumerated type of field)
 $(LANG_RU Структура представляет формат для перечислимого типа поля)
@@ -176,11 +174,13 @@ public:
 		{
 			import webtank.common.std_json: toStdJSON;
 			import webtank.datctrl.common: getFieldTypeString;
+			import webtank.datctrl.consts: SrlField, SrlEntityType;
+
 			JSONValue res;
-			res[WT_ENUM_FIELD] = getStdJSONFormat();
-			res[WT_TYPE_FIELD] = WT_TYPE_ENUM;
-			res[WT_VALUE_TYPE_FIELD] = getFieldTypeString!ValueType;
-			res[WT_DLANG_TYPE_FIELD] = ValueType.stringof;
+			res[SrlField.enum_] = getStdJSONFormat();
+			res[SrlField.type] = SrlEntityType.enum_;
+			res[SrlField.valueType] = getFieldTypeString!ValueType;
+			res[SrlField.dLangType] = ValueType.stringof;
 
 			return res;
 		}
