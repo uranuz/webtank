@@ -3,6 +3,7 @@ module webtank.security.right.plain_rule;
 import webtank.security.right.iface.access_rule: IAccessRule;
 import webtank.security.auth.iface.user_identity: IUserIdentity;
 import webtank.security.right.common: RightDataTypes, RightDataVariant;
+import webtank.security.right.access_exception: AccessSystemException;
 
 import webtank.datctrl.iface.record: IBaseRecord;
 
@@ -65,7 +66,7 @@ public:
 							return del(identity, IvyData());
 						},
 						() {
-							enforce(false, `Unexpected handler type!`);
+							enforce!AccessSystemException(false, `Unexpected handler type!`);
 							return false;
 						}
 					)();
@@ -82,14 +83,14 @@ public:
 					return del(identity, data);
 				},
 				(AddAccessRuleDelType!(IBaseRecord) del) {
-					enforce(false, `Conversion is not implemented yet!`);
+					enforce!AccessSystemException(false, `Conversion is not implemented yet!`);
 					return false;
 				},
 				(AddAccessRuleDelType!(IvyData) del) {
 					return del(identity, data.toIvyJSON());
 				},
 				() {
-					enforce(false, `Unexpected handler type!`);
+					enforce!AccessSystemException(false, `Unexpected handler type!`);
 					return false;
 				}
 			)();
@@ -105,11 +106,11 @@ public:
 					return del(identity, data);
 				},
 				(AddAccessRuleDelType!(IvyData) del) {
-					enforce(false, `Conversion is not implemented yet!`);
+					enforce!AccessSystemException(false, `Conversion is not implemented yet!`);
 					return false;
 				},
 				() {
-					enforce(false, `Unexpected handler type!`);
+					enforce!AccessSystemException(false, `Unexpected handler type!`);
 					return false;
 				}
 			)();
@@ -123,14 +124,14 @@ public:
 					return del(identity, data.toStdJSON());
 				},
 				(AddAccessRuleDelType!(IBaseRecord) del) {
-					enforce(false, `Conversion is not implemented yet!`);
+					enforce!AccessSystemException(false, `Conversion is not implemented yet!`);
 					return false;
 				},
 				(AddAccessRuleDelType!(IvyData) del) {
 					return del(identity, data);
 				},
 				() {
-					enforce(false, `Unexpected handler type!`);
+					enforce!AccessSystemException(false, `Unexpected handler type!`);
 					return false;
 				}
 			)();

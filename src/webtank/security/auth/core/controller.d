@@ -10,7 +10,7 @@ class AuthCoreController: IAuthController
 {
 	import webtank.security.auth.iface.user_identity: IUserIdentity;
 
-	import webtank.security.auth.common.exception: AuthException;
+	import webtank.security.auth.common.exception: AuthException, AuthSystemException;
 	import webtank.security.auth.common.user_identity: CoreUserIdentity;
 	import webtank.security.auth.common.session_id: SessionId, sessionIdStrLength;
 
@@ -28,7 +28,7 @@ public:
 
 	this(IDatabaseFactory factory)
 	{
-		enforce(factory !is null, `Expected instance of IDatabaseFactory`);
+		enforce!AuthSystemException(factory !is null, `Expected instance of IDatabaseFactory`);
 		_dbFactory = factory;
 	}
 

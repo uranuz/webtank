@@ -13,16 +13,16 @@ class AuthClientController: IAuthController
 	import webtank.security.auth.common.anonymous_user: AnonymousUser;
 	import webtank.security.auth.common.user_identity: CoreUserIdentity;
 	import webtank.security.auth.common.session_id: SessionId;
+	import webtank.security.auth.common.exception: AuthException, AuthSystemException;
 
 	import webtank.net.http.headers.cookie.consts: CookieName;
-	import webtank.security.auth.common.exception: AuthException;
 	import webtank.net.service.consts: ServiceRole;
 
 	import std.exception: enforce;
 
 	this(IServiceConfig config)
 	{
-		enforce(config !is null, `Expected instance of IServiceConfig`);
+		enforce!AuthSystemException(config !is null, `Expected instance of IServiceConfig`);
 		_config = config;
 	}
 private:

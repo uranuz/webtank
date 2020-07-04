@@ -15,6 +15,8 @@ import webtank.security.right.iface.data_source:
 	rightRecFormat,
 	groupObjectsRecFormat;
 
+import webtank.security.right.access_exception: AccessSystemException;
+
 class RightDatabaseSource: IRightDataSource
 {
 	private IDatabaseFactory _dbFactory;
@@ -23,7 +25,7 @@ public:
 	this(IDatabaseFactory dbFactory)
 	{
 		import std.exception: enforce;
-		enforce(dbFactory !is null, `Expected database connection function!`);
+		enforce!AccessSystemException(dbFactory !is null, `Expected database factory for access rights database`);
 		_dbFactory = dbFactory;
 	}
 

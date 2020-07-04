@@ -9,3 +9,11 @@ class AuthException: SecurityException
 		super(msg, file, line);
 	}
 }
+
+// Исключение аутентификации
+class AuthSystemException: SecurityException
+{
+	this(string msg, string file = __FILE__, size_t line = __LINE__) {
+		super(msg, file, line);
+	}
+}

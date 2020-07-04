@@ -3,6 +3,7 @@ module webtank.security.right.controller;
 import webtank.security.right.iface.access_rule: IAccessRule;
 import webtank.security.right.iface.data_source: IRightDataSource;
 import webtank.security.right.common: RightDataTypes, RightDataVariant;
+import webtank.security.right.access_exception: AccessException, AccessSystemException;
 
 class AccessObject
 {
@@ -63,8 +64,9 @@ class AccessRightController: IRightController
 private:
 	import webtank.security.right.iface.access_rule_factory: IAccessRuleFactory;
 	import webtank.security.auth.iface.user_identity: IUserIdentity;
-	import webtank.security.right.composite_rule: CompositeAccessRule, RulesRelation;
+
 	import std.typecons: Tuple;
+	import std.exception: enforce;
 
 	// Элемент таблицы правил доступа. Хранит правило доступа, признак его наследуемости, а также расстояние
 	alias RuleWithFlag = Tuple!(
@@ -103,11 +105,11 @@ private:
 public:
 	this(IAccessRuleFactory ruleFactory, IRightDataSource dataSource)
 	{
-		import std.exception: enforce;
-		enforce(ruleFactory !is null, `Expected core rules storage!`);
-		enforce(dataSource !is null, `Expected rights data source!`);
 		_ruleFactory = ruleFactory;
 		_dataSource = dataSource;
+
+		enforce!AccessSystemException(_ruleFactory !is null, `Expected core rules storage!`);
+		enforce!AccessSystemException(_dataSource !is null, `Expected rights data source!`);
 	}
 
 	void reloadRightsData()
@@ -129,26 +131,30 @@ public:
 
 	override public bool hasRight(IUserIdentity user, string accessObject, string accessKind, RightDataVariant data)
 	{
+		import std.array: split, array, join;
+		import std.algorithm: filter, map;
+		import std.range: empty, dropBack, popBack, save;
+		import std.string: strip;
+
 		if( !user.isAuthenticated() ) {
 			return false; // No permission if user is not authenticated
 		}
 
 		_assureLoaded(); // Will load rights lazily
 		
-		import std.array: split, array, join;
-		import std.algorithm: filter, map;
-		import std.range: empty, dropBack, popBack, save;
-		import std.string: strip;
-		if( accessObject !in _objectNumByFullName ) {
+		enforce!AccessException(!accessObject.empty, `Access object name must be not empty`);
+		
+		auto objectNumPtr = accessObject in _objectNumByFullName;
+		if( objectNumPtr is null ) {
 			debug {
 				import std.stdio: writeln;
 				writeln(`Обращение к несуществующему объекту прав: ` ~ accessObject);
 			}
 			return false;
 		}
-		size_t objectNum = _objectNumByFullName[accessObject];
+		size_t objectNum = *objectNumPtr;
 
-		// Get nonempty role names tha mentioned in the list
+		// Get nonempty role names that mentioned in the list
 		string[] userRoles =
 			user.data.get("accessRoles", null).split(";")
 			.map!(strip)
@@ -226,40 +232,27 @@ public:
 		auto ruleRS = _dataSource.getRules();
 
 		_allRules.clear();
-		foreach( ruleRec; ruleRS ) {
-			_loadRuleWithChildren(ruleRec, ruleRS);
-		}
-	}
+		foreach( ruleRec; ruleRS )
+		{
+			if( ruleRec.isNull(`num`) ) {
+				continue;
+			}
+			enforce!AccessSystemException(
+				ruleRec.get!"num" !in _allRules,
+				`Detected duplicate access rule num`);
 
-	IAccessRule _loadRuleWithChildren(REC, RS)(ref REC ruleRec, ref RS rulesRS)
-	{
-		if( auto already = ruleRec.get!"num" in _allRules ) {
-			return *already;
+			string ruleName = ruleRec.get!"name";
+			IAccessRule newRule = _ruleFactory.get(ruleName);
+			if( newRule is null )
+			{
+				debug {
+					import std.stdio: writeln;
+					writeln(`Не удалось загрузить правило доступа: ` ~ ruleName);
+				}
+				continue;
+			}
+			_allRules[ruleRec.get!"num"] = newRule;
 		}
-		
-		string ruleName = ruleRec.get!"name";
-		IAccessRule newRule;
-		if( auto coreRule = _ruleFactory.get(ruleName) ) {
-			newRule = coreRule;
-		} else {
-			newRule = new CompositeAccessRule(
-				ruleName,
-				cast(RulesRelation) ruleRec.get!"relation"(RulesRelation.none),
-				_loadChildRules(ruleRec, rulesRS)
-			);
-		}
-		_allRules[ruleRec.get!"num"] = newRule;
-		return newRule;
-	}
-
-	IAccessRule[] _loadChildRules(REC, RS)(ref REC ruleRec, ref RS rulesRS)
-	{
-		IAccessRule[] childRules;
-		foreach( num; ruleRec.get!"children"(null) ) {
-			auto childRec = rulesRS.getRecordByKey(num);
-			childRules ~= _loadRuleWithChildren(childRec, rulesRS);
-		}
-		return childRules;
 	}
 
 	void loadAccessObjects()
@@ -289,7 +282,9 @@ public:
 				continue; // Don't want to have ability to access group by name
 
 			string fullName = getFullObjectName(obj);
-			enforce(fullName !in _objectNumByFullName, `Duplicated access object name: ` ~ obj.name);
+			enforce!AccessSystemException(
+				fullName !in _objectNumByFullName,
+				`Duplicated access object name: ` ~ obj.name);
 			_objectNumByFullName[fullName] = key;
 		}
 	}
@@ -306,7 +301,9 @@ public:
 				break;
 			}
 			auto parentPtr = obj.parentNum.value in _allObjects;
-			enforce(parentPtr !is null, `Could not find parent access object by num: ` ~ obj.parentNum.text);
+			enforce!AccessSystemException(
+				parentPtr !is null,
+				`Could not find parent access object by num: ` ~ obj.parentNum.text);
 			obj = *parentPtr;
 		}
 		return result;
@@ -317,9 +314,10 @@ public:
 		if( auto already = objRec.get!"num" in _allObjects ) {
 			return *already;
 		}
+		size_t[] objChildKeys = childKeys.get(objRec.get!"num", null);
 		
 		AccessObject[] childObjs;
-		foreach( size_t childKey; childKeys.get(objRec.get!"num", null) )
+		foreach( size_t childKey; objChildKeys )
 		{
 			if( auto existing = childKey in _allObjects ) {
 				childObjs ~= *existing;
@@ -345,7 +343,7 @@ public:
 	{
 		import std.exception: enforce;
 		import std.conv: text;
-		
+
 		auto roleRS = _dataSource.getRoles();
 
 		_allRoles.clear();
@@ -354,12 +352,12 @@ public:
 		{
 			if( roleRec.isNull("num") )
 				continue;
-			enforce(
+			enforce!AccessSystemException(
 				roleRec.get!"num" !in _allRoles,
 				`Duplicated role with id: ` ~ roleRec.get!"num".text);
 			_allRoles[roleRec.get!"num"] = roleRec.getStr!"name";
 
-			enforce(
+			enforce!AccessSystemException(
 				roleRec.getStr!"name" !in _roleNumByName,
 				`Duplicated role with name: ` ~ roleRec.getStr!"name");
 			_roleNumByName[roleRec.getStr!"name"] = roleRec.get!"num";
@@ -368,6 +366,8 @@ public:
 
 	void loadAccessRights()
 	{
+		import std.conv: text;
+
 		auto rightRS = _dataSource.getRights();
 
 		_rulesByRightKey.clear();
@@ -377,16 +377,19 @@ public:
 			if( rightRec.isNull("role_num") || rightRec.isNull("object_num") || rightRec.isNull("rule_num") )
 				continue;
 
-			if( rightRec.get!"role_num" !in _allRoles )
-				continue;
+			enforce!AccessSystemException(
+				rightRec.get!"role_num" in _allRoles,
+				`Access right record refers to non-existent role with id: ` ~ rightRec.get!"role_num".text);
 
 			AccessObject obj = _allObjects.get(rightRec.get!"object_num", null);
-			if( obj is null )
-				continue;
+			enforce!AccessSystemException(
+				obj !is null,
+				`Access right record refers to non-existent object with id: ` ~ rightRec.get!"object_num".text);
 
 			IAccessRule rule = _allRules.get(rightRec.get!"rule_num", null);
-			if( rule is null )
-				continue;
+			enforce!AccessSystemException(
+				rule !is null,
+				`Access right record refers to non-existent rule with id: ` ~ rightRec.get!"rule_num".text);
 
 			_addObjectRight(rightRec.get!"object_num", obj, rightRec, rule, 0);
 		}
@@ -451,12 +454,12 @@ public:
 	}
 
 	IAccessRuleFactory ruleStorage() @property {
-		assert(_ruleFactory, `Core access rule storage is not initialized!!!`);
+		enforce!AccessSystemException(_ruleFactory !is null, `Core access rule storage is not initialized!!!`);
 		return _ruleFactory;
 	}
 
 	IRightDataSource rightSource() @property {
-		assert(_dataSource, `Right source is not initialized!!!`);
+		enforce!AccessSystemException(_dataSource !is null, `Right source is not initialized!!!`);
 		return _dataSource;
 	}
 }

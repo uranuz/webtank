@@ -1,6 +1,7 @@
 module webtank.security.right.user_rights;
 
 import webtank.security.right.common: RightDataTypes, RightDataVariant;
+import webtank.security.right.access_exception: AccessSystemException, AccessException;
 
 import webtank.net.http.context: HTTPContext;
 struct UserRights
@@ -12,10 +13,10 @@ public:
 	private void _checkPreconditions()
 	{
 		import std.exception: enforce;
-		enforce(_ctx, `Access right controller is not set!!!`);
-		enforce(_ctx.service, `HTTPContext service is not set!!!`);
-		enforce(_ctx.service.rightController, `Service rights controller is not set!!!`);
-		enforce(_ctx.user, `HTTPContext user identity is not set!!!`);
+		enforce!AccessSystemException(_ctx !is null, `Access right controller is not set!!!`);
+		enforce!AccessSystemException(_ctx.service !is null, `HTTPContext service is not set!!!`);
+		enforce!AccessSystemException(_ctx.service.rightController !is null, `Service rights controller is not set!!!`);
+		enforce!AccessException(_ctx.user !is null, `HTTPContext user identity is not set!!!`);
 	}
 
 	static foreach( alias RightType; RightDataTypes )

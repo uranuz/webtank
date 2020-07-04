@@ -13,6 +13,9 @@ import webtank.security.right.iface.data_source:
 	roleRecFormat,
 	rightRecFormat,
 	groupObjectsRecFormat;
+
+import webtank.security.right.access_exception: AccessSystemException, AccessException;
+
 import webtank.net.service.iface: IServiceConfig;
 
 class RightRemoteSource: IRightDataSource
@@ -44,9 +47,9 @@ public:
 	this(IServiceConfig config, string serviceName, string methodName)
 	{
 		import std.exception: enforce;
-		enforce(config, `Expected current service config object`);
-		enforce(serviceName.length, `Expected rights source endpoint name`);
-		enforce(methodName.length, `Expected rights source method name`);
+		enforce!AccessSystemException(config, `Expected current service config object`);
+		enforce!AccessSystemException(serviceName.length, `Expected rights source endpoint name`);
+		enforce!AccessSystemException(methodName.length, `Expected rights source method name`);
 
 		_serviceName = serviceName;
 		_methodName = methodName;
@@ -70,11 +73,11 @@ public:
 		import webtank.common.std_json.from: fromStdJSON;
 		foreach( Meta; RightObjMetas )
 		{
-			enforce(Meta.fieldName in jRightsData, `Expected ` ~ Meta.fieldName ~ ` RecordSet in rights data!!!`);
-			JSONValue jRightComponent = jRightsData[Meta.fieldName];
-			enforce(jRightComponent.type == JSONType.object, `Right component "` ~ Meta.fieldName ~ `" is not an object`);
-			auto rightComponent = fromStdJSON!(TypedRecordSet!(typeof(Meta.recFormat), WriteableRecordSet))(jRightComponent);
-			enforce(rightComponent !is null, `Right data is null`);
+			auto jRightComponentPtr = Meta.fieldName in jRightsData;
+			enforce!AccessSystemException(jRightComponentPtr !is null, `Expected ` ~ Meta.fieldName ~ ` RecordSet in rights data`);
+			enforce!AccessSystemException(jRightComponentPtr.type == JSONType.object, `Right component "` ~ Meta.fieldName ~ `" is not an object`);
+			auto rightComponent = fromStdJSON!(TypedRecordSet!(typeof(Meta.recFormat), WriteableRecordSet))(*jRightComponentPtr);
+			enforce!AccessSystemException(rightComponent !is null, `Right data is null`);
 			__traits(getMember, this, `_` ~ Meta.fieldName) = TypedRecordSet!(typeof(Meta.recFormat), IBaseRecordSet)(rightComponent);
 		}
 	}
