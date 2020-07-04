@@ -118,10 +118,6 @@ public:
 			return false;
 		}
 
-		bool isNullable(string fieldName) {
-			return false;
-		}
-
 		bool isWriteable(string fieldName) {
 			return false;
 		}

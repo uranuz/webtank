@@ -16,7 +16,6 @@ class MemoryDataField(FormatType): IWriteableDataField!(FormatType)
 protected:
 	string _name;
 	Optional!(ValueType)[] _values;
-	bool _isNullable;
 
 public:
 
@@ -25,25 +24,21 @@ public:
 		this(
 			string fieldName,
 			FormatType enumFormat,
-			Optional!(ValueType)[] values = null,
-			bool isNullable = true
+			Optional!(ValueType)[] values = null
 		) {
 			_name = fieldName;
 			_enumFormat = enumFormat;
 			_values = values;
-			_isNullable = isNullable;
 		}
 
 		protected FormatType _enumFormat;
 	} else {
 		this(
 			string fieldName,
-			Optional!(ValueType)[] values = null,
-			bool isNullable = true
+			Optional!(ValueType)[] values = null
 		) {
 			_name = fieldName;
 			_values = values;
-			_isNullable = isNullable;
 		}
 	}
 
@@ -56,10 +51,6 @@ public:
 			return _name;
 		}
 
-		bool isNullable() @property inout {
-			return _isNullable;
-		}
-
 		bool isWriteable() @property inout {
 			return true;
 		}
@@ -68,7 +59,7 @@ public:
 		bool isNull(size_t index) inout
 		{
 			enforce(index < _values.length, OUT_OF_BOUNDS);
-			return isNullable && _values[index].isNull;
+			return _values[index].isNull;
 		}
 
 		string getStr(size_t index)
@@ -118,10 +109,6 @@ public:
 			_values[index] = null;
 		}
 
-		void isNullable(bool value) @property {
-			_isNullable = value;
-		}
-
 		void addItems(size_t count, size_t index = size_t.max)
 		{
 			import std.array: insertInPlace;
@@ -166,14 +153,12 @@ IBaseWriteableDataField[] makeMemoryDataFields(RecordFormatT)(RecordFormatT form
 		alias DataFieldType = MemoryDataField!FormatType;
 		alias fieldIndex = RecordFormatT.getFieldIndex!(fieldName);
 
-		bool isNullable = format.nullableFlags.get(fieldName, true);
-
 		static if( isEnumFormat!(FormatType) )
 		{
 			alias enumFieldIndex = RecordFormatT.getEnumFormatIndex!(fieldName);
-			dataFields ~= new DataFieldType(fieldName, format.enumFormats[enumFieldIndex], null, isNullable);
+			dataFields ~= new DataFieldType(fieldName, format.enumFormats[enumFieldIndex], null);
 		} else {
-			dataFields ~= new DataFieldType(fieldName, null, isNullable);
+			dataFields ~= new DataFieldType(fieldName, null);
 		}
 	}
 	return dataFields;

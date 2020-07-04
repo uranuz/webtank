@@ -84,10 +84,6 @@ public:
 			return _sourceRS.isNull(fieldName, recordIndex + _begin);
 		}
 
-		bool isNullable(string fieldName) {
-			return _sourceRS.isNullable(fieldName);
-		}
-
 		bool isWriteable(string fieldName) {
 			return _sourceRS.isWriteable(fieldName);
 		}

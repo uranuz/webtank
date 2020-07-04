@@ -90,12 +90,6 @@ interface IBaseDataField
 	string name() @property inout;
 
 	/++
-	$(LANG_EN Returns true if field value could be null or false otherwise)
-	$(LANG_RU	Возвращает true, если значение поле может быть пустым	(null) иначе равно false)
-	+/
-	bool isNullable() @property inout;
-
-	/++
 	$(LANG_EN Returns true if allowed to write into field)
 	$(LANG_RU Возвращает true, если разрешена запись в поле данных)
 	+/
@@ -142,13 +136,6 @@ interface IBaseWriteableDataField: IBaseDataField
 	$(LANG_RU Обнуляет занчение ячейки с номером $(D_PARAM index))
 	+/
 	void nullify(size_t index);
-
-	alias isNullable = IBaseDataField.isNullable;
-	/++
-	$(LANG_EN Set field ability to be null)
-	$(LANG_RU Задает возможность для свойства иметь значение null)
-	+/
-	void isNullable(bool value) @property;
 
 	/++
 	$(LANG_EN Inserts $(D_PARAM count) field .init values at $(D_PARAM index)(value will be appended to the end if param is not set))

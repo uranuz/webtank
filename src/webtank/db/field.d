@@ -25,7 +25,6 @@ protected: ///ВНУТРЕННИЕ ПОЛЯ КЛАССА
 	IDBQueryResult _queryResult;
 	immutable(size_t) _fieldIndex;
 	immutable(string) _name;
-	immutable(bool) _isNullable;
 
 	static if( isEnumFormat!(FormatType) ) {
 		FormatType _enumFormat;
@@ -37,13 +36,12 @@ public:
 	{
 		this( IDBQueryResult queryResult,
 			size_t fieldIndex,
-			string fieldName, bool isNullable,
+			string fieldName,
 			FormatType enumFormat
 		) {
 			_queryResult = queryResult;
 			_fieldIndex = fieldIndex;
 			_name = fieldName;
-			_isNullable = isNullable;
 			_enumFormat = enumFormat;
 		}
 
@@ -54,12 +52,11 @@ public:
 	}
 	else
 	{
-		this( IDBQueryResult queryResult, size_t fieldIndex, string fieldName, bool isNullable )
+		this( IDBQueryResult queryResult, size_t fieldIndex, string fieldName )
 		{
 			_queryResult = queryResult;
 			_fieldIndex = fieldIndex;
 			_name = fieldName;
-			_isNullable = isNullable;
 		}
 	}
 
@@ -73,11 +70,6 @@ public:
 			return _name;
 		}
 
-		///Возвращает true, если поле может быть пустым и false - иначе
-		bool isNullable() @property inout {
-			return _isNullable;
-		}
-
 		///Возвращает false, поскольку поле не записываемое
 		bool isWriteable() @property inout {
 			return false; //Поле только для чтения из БД
@@ -89,10 +81,7 @@ public:
 			import std.conv;
 			enforce( index < _queryResult.recordCount, "Field index '" ~ std.conv.to!string(index)
 				~ "' is out of bounds, because record count is '" ~ std.conv.to!string(_queryResult.recordCount) ~ "'!!!" );
-			return
-				( _isNullable?
-				_queryResult.isNull( _fieldIndex, index )
-				: false );
+			return _queryResult.isNull(_fieldIndex, index);
 		}
 
 		import webtank.datctrl.common;
@@ -205,7 +194,6 @@ IBaseDataField[] makeDataFields(RecordFormatType)(IDBQueryResult queryResult, Re
 	static foreach( size_t fi, fieldName; fieldNames )
 	{{
 		alias fieldSpec = RecordFormatType.getFieldSpec!(fieldName);
-		bool isNullable = format.nullableFlags.get(fieldName, true);
 
 		static if( isEnumFormat!(fieldSpec.FormatType) ) {
 			alias enumFieldIndex = RecordFormatType.getEnumFormatIndex!(fieldName);
@@ -233,18 +221,18 @@ IBaseDataField[] makeDataFields(RecordFormatType)(IDBQueryResult queryResult, Re
 			}
 
 			static if( isEnumFormat!(fieldSpec.FormatType) ) {
-				fields[fi] = new CurrFieldT(fieldName, format.enumFormats[enumFieldIndex], data, isNullable);
+				fields[fi] = new CurrFieldT(fieldName, format.enumFormats[enumFieldIndex], data);
 			} else {
-				fields[fi] = new CurrFieldT(fieldName, data, isNullable);
+				fields[fi] = new CurrFieldT(fieldName, data);
 			}
 		}
 		else
 		{
 			alias CurrFieldT = DatabaseField!(fieldSpec.FormatType);
 			static if( isEnumFormat!(fieldSpec.FormatType) ) {
-				fields[fi] = new CurrFieldT(queryResult, fi, fieldName, isNullable, format.enumFormats[enumFieldIndex]);
+				fields[fi] = new CurrFieldT(queryResult, fi, fieldName, format.enumFormats[enumFieldIndex]);
 			} else {
-				fields[fi] = new CurrFieldT(queryResult, fi, fieldName, isNullable);
+				fields[fi] = new CurrFieldT(queryResult, fi, fieldName);
 			}
 		}
 	}}

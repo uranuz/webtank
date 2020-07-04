@@ -21,9 +21,6 @@ public:
 		void nullify(string fieldName) {
 			_recordSet.nullify(fieldName, recordIndex);
 		}
-		void setNullable(string fieldName, bool value) {
-			_recordSet.setNullable(fieldName, value);
-		}
 	}
 }
 
@@ -69,10 +66,6 @@ public:
 
 		bool isNull(string fieldName) {
 			return _recordSet.isNull(fieldName, recordIndex);
-		}
-
-		bool isNullable(string fieldName) {
-			return _recordSet.isNullable(fieldName);
 		}
 
 		bool isWriteable(string fieldName) {

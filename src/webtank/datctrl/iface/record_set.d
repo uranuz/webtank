@@ -72,18 +72,6 @@ interface IBaseRecordSet
 	+/
 	bool isNull(string fieldName, size_t recordIndex);
 
-	/++
-	$(LANG_EN
-		Returns true if cell with field name $(D_PARAM fieldName) can
-		be null or false otherwise
-	)
-	$(LANG_RU
-		Возвращает true, если ячейка с именем поля $(D_PARAM fieldName)
-		может быть пустой (null). В противном случае возвращает false
-	)
-	+/
-	bool isNullable(string fieldName);
-
 	bool isWriteable(string fieldName);
 
 	/++
@@ -164,7 +152,6 @@ interface IWriteableRecordSetRange: IRecordSetRange
 interface IBaseWriteableRecordSet: IBaseRecordSet
 {
 	void nullify(string fieldName, size_t recordIndex);
-	void setNullable(string fieldName, bool value);
 	void addItems(size_t count, size_t index = size_t.max);
 	void addItems(IBaseWriteableRecord[] records, size_t index = size_t.max);
 

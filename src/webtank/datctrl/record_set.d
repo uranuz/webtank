@@ -34,10 +34,6 @@ public:
 			getWriteableField(fieldName).nullify(recordIndex);
 		}
 
-		void setNullable(string fieldName, bool value) {
-			getWriteableField(fieldName).isNullable = value;
-		}
-
 		void addItems(size_t count, size_t index = size_t.max)
 		{
 			import std.array: insertInPlace;
@@ -265,10 +261,6 @@ public:
 
 		bool isNull(string fieldName, size_t recordIndex) {
 			return getField(fieldName).isNull(recordIndex);
-		}
-
-		bool isNullable(string fieldName) {
-			return getField(fieldName).isNullable;
 		}
 
 		bool isWriteable(string fieldName) {

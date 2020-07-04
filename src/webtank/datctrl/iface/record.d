@@ -64,16 +64,6 @@ interface IBaseRecord
 	+/
 	bool isNull(string fieldName);
 
-	/++
-	$(LANG_EN Returns true if value for field with name $(D_PARAM fieldName)
-		could be null or returns false if it can't be null
-	)
-	$(LANG_RU Возвращает true, если значения для поля с именем $(D_PARAM fieldName)
-		может быть пустым (null) или false, если пустые значения не разрешены
-	)
-	+/
-	bool isNullable(string fieldName);
-	
 	bool isWriteable(string fieldName);
 
 	/++
@@ -100,7 +90,6 @@ interface IBaseRecord
 interface IBaseWriteableRecord: IBaseRecord
 {
 	void nullify(string fieldName);
-	void setNullable(string fieldName, bool value);
 }
 
 } //static if( isDatCtrlEnabled )

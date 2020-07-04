@@ -34,7 +34,6 @@ struct RecordFormat(Args...)
 	// Идентификатор поля первичного ключа в формате записи
 	enum size_t _keyFieldIndex = _argsParseRes.keyFieldIndex;
 
-	bool[string] nullableFlags;
 	Tuple!(EnumFormatTypes) enumFormats;
 
 	/++

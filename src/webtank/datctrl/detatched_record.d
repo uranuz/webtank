@@ -61,10 +61,6 @@ public:
 			return getField(fieldName).isNull(recordIndex);
 		}
 
-		bool isNullable(string fieldName) {
-			return getField(fieldName).isNullable;
-		}
-
 		bool isWriteable(string fieldName) {
 			return getField(fieldName).isWriteable;
 		}
@@ -75,10 +71,6 @@ public:
 
 		void nullify(string fieldName) {
 			getField(fieldName).nullify(recordIndex);
-		}
-
-		void setNullable(string fieldName, bool value) {
-			getField(fieldName).isNullable = value;
 		}
 
 		JSONValue toStdJSON()
