@@ -9,8 +9,10 @@ struct TypedRecord(RecordFormatT, RecordType)
 {
 	// Тип формата для записи
 	alias FormatType = RecordFormatT;
-	alias ThisRecordSet = TypedRecord!(FormatType, RecordType);
+	
 	private RecordType _record;
+	
+	private alias ThisRecord = TypedRecord!(FormatType, RecordType);
 
 	this(RecordType record)
 	{
@@ -22,7 +24,7 @@ struct TypedRecord(RecordFormatT, RecordType)
 	template _getTypedField(string fieldName, bool isWriteable = false)
 	{
 		import webtank.datctrl.iface.data_field;
-		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
+		alias FieldFormatType = FormatType.getFormatType!(fieldName);
 		static if( isWriteable ) {
 			alias DataFieldType = IWriteableDataField!FieldFormatType;
 		} else {
@@ -111,7 +113,7 @@ struct TypedRecord(RecordFormatT, RecordType)
 
 	import std.json: JSONValue;
 	static auto fromStdJSON()(JSONValue jRecord) {
-		return ThisRecordSet(RecordType.fromStdJSONByFormat!FormatType(jRecord));
+		return ThisRecord(RecordType.fromStdJSONByFormat!FormatType(jRecord));
 	}
 
 	alias record this;

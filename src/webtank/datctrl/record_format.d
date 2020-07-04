@@ -21,9 +21,6 @@ $(LANG_RU Структура представляющая формат запи�
 +/
 struct RecordFormat(Args...)
 {
-	alias EnumFormatDecls = filterFieldFormatDecls!( EnumFormat );
-	alias EnumFieldSpecs = _filterFieldSpecs!(_fieldSpecs).ByTypes!(EnumFormat);
-
 	// Результат разбора аргументов
 	alias _argsParseRes = _parseRecordFormatArgs!(0, Args);
 
@@ -31,11 +28,14 @@ struct RecordFormat(Args...)
 	//Не использовать извне!!!
 	alias _fieldSpecs = _argsParseRes.FieldSpecs;
 
+	alias EnumFieldSpecs = _filterFieldSpecs!(_fieldSpecs).ByTypes!(EnumFormat);
+	alias EnumFormatTypes = _getFormatTypesTyple!(EnumFieldSpecs);
+
 	// Идентификатор поля первичного ключа в формате записи
 	enum size_t _keyFieldIndex = _argsParseRes.keyFieldIndex;
 
 	bool[string] nullableFlags;
-	Tuple!(EnumFormatDecls) enumFormats;
+	Tuple!(EnumFormatTypes) enumFormats;
 
 	/++
 	$(LANG_EN Returns true if format includes primary key field)
@@ -57,7 +57,7 @@ struct RecordFormat(Args...)
 	template getEnumFormat(string fieldName)
 	{
 		alias enumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
-		alias EnumFormatType = _getFieldSpec!(fieldName, EnumFieldSpecs).FormatDecl;
+		alias EnumFormatType = _getFieldSpec!(fieldName, EnumFieldSpecs).FormatType;
 
 		EnumFormatType getEnumFormat() const {
 			return enumFormats[enumFormatIndex];
@@ -71,7 +71,7 @@ struct RecordFormat(Args...)
 	template setEnumFormat(string fieldName)
 	{
 		alias enumFormatIndex = _getFieldIndex!(fieldName, 0, EnumFieldSpecs);
-		alias EnumFormatType = _getFieldSpec!(fieldName, EnumFieldSpecs).FormatDecl;
+		alias EnumFormatType = _getFieldSpec!(fieldName, EnumFieldSpecs).FormatType;
 
 		void setEnumFormat(EnumFormatType enumFormat) inout {
 			enumFormats[enumFormatIndex] = enumFormat;
@@ -112,26 +112,6 @@ struct RecordFormat(Args...)
 
 	//АХТУНГ!!! ДАЛЕЕ ИДУТ СТРАШНЫЕ ШАБЛОННЫЕ ЗАКЛИНАНИЯ!!!
 
-
-	/++
-	$(LANG_EN
-		Returns tuple of names for fields having semantic types from
-		$(D_PARAM FilterFieldTypes) parameter. All elements from $(D_PARAM FilterFieldTypes)
-		tuple must be of FieldType type
-	)
-	$(LANG_RU
-		Возвращает кортеж имен для полей, имеющих семантический тип из
-		кортежа $(D_PARAM FilterFieldTypes). Все элементы в кортеже $(D_PARAM FilterFieldTypes)
-		должны иметь тип FieldType
-	)
-	+/
-	alias filterNamesByTypes(FilterDecls...) = _getFieldNameTuple!(
-		_filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterDecls) );
-
-	alias filterFieldFormatDecls(FilterDecls...) = _getFieldFormatDeclTuple!(
-		_filterFieldSpecs!(_fieldSpecs).ByTypes!(FilterDecls) );
-
-
 	/++
 	$(LANG_EN Returns tuple of all field names for record format)
 	$(LANG_RU Возвращает кортеж всех имен полей для формата записи)
@@ -153,16 +133,16 @@ struct RecordFormat(Args...)
 	alias getFieldSpec(size_t fieldIndex) = _getFieldSpec!(fieldIndex, _fieldSpecs);
 
 	/++
-	$(LANG_EN Returns semantic field type $(D FieldType) for field with name $(D_PARAM fieldName))
-	$(LANG_RU Возвращает семантический тип поля $(D FieldType) для поля с именем $(D_PARAM fieldName))
+	$(LANG_EN Returns semantic field type $(D FormatType) for field with name $(D_PARAM fieldName))
+	$(LANG_RU Возвращает семантический тип поля $(D FormatType) для поля с именем $(D_PARAM fieldName))
 	+/
-	alias getFieldFormatDecl(string fieldName) = getFieldSpec!(fieldName).FormatDecl;
+	alias getFormatType(string fieldName) = getFieldSpec!(fieldName).FormatType;
 
 	/++
-	$(LANG_EN Returns semantic field type $(D FieldType) for field with index $(D_PARAM fieldIndex))
-	$(LANG_RU Возвращает семантический тип поля $(D FieldType) для поля с номером $(D_PARAM fieldIndex))
+	$(LANG_EN Returns semantic field type $(D FormatType) for field with index $(D_PARAM fieldIndex))
+	$(LANG_RU Возвращает семантический тип поля $(D FormatType) для поля с номером $(D_PARAM fieldIndex))
 	+/
-	alias getFieldFormatDecl(size_t fieldIndex) = getFieldSpec!(fieldIndex).FormatDecl;
+	alias getFormatType(size_t fieldIndex) = getFieldSpec!(fieldIndex).FormatType;
 
 
 	/++
@@ -303,12 +283,12 @@ template _getFieldNameTuple(FieldSpecs...)
 		alias _getFieldNameTuple = AliasSeq!( FieldSpecs[0].name, _getFieldNameTuple!(FieldSpecs[1..$]) );
 }
 
-template _getFieldFormatDeclTuple(FieldSpecs...)
+template _getFormatTypesTyple(FieldSpecs...)
 {
 	static if( FieldSpecs.length == 0 )
-		alias _getFieldFormatDeclTuple = AliasSeq!();
+		alias _getFormatTypesTyple = AliasSeq!();
 	else
-		alias _getFieldFormatDeclTuple = AliasSeq!( FieldSpecs[0].FormatDecl, _getFieldFormatDeclTuple!(FieldSpecs[1..$]) );
+		alias _getFormatTypesTyple = AliasSeq!( FieldSpecs[0].FormatType, _getFormatTypesTyple!(FieldSpecs[1..$]) );
 }
 
 //Получить из кортежа элементов типа FieldSpec нужный элемент по имени
@@ -347,44 +327,44 @@ template _getFieldIndex(string fieldName, size_t index, FieldSpecs...)
 //Шаблон фильтрации кортежа элементов FieldSpec
 template _filterFieldSpecs(FieldSpecs...)
 {	//Фильтрация по типам полей
-	//Элементы кортежа FilterFieldTypes должны иметь тип FieldType
-	template ByTypes(FilterFieldTypes...)
+	//Элементы кортежа FieldTypes должны иметь тип FieldType
+	template ByTypes(FieldTypes...)
 	{
-		static assert( FilterFieldTypes.length > 0, "Field types list must be provided!" );
+		static assert( FieldTypes.length > 0, "Field types list must be provided!" );
 
 		static if( FieldSpecs.length == 0 )
 			alias ByTypes = AliasSeq!();
 		else
 			alias ByTypes = AliasSeq!(
-				//Вызов фильтации для первого FieldSpec по набору FilterFieldTypes (типов полей)
-				_filterFieldSpec!(FieldSpecs[0], FilterFieldTypes),
+				//Вызов фильтации для первого FieldSpec по набору FieldTypes (типов полей)
+				_filterFieldSpec!(FieldSpecs[0], FieldTypes),
 
 				//Вызов для остальных FieldSpecs
-				_filterFieldSpecs!(FieldSpecs[1..$]).ByTypes!(FilterFieldTypes)
+				_filterFieldSpecs!(FieldSpecs[1..$]).ByTypes!(FieldTypes)
 			);
 	}
 }
 
 //Фильтрация одного элемента FieldSpec по набору типов полей
-//Элементы кортежа FilterFieldTypes должны иметь тип FieldType
-template _filterFieldSpec(alias FieldSpec, FilterFieldTypes...)
+//Элементы кортежа FieldTypes должны иметь тип FieldType
+template _filterFieldSpec(alias FieldSpec, FieldTypes...)
 {
 	import std.traits: isInstanceOf;
-	static if( FilterFieldTypes.length == 0 ) {
+	static if( FieldTypes.length == 0 ) {
 		alias _filterFieldSpec = AliasSeq!();
 	}
 	else
 	{
-		static if( __traits(isSame, FilterFieldTypes[0], EnumFormat) &&
-			isInstanceOf!(EnumFormat, FieldSpec.FormatDecl) )
-		{
+		static if(
+			__traits(isSame, FieldTypes[0], EnumFormat) && isInstanceOf!(EnumFormat, FieldSpec.FormatType)
+		) {
 			alias _filterFieldSpec = FieldSpec;
-		}
-		else static if( is(FilterFieldTypes[0]) && is( FieldSpec.FormatDecl == FilterFieldTypes[0] ) )
-		{
+		} else static if(
+			is(FieldTypes[0]) && is( FieldSpec.FormatType == FieldTypes[0] )
+		) {
 			alias _filterFieldSpec = FieldSpec;
 		} else {
-			alias _filterFieldSpec = _filterFieldSpec!(FieldSpec, FilterFieldTypes[1..$]);
+			alias _filterFieldSpec = _filterFieldSpec!(FieldSpec, FieldTypes[1..$]);
 		}
 	}
 }

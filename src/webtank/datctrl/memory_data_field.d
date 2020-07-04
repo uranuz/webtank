@@ -162,13 +162,13 @@ IBaseWriteableDataField[] makeMemoryDataFields(RecordFormatT)(RecordFormatT form
 	IBaseWriteableDataField[] dataFields;
 	foreach( fieldName; RecordFormatT.tupleOfNames )
 	{
-		alias FieldFormatDecl = RecordFormatT.getFieldFormatDecl!(fieldName);
-		alias DataFieldType = MemoryDataField!FieldFormatDecl;
+		alias FormatType = RecordFormatT.getFormatType!(fieldName);
+		alias DataFieldType = MemoryDataField!FormatType;
 		alias fieldIndex = RecordFormatT.getFieldIndex!(fieldName);
 
 		bool isNullable = format.nullableFlags.get(fieldName, true);
 
-		static if( isEnumFormat!(FieldFormatDecl) )
+		static if( isEnumFormat!(FormatType) )
 		{
 			alias enumFieldIndex = RecordFormatT.getEnumFormatIndex!(fieldName);
 			dataFields ~= new DataFieldType(fieldName, format.enumFormats[enumFieldIndex], null, isNullable);

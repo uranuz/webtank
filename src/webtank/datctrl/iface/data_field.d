@@ -10,16 +10,16 @@ import webtank.datctrl.enum_format;
 
 
 ///В шаблоне хранится соответсвие между именем и типом поля
-struct FieldSpec(T, string s, Attrs...)
+struct FieldSpec(FormatT, string n, Attrs...)
 {
-	/// Тип поля. Тип значения, либо формат перечислимого поля
-	alias FormatDecl = T;
+	/// Тип значения поля, либо формат перечислимого поля
+	alias FormatType = FormatT;
 
 	/// Тип значения перечислимого поля
-	alias ValueType = DataFieldValueType!(T);
+	alias ValueType = DataFieldValueType!(FormatType);
 
 	/// Название поля
-	alias name = s;
+	alias name = n;
 
 	enum bool hasKeySpec = _hasSpecAttr!(KeySpecAttr, Attrs);
 	enum bool hasWriteableSpec = _hasSpecAttr!(WriteableSpecAttr, Attrs);

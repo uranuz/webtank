@@ -64,10 +64,6 @@ public:
 	}
 
 	override { //Переопределяем интерфейсные методы
-		///Возвращает тип поля
-		//FieldType type()
-		//{	return FieldT; }
-
 		///Возвращает количество записей для поля
 		size_t length() @property inout {
 			return _queryResult.recordCount;
@@ -211,13 +207,13 @@ IBaseDataField[] makeDataFields(RecordFormatType)(IDBQueryResult queryResult, Re
 		alias fieldSpec = RecordFormatType.getFieldSpec!(fieldName);
 		bool isNullable = format.nullableFlags.get(fieldName, true);
 
-		static if( isEnumFormat!(fieldSpec.FormatDecl) ) {
+		static if( isEnumFormat!(fieldSpec.FormatType) ) {
 			alias enumFieldIndex = RecordFormatType.getEnumFormatIndex!(fieldName);
 		}
 
 		static if( fieldSpec.hasWriteableSpec )
 		{
-			alias CurrFieldT = MemoryDataField!(fieldSpec.FormatDecl);
+			alias CurrFieldT = MemoryDataField!(fieldSpec.FormatType);
 			Optional!(fieldSpec.ValueType)[] data;
 			data.length = queryResult.recordCount; // preallocating
 
@@ -236,7 +232,7 @@ IBaseDataField[] makeDataFields(RecordFormatType)(IDBQueryResult queryResult, Re
 				}
 			}
 
-			static if( isEnumFormat!(fieldSpec.FormatDecl) ) {
+			static if( isEnumFormat!(fieldSpec.FormatType) ) {
 				fields[fi] = new CurrFieldT(fieldName, format.enumFormats[enumFieldIndex], data, isNullable);
 			} else {
 				fields[fi] = new CurrFieldT(fieldName, data, isNullable);
@@ -244,8 +240,8 @@ IBaseDataField[] makeDataFields(RecordFormatType)(IDBQueryResult queryResult, Re
 		}
 		else
 		{
-			alias CurrFieldT = DatabaseField!(fieldSpec.FormatDecl);
-			static if( isEnumFormat!(fieldSpec.FormatDecl) ) {
+			alias CurrFieldT = DatabaseField!(fieldSpec.FormatType);
+			static if( isEnumFormat!(fieldSpec.FormatType) ) {
 				fields[fi] = new CurrFieldT(queryResult, fi, fieldName, isNullable, format.enumFormats[enumFieldIndex]);
 			} else {
 				fields[fi] = new CurrFieldT(queryResult, fi, fieldName, isNullable);

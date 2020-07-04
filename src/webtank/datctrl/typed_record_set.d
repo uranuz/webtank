@@ -5,12 +5,19 @@ import webtank.datctrl.record_format;
 import webtank.datctrl.iface.record_set;
 import webtank.datctrl.typed_record;
 
-struct TypedRecordSet(FormatType, RecordSetType)
+struct TypedRecordSet(FormatT, RecordSetT)
+	if( is( RecordSetT: IBaseRecordSet ) )
 {
-	enum bool hasKeyField = FormatType.hasKeyField;
-	alias ThisRecordSet = TypedRecordSet!(FormatType, RecordSetType);
+public:
+	alias FormatType = FormatT;
+	alias RecordSetType = RecordSetT;
+
 	alias RecordIface = typeof(_recordSet[].front());
 	alias RecordType = TypedRecord!(FormatType, RecordIface);
+
+	enum bool hasKeyField = FormatType.hasKeyField;
+
+	private alias ThisRecordSet = typeof(this);
 
 	private RecordSetType _recordSet;
 
@@ -19,23 +26,6 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		import std.exception: enforce;
 		enforce(recordSet !is null, `Expected record set, but got null`);
 		_recordSet = recordSet;
-	}
-
-	private template _getTypedField(string fieldName, bool isWriteable = false)
-	{
-		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
-		static if( isWriteable ) {
-			alias DataFieldType = IWriteableDataField!FieldFormatType;
-		} else {
-			alias DataFieldType = IDataField!FieldFormatType;
-		}
-
-		DataFieldType _getTypedField()
-		{
-			DataFieldType dataField = cast(DataFieldType) _recordSet.getField(fieldName);
-			assert(dataField, `Failed to cast data field to target type or field is null`);
-			return dataField;
-		}
 	}
 
 	/++
@@ -217,7 +207,7 @@ struct TypedRecordSet(FormatType, RecordSetType)
 	template getEnumFormat(string fieldName)
 	{
 		alias ValueType = FormatType.getValueType!(fieldName);
-		alias FieldFormatType = FormatType.getFieldFormatDecl!(fieldName);
+		alias FieldFormatType = FormatType.getFormatType!(fieldName);
 
 		static if( isEnumFormat!(FieldFormatType) )
 		{
@@ -269,6 +259,17 @@ struct TypedRecordSet(FormatType, RecordSetType)
 		}
 	}
 
+	Range opSlice() {
+		return Range(this);
+	}
+
+	public auto recordSet() @property {
+		return _recordSet;
+	}
+
+	alias recordSet this;
+
+private:
 	static struct Range
 	{
 		private ThisRecordSet _rs;
@@ -292,16 +293,23 @@ struct TypedRecordSet(FormatType, RecordSetType)
 			++_index;
 		}
 	}
+	
+	template _getTypedField(string fieldName, bool isWriteable = false)
+	{
+		alias FormatType = FormatType.getFormatType!(fieldName);
+		static if( isWriteable ) {
+			alias DataFieldType = IWriteableDataField!FormatType;
+		} else {
+			alias DataFieldType = IDataField!FormatType;
+		}
 
-	Range opSlice() {
-		return Range(this);
+		DataFieldType _getTypedField()
+		{
+			DataFieldType dataField = cast(DataFieldType) _recordSet.getField(fieldName);
+			assert(dataField, `Failed to cast data field to target type or field is null`);
+			return dataField;
+		}
 	}
-
-	public auto recordSet() @property {
-		return _recordSet;
-	}
-
-	alias recordSet this;
 }
 
 unittest

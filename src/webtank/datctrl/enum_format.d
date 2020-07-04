@@ -9,8 +9,8 @@ import webtank.datctrl.iface.data_field: IBaseDataField;
 import webtank.datctrl.cursor_record: CursorRecord;
 
 /++
-$(LANG_EN Struct represents format for enumerated type of field)
-$(LANG_RU Структура представляет формат для перечислимого типа поля)
+$(LANG_EN Represents format for enumerated type)
+$(LANG_RU Представляет формат для перечислимого типа)
 +/
 class EnumFormat(T, bool withNames): IBaseRecordSet
 {
@@ -18,7 +18,7 @@ class EnumFormat(T, bool withNames): IBaseRecordSet
 	import std.algorithm: canFind;
 
 	alias ValueType = T;
-	alias hasNames = withNames;
+	enum bool hasNames = withNames;
 
 	import webtank.datctrl.cursor_record: CursorRecord;
 	import webtank.datctrl.iface.record_set: IRecordSetRange;
