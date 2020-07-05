@@ -379,6 +379,14 @@ public:
 	mixin RecordSetRangeImpl;
 }
 
+// Псевдонимы шаблона для удобства
+
+/// Формат перечисления с именованными значениями
+alias NamedEnumFormat(T) = EnumFormat!(T, true);
+
+/// Формат перечисления с анонимными значениями
+alias UnnamedEnumFormat(T) = EnumFormat!(T, false);
+
 import std.range: ElementType;
 import std.typecons: isTuple;
 

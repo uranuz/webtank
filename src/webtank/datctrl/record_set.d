@@ -64,7 +64,7 @@ public:
 	}
 
 	import std.json: JSONValue, JSONType;
-	static WriteableRecordSet fromStdJSONByFormat(RecordFormatT)(JSONValue jRecordSet)
+	static WriteableRecordSet fromStdJSONByFormat(RecordFormatT)(JSONValue jRecordSet, RecordFormatT format)
 	{
 		import std.exception: enforce;
 		import std.conv: text;
@@ -85,7 +85,7 @@ public:
 		size_t[string] fieldToIndex = _makeRecordFieldIndex(jFormat);
 
 		// Fill with init format for now
-		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init);
+		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(format);
 
 		auto newRS = new WriteableRecordSet(dataFields, RecordFormatT.getKeyFieldIndex!());
 		newRS.addItems(jData.array.length); // Expand fields to desired size

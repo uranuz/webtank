@@ -247,7 +247,7 @@ public:
 
 	import std.json: JSONValue;
 	static auto fromStdJSON()(JSONValue jRecordSet) {
-		return ThisRecordSet(RecordSetType.fromStdJSONByFormat!FormatType(jRecordSet));
+		return ThisRecordSet(RecordSetType.fromStdJSONByFormat(jRecordSet, FormatType.init));
 	}
 
 	template set(string fieldName)

@@ -113,7 +113,7 @@ struct TypedRecord(RecordFormatT, RecordType)
 
 	import std.json: JSONValue;
 	static auto fromStdJSON()(JSONValue jRecord) {
-		return ThisRecord(RecordType.fromStdJSONByFormat!FormatType(jRecord));
+		return ThisRecord(RecordType.fromStdJSONByFormat(jRecord, FormatType.init));
 	}
 
 	alias record this;

@@ -88,7 +88,7 @@ public:
 	} // override
 
 	import std.json: JSONValue, JSONType;
-	static DetatchedRecord fromStdJSONByFormat(RecordFormatT)(JSONValue jRecord)
+	static DetatchedRecord fromStdJSONByFormat(RecordFormatT)(JSONValue jRecord, RecordFormatT format)
 	{
 		import webtank.datctrl.memory_data_field: makeMemoryDataFields;
 		import webtank.datctrl.common: _extractFromJSON, _makeRecordFieldIndex;
@@ -103,7 +103,7 @@ public:
 		enforce(type == SrlEntityType.record, `Expected record type`);
 
 		// Fill with init format for now
-		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(RecordFormatT.init);
+		IBaseWriteableDataField[] dataFields = makeMemoryDataFields(format);
 
 		auto newRec = new DetatchedRecord(dataFields, RecordFormatT.getKeyFieldIndex!());
 		newRS.addItems(1); // Add exactly on field
