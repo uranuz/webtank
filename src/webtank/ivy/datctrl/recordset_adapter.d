@@ -10,7 +10,7 @@ import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
 
 import std.exception: enforce;
 
-class RecordSetAdapter: IClassNode
+class RecordSetAdapter: NotImplClassNode
 {
 	import webtank.datctrl.consts;
 private:
@@ -110,10 +110,6 @@ public:
 				default: break;
 			}
 			return IvyData();
-		}
-
-		void __setAttr__(IvyData node, string attrName) {
-			throw new Exception(`Not attributes setting is yet supported by RecordSetAdapter`);
 		}
 
 		IvyData __serialize__()

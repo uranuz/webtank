@@ -7,7 +7,7 @@ import ivy.interpreter.data_node;
 import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
 import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
 
-class RecordFormatAdapter: IClassNode
+class RecordFormatAdapter: NotImplClassNode
 {
 	import webtank.datctrl.consts;
 	import std.exception: enforce;
@@ -83,10 +83,6 @@ public:
 			return new Range(this);
 		}
 
-		IClassNode opSlice(size_t, size_t) {
-			throw new Exception(`opSlice for RecordFormatAdapter is not implemented yet`);
-		}
-
 		IvyData opIndex(IvyData index)
 		{
 			import std.conv: text;
@@ -108,10 +104,6 @@ public:
 		IvyData __getAttr__(string attrName)
 		{
 			return IvyData();
-		}
-
-		void __setAttr__(IvyData value, string attrName) {
-			enforce(false, `No attributes setting is yet supported by RecordFormatAdapter`);
 		}
 
 		IvyData __serialize__()

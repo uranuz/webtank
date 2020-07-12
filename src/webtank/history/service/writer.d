@@ -31,7 +31,7 @@ void writeDataToHistory(JSON_RPCServiceContext ctx, HistoryRecordData[] data)
 
 	HistoryRecordData[][string] byTableData;
 
-	ctx.service.loger.info(`Подготовка записи изменений в историю`);
+	ctx.service.log.info(`Подготовка записи изменений в историю`);
 
 	// Распределяем записи по таблицам
 	foreach( item; data )
@@ -47,12 +47,12 @@ void writeDataToHistory(JSON_RPCServiceContext ctx, HistoryRecordData[] data)
 		}
 	}
 
-	ctx.service.loger.info(`Запуск записи изменений в историю`);
+	ctx.service.log.info(`Запуск записи изменений в историю`);
 
 	foreach( tableName, tableData; byTableData ) {
 		writeDataForTable(db, tableData, tableName);
 	}
-	ctx.service.loger.info(`Завершение записи изменений в историю`);
+	ctx.service.log.info(`Завершение записи изменений в историю`);
 }
 
 void writeDataForTable(IDatabase db, HistoryRecordData[] data, string tableName)
@@ -182,8 +182,8 @@ size_t saveActionToHistory(JSON_RPCServiceContext ctx, HistoryActionData data)
 {
 	enforce!AccessException(ctx.user.isAuthenticated, `Недостаточно прав для записи в историю!!!`);
 
-	ctx.service.loger.info(`Начало записи действия в историю`);
-	scope(success) ctx.service.loger.info(`Окончание записи действия в историю`);
+	ctx.service.log.info(`Начало записи действия в историю`);
+	scope(success) ctx.service.log.info(`Окончание записи действия в историю`);
 
 	return ctx.service.getDB(DBRole.history).queryParams(`
 insert into "_history_action"

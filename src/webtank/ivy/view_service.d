@@ -132,7 +132,7 @@ public:
 		return _pageRouter;
 	}
 
-	override Loger loger() @property {
+	override Loger log() @property {
 		return _loger;
 	}
 
@@ -165,7 +165,7 @@ public:
 		_pageRouter.onError.join( (Exception ex, HTTPContext context)
 		{
 			auto messages = makeErrorMsg(ex);
-			loger.error(messages.details);
+			log.error(messages.details);
 			renderResult(IvyData(messages.userError), context);
 			context.response.headers.statusCode = HTTPStatus.InternalServerError;
 			return true; // Ошибка обработана

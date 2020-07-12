@@ -6,7 +6,7 @@ import ivy.interpreter.data_node;
 
 import webtank.ivy.datctrl.deserialize;
 
-class FieldFormatAdapter: IClassNode
+class FieldFormatAdapter: NotImplClassNode
 {
 	import std.exception: enforce;
 	import webtank.datctrl.consts;
@@ -22,18 +22,6 @@ public:
 	}
 
 	override {
-		IvyNodeRange opSlice() {
-			throw new Exception(`opSlice for FieldFormatAdapter is not implemented yet`);
-		}
-
-		IClassNode opSlice(size_t, size_t) {
-			throw new Exception(`opSlice for FieldFormatAdapter is not implemented yet`);
-		}
-
-		IvyData opIndex(IvyData index) {
-			throw new Exception(`opIndex for FieldFormatAdapter is not implemented yet`);
-		}
-
 		IvyData __getAttr__(string attrName)
 		{
 			switch(attrName)
@@ -44,19 +32,10 @@ public:
 			}
 			throw new Exception(`Unexpected attribute name for FieldFormatAdapter`);
 		}
-
-		void __setAttr__(IvyData value, string attrName) {
-			throw new Exception(`__setAttr__ for FieldFormatAdapter is not implemented yet`);
-		}
-
 		IvyData __serialize__() {
 			// Maybe we should make deep copy of it there, but because of productivity
 			// we shall not do it now. Just say for now that nobody should modifiy serialized data
 			return _rawField;
-		}
-
-		size_t length() @property {
-			throw new Exception(`length for FieldFormatAdapter is not implemented yet`);
 		}
 	}
 

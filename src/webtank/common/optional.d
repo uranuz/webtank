@@ -1,44 +1,15 @@
 module webtank.common.optional;
 
-class OptionalException : Exception
+import std.traits: isDynamicArray, isAssociativeArray;
+import trifle.traits: isNullableType, isUnsafelyNullable;
+
+class OptionalException: Exception
 {
 	this(string msg, string file = __FILE__, size_t line = __LINE__)
 		@safe pure nothrow 
 	{
 		super(msg, file, line);
 	}
-}
-
-import std.traits: isDynamicArray, isAssociativeArray;
-
-///Returns true if T is nullable type
-template isNullableType(T) {
-	enum bool isNullableType = __traits( compiles, { bool aaa = T.init is null; } );
-}
-
-template isUnsafelyNullable(T) {
-	enum bool isUnsafelyNullable = isNullableType!T && !isDynamicArray!T && !isAssociativeArray!T;
-}
-
-///Шаблон, возвращает true, если T является Nullable или NullableRef
-template isStdNullable(T)
-{
-	import std.traits: isInstanceOf, Unqual;
-	import std.typecons: Nullable, NullableRef;
-	enum bool isStdNullable = isInstanceOf!(Nullable, Unqual!N) || isInstanceOf!(NullableRef, Unqual!N);
-}
-
-///Шаблон возвращает базовый тип для Nullable или NullableRef
-template getStdNullableType(N)
-{
-	import std.typecons: Nullable, NullableRef;
-	import std.traits: fullyQualifiedName;
-	static if( is( N == NullableRef!(TL2), TL2... ) )
-		alias TL2[0] getStdNullableType;
-	else static if( is( N == Nullable!(TL2), TL2... ) )
-		alias TL2[0] getStdNullableType;
-	else
-		static assert(false, `Type ` ~ fullyQualifiedName!(N) ~ ` can't be used as Nullable type!!!` );
 }
 
 ///Возвращает true, если тип N произведён от шаблона Optional
@@ -66,65 +37,6 @@ template OptionalValueType(O)
 		static assert(false, `Type ` ~ fullyQualifiedName!(O) ~ ` is not an instance of Optional!!!` );
 }
 
-
-
-unittest
-{	
-	interface Vasya {}
-	
-	class Petya {}
-	
-	struct Vova {}
-	
-	alias void function(int) FuncType;
-	alias bool delegate(string, int) DelType;
-	
-	//Check that these types are nullable
-	assert( isNullableType!Vasya );
-	assert( isNullableType!Petya );
-	assert( isNullableType!(string) );
-	assert( isNullableType!(int*) );
-	assert( isNullableType!(string[string]) );
-	assert( isNullableType!(FuncType) );
-	assert( isNullableType!(DelType) );
-	assert( isNullableType!(dchar[7]*) );
-	
-	//Check that these types are not nullable
-	assert( !isNullableType!Vova );
-	assert( !isNullableType!(double) );
-	assert( !isNullableType!(int[8]) );
-	assert( !isNullableType!(double) );
-}
-
-unittest
-{	
-	interface Vasya {}
-	
-	class Petya {}
-	
-	struct Vova {}
-	
-	alias void function(int) FuncType;
-	alias bool delegate(string, int) DelType;
-	
-	//Check that these types are nullable
-	assert( isUnsafelyNullable!Vasya );
-	assert( isUnsafelyNullable!Petya );
-	assert( isUnsafelyNullable!(int*) );
-	assert( isUnsafelyNullable!(FuncType) );
-	assert( isUnsafelyNullable!(DelType) );
-	assert( isUnsafelyNullable!(dchar[7]*) );
-	
-	//Check that these types are not nullable
-	assert( !isUnsafelyNullable!Vova );
-	assert( !isUnsafelyNullable!(double) );
-	assert( !isUnsafelyNullable!(int[8]) );
-	assert( !isUnsafelyNullable!(double) );
-	assert( !isUnsafelyNullable!(string) );
-	assert( !isUnsafelyNullable!(int[]) );
-	assert( !isUnsafelyNullable!(string[string]) );
-}
-
 unittest {
 	assert(!isOptional!int);
 	assert(!isOptional!string);
@@ -150,7 +62,11 @@ Optional!(T) optional(T)(auto ref inout(T) value)
 	return Optional!(T)(value);
 }
 
-private enum OptState: ubyte { Undef, Null, Set };
+private enum OptState: ubyte {
+	Undef,
+	Null,
+	Set
+}
 
 ///Шаблон для представления типов, имеющих выделенное пустое,
 ///или неинициализированное состояние

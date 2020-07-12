@@ -24,7 +24,7 @@ interface IWebService: IServiceConfig
 	import webtank.net.http.output: HTTPOutput;
 	import webtank.net.server.iface: IWebServer;
 
-	Loger loger() @property;
+	Loger log() @property;
 	ICompositeHTTPHandler rootRouter() @property;
 	IAuthController accessController() @property;
 	IRightController rightController() @property;

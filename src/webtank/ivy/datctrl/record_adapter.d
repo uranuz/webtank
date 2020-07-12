@@ -9,7 +9,7 @@ import std.exception: enforce;
 
 import webtank.datctrl.consts;
 
-class RecordAdapter: IClassNode
+class RecordAdapter: NotImplClassNode
 {
 private:
 	IvyData[] _items;
@@ -33,7 +33,6 @@ public:
 		_fmt = new RecordFormatAdapter(rawRec);
 		_items = _deserialize(rawRec);
 	}
-
 
 	this(RecordFormatAdapter fmt, IvyData[] items)
 	{
@@ -87,10 +86,6 @@ public:
 			return new Range(this);
 		}
 
-		IClassNode opSlice(size_t, size_t) {
-			throw new Exception(`opSlice for RecordAdapter is not implemented yet`);
-		}
-
 		IvyData opIndex(IvyData index)
 		{
 			import std.conv: text;
@@ -117,10 +112,6 @@ public:
 				default: break;
 			}
 			return this[IvyData(attrName)];
-		}
-
-		void __setAttr__(IvyData value, string attrName) {
-			enforce(false, `Not attributes setting is yet supported by RecordAdapter`);
 		}
 
 		IvyData __serialize__()

@@ -102,9 +102,9 @@ public:
 		}
 	}
 
-	override Loger loger() @property
+	override Loger log() @property
 	{
-		assert(_rootRouter, `Main service loger is not initialized!`);
+		assert(_rootRouter, `Main service log is not initialized!`);
 		return _loger;
 	}
 

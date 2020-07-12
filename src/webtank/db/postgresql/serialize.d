@@ -10,7 +10,8 @@ string toPGString(T)(T value)
 	import std.range: ElementType, isInputRange, empty, front, popFront;
 	import std.array: replace;
 	import std.json: JSONValue;
-	import webtank.common.optional: isOptional, isNullableType;
+	import trifle.traits: isNullableType;
+	import webtank.common.optional: isOptional;
 
 	static if( is(T == typeof(null)) )
 	{

@@ -22,16 +22,16 @@ class RemoteCallInterpreter: INativeDirectiveInterpreter
 		IvyData uriNode = interp.getValue("uri");
 		IvyData methodNode = interp.getValue("method");
 		IvyData dataNode = interp.getValue("data");
-		interp.loger.internalAssert(uriNode.type == IvyDataType.String, `Expected string as URI parameter`);
-		interp.loger.internalAssert(
+		interp.log.internalAssert(uriNode.type == IvyDataType.String, `Expected string as URI parameter`);
+		interp.log.internalAssert(
 			[IvyDataType.String, IvyDataType.Undef, IvyDataType.Null].canFind(methodNode.type),
 			`Expected string as HTTP-method parameter`);
-		interp.loger.internalAssert(
+		interp.log.internalAssert(
 			[IvyDataType.String, IvyDataType.Undef, IvyDataType.Null].canFind(dataNode.type),
 			`Expected string as data parameter`);
 
 		IvyData forwardHTTPHeadersNode = interp.getValue("forwardHTTPHeaders");
-		interp.loger.internalAssert(
+		interp.log.internalAssert(
 			[IvyDataType.AssocArray, IvyDataType.Undef, IvyDataType.Null].canFind(forwardHTTPHeadersNode.type),
 			`Expected assoc array as forwardHTTPHeaders global variable`);
 
@@ -57,7 +57,7 @@ class RemoteCallInterpreter: INativeDirectiveInterpreter
 		} catch(Exception ex) {
 			fResult.reject(ex);
 		}
-		interp._stack ~= IvyData(fResult);
+		interp._stack.push(fResult);
 	}
 
 	private __gshared DirAttrsBlock[] _attrBlocks;

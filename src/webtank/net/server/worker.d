@@ -43,7 +43,7 @@ void runServer(ref WorkerOpts opts)
 
 	enforce(opts.service !is null, `Server service object is null`);
 	enforce(opts.service.rootRouter !is null, `Server main handler is null`);
-	enforce(opts.service.loger !is null, `Server main loger is null`);
+	enforce(opts.service.log !is null, `Server main log is null`);
 	
 	bool isSharedSocket = opts.workerSockAddr.length > 0;
 	socket_t serverSock;

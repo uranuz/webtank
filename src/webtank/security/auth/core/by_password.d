@@ -177,7 +177,7 @@ authByPassword(
 	try {
 		ctx.user = authByPasswordInternal(ctx.service, userLogin, userPassword, userIP, userAgent);
 	} catch(Exception exc) {
-		ctx.service.loger.warn(exc);
+		ctx.service.log.warn(exc);
 	}
 
 	if( ctx.user is null ) {

@@ -1,9 +1,9 @@
 module webtank.ivy.user;
 
 import webtank.security.auth.iface.user_identity: IUserIdentity;
-import ivy.interpreter.data_node: IClassNode, IvyDataType, IvyNodeRange, IvyData;
+import ivy.interpreter.data_node: NotImplClassNode, IvyDataType, IvyNodeRange, IvyData;
 
-class IvyUserIdentity: IClassNode
+class IvyUserIdentity: NotImplClassNode
 {
 private:
 	IUserIdentity _identity;
@@ -17,18 +17,6 @@ public:
 	}
 
 	override {
-		IvyNodeRange opSlice() {
-			throw new Exception("Method opSlice is not implemented");
-		}
-
-		IClassNode opSlice(size_t, size_t) {
-			throw new Exception("Method opSlice is not implemented");
-		}
-
-		IvyData opIndex(IvyData) {
-			throw new Exception("Method opIndex is not implemented");
-		}
-
 		IvyData __getAttr__(string attrName)
 		{
 			import std.array: split;
@@ -44,20 +32,13 @@ public:
 			throw new Exception(`Unexpected IvyUserIdentity attribute: ` ~ attrName);
 		}
 
-		void __setAttr__(IvyData val, string attrName) {
-			throw new Exception("Method __setAttr__ is not implemented");
-		}
-		
-		IvyData __serialize__() {
+		IvyData __serialize__()
+		{
 			IvyData res;
 			foreach( field; [`id`, `name`, `data`, `isAuthenticated`, `accessRoles`] ) {
 				res[field] = this.__getAttr__(field);
 			}
 			return res;
-		}
-		
-		size_t length() @property {
-			throw new Exception("Method length not implemented");
 		}
 	}
 }

@@ -17,7 +17,8 @@ T conv(T, V)(V value)
 	import std.algorithm: canFind;
 	import std.traits: isSomeString, OriginalType, isDynamicArray, isArray;
 	import std.algorithm: startsWith;
-	import webtank.common.optional: Optional, isUnsafelyNullable, isOptional;
+	import trifle.traits: isUnsafelyNullable;
+	import webtank.common.optional: Optional, isOptional;
 	static if( is(T == enum) )
 	{
 		static if( isSomeString!( OriginalType!(T) ) && isSomeString!(V) )

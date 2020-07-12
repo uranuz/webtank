@@ -1,6 +1,10 @@
 module webtank.ivy.datctrl.deserialize;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.interpreter.data_node;
+import ivy;
+import ivy.compiler.compiler;
+import ivy.interpreter.interpreter;
+import ivy.interpreter.data_node;
+import ivy.interpreter.data_node_types: IvyDateTime;
 import webtank.ivy.datctrl.record_adapter;
 import webtank.ivy.datctrl.recordset_adapter;
 import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
@@ -31,15 +35,12 @@ IvyData _deserializeRecordData(ref IvyData fieldData, IvyData format)
 	{
 		case SrlEntityType.date:
 		case SrlEntityType.dateTime:
-			if( fieldData.type == IvyDataType.String ) {
-				return IvyData(
-					fmt.typeStr == SrlEntityType.date?
-					SysTime(Date.fromISOExtString(fieldData.str)):
-					SysTime.fromISOExtString(fieldData.str)
-				);
-			} else {
-				enforce(fieldData.type == IvyDataType.DateTime, `Node is node convertible to dateTime`);
-			}
+			enforce(fieldData.type == IvyDataType.String, `Node is node convertible to dateTime`);
+			fieldData = new IvyDateTime(
+				fmt.typeStr == SrlEntityType.date?
+				SysTime(Date.fromISOExtString(fieldData.str)):
+				SysTime.fromISOExtString(fieldData.str)
+			);
 			break;
 		default:
 			break;

@@ -99,7 +99,7 @@ void processRequest(Socket sock, IWebServer server)
 
 		if( request is null )
 		{
-			server.service.loger.crit(`request is null`);
+			server.service.log.crit(`request is null`);
 			return;
 		}
 
@@ -109,7 +109,7 @@ void processRequest(Socket sock, IWebServer server)
 			//Запуск обработки HTTP-запроса
 			server.service.rootRouter.processRequest(context);
 		} catch(Exception ex) {
-			server.service.loger.error(makeErrorMsg(ex).details);
+			server.service.log.error(makeErrorMsg(ex).details);
 			makeErrorResponse(ex, response);
 		}
 
@@ -120,7 +120,7 @@ void processRequest(Socket sock, IWebServer server)
 	}
 	catch(Exception exc)
 	{
-		server.service.loger.crit(makeErrorMsg(exc).userError); //Хотим знать, что случилось
+		server.service.log.crit(makeErrorMsg(exc).userError); //Хотим знать, что случилось
 		enforce(sock.isAlive, `Unable to send error response to user because socket is dead`);
 		makeErrorResponse(exc, response);
 		sock.send(response.getString());
@@ -129,7 +129,7 @@ void processRequest(Socket sock, IWebServer server)
 	}
 	catch(Throwable exc)
 	{
-		server.service.loger.fatal(makeErrorMsg(exc).userError); //Хотим знать, что случилось
+		server.service.log.fatal(makeErrorMsg(exc).userError); //Хотим знать, что случилось
 		enforce(sock.isAlive, `Unable to send critical error response to user because socket is dead`);
 		makeErrorResponse(exc, response);
 		sock.send(response.getString());

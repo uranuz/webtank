@@ -51,14 +51,14 @@ auto getScalar(T)(IDBQueryResult queryResult)
 {
 	import std.exception: enforce;
 	import webtank.common.conv: conv;
-	import webtank.common.optional: isNullableType, isUnsafelyNullable;
+	import trifle.traits: isSafelyNullable;
 	bool isSet = (
 		queryResult !is null
 		&& queryResult.fieldCount == 1
 		&& queryResult.recordCount == 1
 		&& !queryResult.isNull(0, 0)
 	);
-	static if( isNullableType!T && !isUnsafelyNullable!T ) {
+	static if( isSafelyNullable!T ) {
 		if( !isSet )
 			return null;
 	} else {

@@ -5,7 +5,7 @@ import webtank.ivy.datctrl.record_adapter;
 import webtank.ivy.datctrl.recordset_adapter;
 import webtank.ivy.datctrl.deserialize;
 
-class RecordSetAdapterSlice: IClassNode
+class RecordSetAdapterSlice: NotImplClassNode
 {
 private:
 	RecordSetAdapter _rs;
@@ -69,10 +69,6 @@ public:
 		return new Range(this);
 	}
 
-	override RecordSetAdapter opSlice(size_t, size_t) {
-		throw new Exception(`Getting slice for RecordSetAdapterSlice is not supported yet`);
-	}
-
 	override IvyData opIndex(IvyData index)
 	{
 		import std.conv: text;
@@ -90,10 +86,6 @@ public:
 
 	override IvyData __getAttr__(string attrName) {
 		return _rs.__getAttr__(attrName);
-	}
-
-	override void __setAttr__(IvyData node, string attrName) {
-		throw new Exception(`Not attributes setting is yet supported by RecordSetAdapterSlice`);
 	}
 
 	override IvyData __serialize__() {

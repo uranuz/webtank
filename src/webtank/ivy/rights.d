@@ -1,9 +1,9 @@
 module webtank.ivy.rights;
 
 import webtank.security.right.user_rights: UserRights;
-import ivy.interpreter.data_node: IClassNode, IvyDataType, IvyNodeRange, IvyData;
+import ivy.interpreter.data_node: NotImplClassNode, IvyDataType, IvyNodeRange, IvyData;
 
-class IvyUserRights: IClassNode
+class IvyUserRights: NotImplClassNode
 {
 private:
 	UserRights _rights;
@@ -19,18 +19,6 @@ public:
 	}
 
 	override {
-		IvyNodeRange opSlice() {
-			throw new Exception("Method opSlice is not implemented");
-		}
-
-		IClassNode opSlice(size_t, size_t) {
-			throw new Exception("Method opSlice is not implemented");
-		}
-
-		IvyData opIndex(IvyData) {
-			throw new Exception("Method opIndex is not implemented");
-		}
-
 		IvyData __getAttr__(string attrName)
 		{
 			switch(attrName)
@@ -78,17 +66,14 @@ public:
 					throw new Exception(`Unexpected IvyUserRights attribute: ` ~ attrName);
 			}
 		}
-		
-		IvyData __serialize__() {
+
+		IvyData __serialize__()
+		{
 			IvyData res;
 			foreach( field; [`object`, `kind`, `data`, `hasRight`] ) {
 				res[field] = this.__getAttr__(field);
 			}
 			return res;
-		}
-		
-		size_t length() @property {
-			throw new Exception("Method length not implemented");
 		}
 	}
 }

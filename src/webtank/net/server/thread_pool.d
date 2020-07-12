@@ -60,7 +60,7 @@ public:
 				Socket client = _listener.accept();
 				if( client is null )
 				{
-					_service.loger.crit(`accepted socket is null`);
+					_service.log.crit(`accepted socket is null`);
 					continue;
 				}
 
@@ -68,7 +68,7 @@ public:
 			//}
 			//catch(Throwable exc)
 			//{
-			//	_service.loger.fatal( makeErrorMsg(exc).userError );
+			//	_service.log.fatal( makeErrorMsg(exc).userError );
 			//	throw exc;
 			//}
 		}

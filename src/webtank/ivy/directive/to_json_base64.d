@@ -14,7 +14,7 @@ class ToJSONBase64DirInterpreter: INativeDirectiveInterpreter
 	{
 		import std.base64: Base64;
 		ubyte[] jsonStr = cast(ubyte[]) interp.getValue("value").toJSONString();
-		interp._stack ~= IvyData(cast(string) Base64.encode(jsonStr));
+		interp._stack.push(cast(string) Base64.encode(jsonStr));
 	}
 
 	private __gshared DirAttrsBlock[] _attrBlocks = [

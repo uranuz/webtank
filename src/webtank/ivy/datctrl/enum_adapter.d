@@ -9,7 +9,7 @@ import std.exception: enforce;
 
 import webtank.datctrl.consts;
 
-class EnumAdapter: IClassNode
+class EnumAdapter: NotImplClassNode
 {
 private:
 	EnumFormatAdapter _fmt;
@@ -42,18 +42,6 @@ public:
 	}
 
 	override {
-		IvyNodeRange opSlice() {
-			throw new Exception(`opSlice for EnumAdapter is not implemented yet`);
-		}
-
-		IClassNode opSlice(size_t, size_t) {
-			throw new Exception(`opSlice for EnumAdapter is not implemented yet`);
-		}
-
-		IvyData opIndex(IvyData index) {
-			throw new Exception(`opIndex for EnumAdapter is not implemented yet`); 
-		}
-
 		IvyData __getAttr__(string attrName)
 		{
 			switch(attrName)
@@ -66,19 +54,11 @@ public:
 			throw new Exception(`Unexpected EnumAdapter property`);
 		}
 
-		void __setAttr__(IvyData value, string attrName) {
-			throw new Exception(`Not attributes setting is yet supported by EnumAdapter`);
-		}
-
 		IvyData __serialize__()
 		{
 			IvyData res = _fmt.__serialize__();
 			res[SrlField.data] = _value;
 			return res;
-		}
-
-		size_t length() @property {
-			throw new Exception(`length for EnumAdapter is not implemented yet`); 
 		}
 	}
 }

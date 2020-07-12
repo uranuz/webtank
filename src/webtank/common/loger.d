@@ -144,7 +144,7 @@ public:
 	/++
 	$(LANG_EN
 		This is write log event function that must be reimplemented
-		in derived loger classes
+		in derived log classes
 	)
 	$(LANG_RU
 		Функция записи события в журнал, которая должна быть переопределена
@@ -416,7 +416,7 @@ protected:
 
 /++
 $(LANG_EN
-	Wrapper loger that makes logging work in separate thread
+	Wrapper log that makes logging work in separate thread
 )
 $(LANG_RU
 	Логер-обертка для работы журналирования в отдельном системном потоке
@@ -447,7 +447,7 @@ public:
 
 	/++
 	$(LANG_EN
-		Function stops loger and it's thread.
+		Function stops log and it's thread.
 		Loger object turns into invalid state after it.
 	)
 	$(LANG_RU
@@ -493,13 +493,13 @@ protected:
 		import std.conv: to;
 		
 		bool cont = true;
-		auto loger = cast(Loger) baseLoger;
+		auto log = cast(Loger) baseLoger;
 		while(cont)
 		{
 			receive(
 				(shared(LogEvent) ev) {
-					enforce(loger !is null, `Base loger object reference is null!!!`);
-					loger.writeEvent(ev);
+					enforce(log !is null, `Base log object reference is null!!!`);
+					log.writeEvent(ev);
 				},
 				(LogStopMsg msg) {
 					cont = false;
@@ -508,8 +508,8 @@ protected:
 					throw e;
 				},
 				(Variant val) {
-					enforce(loger !is null, `Base loger object reference is null!!!`);
-					loger.error(`Unexpected message to loger thread: ` ~ val.to!string);
+					enforce(log !is null, `Base log object reference is null!!!`);
+					log.error(`Unexpected message to log thread: ` ~ val.to!string);
 				}
 			);
 		}

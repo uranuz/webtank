@@ -7,7 +7,7 @@ import std.exception: enforce;
 
 import webtank.datctrl.consts;
 
-class EnumFormatAdapter: IClassNode
+class EnumFormatAdapter: NotImplClassNode
 {
 private:
 	IvyData _rawEnum;
@@ -95,7 +95,7 @@ public:
 		}
 	}
 
-	static class NameByValue: IClassNode
+	static class NameByValue: NotImplClassNode
 	{
 		protected EnumFormatAdapter _fmt;
 
@@ -104,12 +104,6 @@ public:
 		}
 		
 		override {
-			IvyNodeRange opSlice() {
-				throw new Exception(`opSlice for EnumFormatAdapter.NameByValue is not implemented yet`);
-			}
-			IClassNode opSlice(size_t, size_t) {
-				throw new Exception(`opSlice for EnumFormatAdapter.NameByValue is not implemented yet`);
-			}
 			IvyData opIndex(IvyData index)
 			{
 				import std.conv: text;
@@ -127,22 +121,10 @@ public:
 				}
 				throw new Exception(`There is no item with value: "` ~ index.toString() ~ `" in enum`);
 			}
-			IvyData __getAttr__(string) {
-				throw new Exception(`__getAttr__ for EnumFormatAdapter.NameByValue is not implemented yet`);
-			}
-			void __setAttr__(IvyData, string) {
-				throw new Exception(`__setAttr__ for EnumFormatAdapter.NameByValue is not implemented yet`);
-			}
-			IvyData __serialize__() {
-				throw new Exception(`__serialize__ for EnumFormatAdapter.NameByValue is not implemented yet`);
-			}
-			size_t length() @property {
-				throw new Exception(`length for EnumFormatAdapter.NameByValue is not implemented yet`);
-			}
 		}
 	}
 
-	static class ValueByName: IClassNode
+	static class ValueByName: NotImplClassNode
 	{
 		protected EnumFormatAdapter _fmt;
 
@@ -151,12 +133,6 @@ public:
 		}
 		
 		override {
-			IvyNodeRange opSlice() {
-				throw new Exception(`opSlice for EnumFormatAdapter.ValueByName is not implemented yet`);
-			}
-			IClassNode opSlice(size_t, size_t) {
-				throw new Exception(`opSlice for EnumFormatAdapter.ValueByName is not implemented yet`);
-			}
 			IvyData opIndex(IvyData index)
 			{
 				import std.conv: text;
@@ -174,18 +150,6 @@ public:
 				}
 				throw new Exception(`There is no item with value: "` ~ index.toString() ~ `" in enum`);
 			}
-			IvyData __getAttr__(string) {
-				throw new Exception(`__getAttr__ for EnumFormatAdapter.ValueByName is not implemented yet`);
-			}
-			void __setAttr__(IvyData, string) {
-				throw new Exception(`__setAttr__ for EnumFormatAdapter.ValueByName is not implemented yet`);
-			}
-			IvyData __serialize__() {
-				throw new Exception(`__serialize__ for EnumFormatAdapter.ValueByName is not implemented yet`);
-			}
-			size_t length() @property {
-				throw new Exception(`length for EnumFormatAdapter.ValueByName is not implemented yet`);
-			}
 		}
 	}
 
@@ -193,11 +157,6 @@ public:
 		IvyNodeRange opSlice() {
 			return new Range(this);
 		}
-
-		IClassNode opSlice(size_t, size_t) {
-			throw new Exception(`opSlice for EnumFormatAdapter is not implemented yet`);
-		}
-
 		IvyData opIndex(IvyData index)
 		{
 			import std.conv: to;
@@ -216,10 +175,6 @@ public:
 				default: break;
 			}
 			throw new Exception(`Unexpected attribute for EnumFormatAdapter`);
-		}
-
-		void __setAttr__(IvyData value, string attrName) {
-			throw new Exception(`Not attributes setting is yet supported by EnumFormatAdapter`);
 		}
 
 		IvyData __serialize__() {

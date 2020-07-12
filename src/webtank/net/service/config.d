@@ -165,72 +165,6 @@ string[string] resolveConfigDatabases(JSONValue jsonDatabases)
 	return result;
 }
 
-import std.typecons: Tuple;
-alias RoutingConfigEntry = Tuple!(
-	string, "pageURI", // Адрес расположения страницы, который обрабатывается сервисом отображения
-	string, "service", // Имя сервиса для определения адреса для отправки запроса, если указан относительный requestURI
-	string, "endpoint", // Имя точки доступа для определения адреса для отправки запроса, если указан относительный requestURI
-	string, "requestURI", // Адрес для получения данных страницы в виде JSON
-	string, "HTTPMethod", // Ограничение на HTTP-метод. Например, можно ограничить запросы на запись методом POST для защиты от случайных GET-запросов
-	string, "ivyModule", // Имя модуля на языке Ivy для отображения результатов
-	string, "ivyMethod", // Имя метода для вызова, который находится на верхнем уровне внутри модуля ivyModule
-	string, "ivyModuleError", // То же что и ivyModule, но для обработки ошибок. Если не задан, то используется ivyModule
-	string, "ivyMethodError" // Как и ivyMethod, но для обработки ошибок. Если не задано, то используется имя ivyMethod
-);
-
-RoutingConfigEntry[] resolvePageRoutingConfig(JSONValue pageRouting)
-{
-	import std.exception: enforce;
-	import std.algorithm: canFind;
-	import std.traits: isDynamicArray;
-	import std.range: ElementType;
-	RoutingConfigEntry[] entries;
-	if( pageRouting.type != JSONType.array ) {
-		return entries;
-	}
-	foreach( JSONValue jEntry; pageRouting.array )
-	{
-		enforce(jEntry.type == JSONType.object, `Expected JSON object as page routing entry`);
-		RoutingConfigEntry entry;
-
-		foreach( field; RoutingConfigEntry.fieldNames )
-		{
-			alias FieldType = typeof(__traits(getMember, entry, field));
-			if( auto fieldValPtr = field in jEntry ) {
-				static if( is( FieldType == string ) )
-				{
-					enforce(
-						[JSONType.string, JSONType.null_].canFind(fieldValPtr.type),
-						`Expected string or null for field "` ~ field ~ `" in routing config entry`);
-					if( fieldValPtr.type == JSONType.string ) {
-						__traits(getMember, entry, field) = fieldValPtr.str;
-					}
-					// If null then just do nothing
-				}
-				else static if( isDynamicArray!FieldType && is( ElementType!FieldType == string ) )
-				{
-					enforce(
-						[JSONType.array, JSONType.null_].canFind(fieldValPtr.type),
-						`Expected string array or null for field "` ~ field ~ `" in routing config entry`);
-					if( fieldValPtr.type == JSONType.array )
-					{
-						foreach( val; fieldValPtr.array )
-						{
-							enforce(val.type == JSONType.string, `Expected string as item of field "` ~ field ~ `"`);
-							__traits(getMember, entry, field) ~= val.str;
-						}
-					}
-					// If null then just do nothing
-				}
-				else
-					static assert(false, `Unhandled type of RoutingConfigEntry field`);
-			}
-		}
-		entries ~= entry;
-	}
-	return entries;
-}
-
 JSONValue getServicesConfig(JSONValue jsonConfig)
 {
 	import std.exception: enforce;
@@ -336,13 +270,28 @@ string[string] getServiceDatabases(JSONValue jsonCurrService)
 	return resolveConfigDatabases(jsonDatabases);
 }
 
+struct RoutingConfigEntry
+{
+	string pageURI; // Адрес расположения страницы, который обрабатывается сервисом отображения
+	string service; // Имя сервиса для определения адреса для отправки запроса, если указан относительный requestURI
+	string endpoint; // Имя точки доступа для определения адреса для отправки запроса, если указан относительный requestURI
+	string requestURI; // Адрес для получения данных страницы в виде JSON
+	string HTTPMethod; // Ограничение на HTTP-метод. Например, можно ограничить запросы на запись методом POST для защиты от случайных GET-запросов
+	string ivyModule; // Имя модуля на языке Ivy для отображения результатов
+	string ivyMethod; // Имя метода для вызова, который находится на верхнем уровне внутри модуля ivyModule
+	string ivyModuleError; // То же что и ivyModule, но для обработки ошибок. Если не задан, то используется ivyModule
+	string ivyMethodError; // Как и ivyMethod, но для обработки ошибок. Если не задано, то используется имя ivyMethod
+}
+
 RoutingConfigEntry[] getPageRoutingConfig(JSONValue jsonCurrService)
 {
+	import webtank.common.std_json.from: fromStdJSON;
+
 	JSONValue pageRouting;
 	if( "pageRouting" in jsonCurrService ) {
 		pageRouting = jsonCurrService["pageRouting"];
 	}
-	return resolvePageRoutingConfig(pageRouting);
+	return fromStdJSON!(RoutingConfigEntry[])(pageRouting);
 }
 
 
@@ -439,6 +388,7 @@ public:
 		import std.json: JSONType;
 		import std.range: empty;
 		import webtank.net.uri: URI;
+
 		auto vPathsPtr = serviceName in _endpoints; 
 		enforce(vPathsPtr, `No service with name "` ~ serviceName ~ `" in config`);
 		string vPathName = endpointName.length > 0? endpointName: `default`;

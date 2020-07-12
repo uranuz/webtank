@@ -1,12 +1,12 @@
 module webtank.ivy.directive.opt_storage;
 
-import ivy.interpreter.data_node: IvyDataType, IvyNodeRange, IvyData, IClassNode;
+import ivy.interpreter.data_node: IvyDataType, IvyNodeRange, IvyData, NotImplClassNode;
 import ivy.interpreter.iface: INativeDirectiveInterpreter;
 import ivy.interpreter.interpreter: Interpreter;
 import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirValueAttr;
 import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
 
-class OptStorage: IClassNode
+class OptStorage: NotImplClassNode
 {
 private:
 	IvyData _opts;
@@ -19,28 +19,6 @@ public:
 	}
 
 	override {
-		IvyNodeRange opSlice() {
-			throw new Exception("Method opSlice is not implemented");
-		}
-
-		IClassNode opSlice(size_t, size_t) {
-			throw new Exception("Method opSlice is not implemented");
-		}
-
-		IvyData opIndex(IvyData) {
-			throw new Exception("Method opIndex is not implemented");
-		}
-
-		IvyData __getAttr__(string attrName)
-		{
-			throw new Exception("Method __getAttr__ is not implemented");
-		}
-
-		void __setAttr__(IvyData val, string attrName)
-		{
-			throw new Exception("Method __setAttr__ is not implemented");
-		}
-		
 		IvyData __serialize__() {
 			import std.base64: Base64;
 			return IvyData(
@@ -61,11 +39,11 @@ class OptStorageInterpreter: INativeDirectiveInterpreter
 	{
 		import std.algorithm: canFind;
 		IvyData optsNode = interp.getValue("opts");
-		interp.loger.internalAssert(
+		interp.log.internalAssert(
 			[IvyDataType.AssocArray, IvyDataType.Null].canFind(optsNode.type),
 			`Expected opts assoc array or null!`);
 
-		interp._stack ~= IvyData(new OptStorage(optsNode));
+		interp._stack.push(new OptStorage(optsNode));
 	}
 
 	private __gshared DirAttrsBlock[] _attrBlocks;
