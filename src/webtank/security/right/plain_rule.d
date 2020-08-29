@@ -7,9 +7,9 @@ import webtank.security.right.access_exception: AccessSystemException;
 
 import webtank.datctrl.iface.record: IBaseRecord;
 
-version(Have_ivy) import ivy.interpreter.data_node: IvyData, IvyDataType;
+version(Have_ivy) import ivy.types.data: IvyData, IvyDataType;
 
-import ivy.json: toIvyJSON, toStdJSON;
+import ivy.types.data.conv.std_to_ivy_json: toIvyJSON;
 
 import std.meta: staticMap;
 import std.variant: Algebraic, visit;

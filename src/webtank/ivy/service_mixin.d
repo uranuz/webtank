@@ -3,7 +3,7 @@ module webtank.ivy.service_mixin;
 interface IIvyServiceMixin
 {
 	import webtank.net.http.context: HTTPContext;
-	import ivy.interpreter.data_node: IvyData;
+	import ivy.types.data: IvyData;
 	import ivy.engine: IvyEngine;
 
 	IvyEngine ivyEngine() @property;
@@ -20,13 +20,13 @@ mixin template IvyServiceMixin()
 
 	import ivy.engine: IvyEngine;
 	import ivy.engine_config: IvyConfig;
-	import ivy.programme: ExecutableProgramme, SaveStateResult;
+	import ivy.programme: ExecutableProgramme;
 	import ivy.interpreter.interpreter: Interpreter;
-	import ivy.interpreter.data_node: IvyData;
+	import ivy.types.data: IvyData;
 	import ivy.loger: LogInfo, LogInfoType;
 	import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
 	
-	import ivy.interpreter.async_result: AsyncResult;
+	import ivy.types.data.async_result: AsyncResult;
 
 public:
 	IvyEngine ivyEngine() @property
@@ -125,8 +125,8 @@ private:
 }
 
 import webtank.net.http.context: HTTPContext;
-import ivy.interpreter.data_node: IvyData, IvyDataType;
-import ivy.directive_stuff: DirValueAttr;
+import ivy.types.data: IvyData, IvyDataType;
+import ivy.directive_stuff: DirAttr;
 import webtank.net.http.handler.iface: IHTTPHandler, HTTPHandlingResult;
 import webtank.net.service.config: RoutingConfigEntry;
 class ViewServiceURIPageRoute: IHTTPHandler
@@ -158,7 +158,7 @@ public:
 		import std.algorithm: equal;
 		import std.range: empty;
 
-		import ivy.interpreter.data_node: errorToIvyData;
+		import ivy.types.data: errorToIvyData;
 
 		if( !_entry.HTTPMethod.empty )
 		{
@@ -195,7 +195,7 @@ public:
 	}
 }
 
-import ivy.interpreter.async_result: AsyncResult;
+import ivy.types.data.async_result: AsyncResult;
 
 AsyncResult processViewRequest(
 	HTTPContext context,
@@ -265,7 +265,7 @@ void _onIvyModule_initImpl(
 	IvyData coreParams,
 	AsyncResult asyncRes
 ) {
-	import ivy.interpreter.data_node: errorToIvyData;
+	import ivy.types.data: errorToIvyData;
 	import std.range: empty;
 	import std.exception: enforce;
 
@@ -274,7 +274,7 @@ void _onIvyModule_initImpl(
 	import webtank.net.http.consts: JunkField;
 	import webtank.net.http.headers.consts: HTTPHeader;
 
-	DirValueAttr[string] dirAttrs = interp.getDirAttrs(entry.ivyMethod);
+	DirAttr[string] dirAttrs = interp.getDirAttrs(entry.ivyMethod);
 	auto callOpts = _getCallOpts(dirAttrs, context, entry);
 	//context.junk[`ivyModule`] = entry.ivyModule.empty;
 	//context.junk[`ivyMethod`] = entry.ivyMethod;
@@ -349,7 +349,7 @@ void _onIvyModule_initImpl(
 }
 
 // Добавляем параметры, которые нужно передать напрямую в шаблон
-void _addViewParams(HTTPContext context, ref IvyData params, DirValueAttr[string] dirAttrs)
+void _addViewParams(HTTPContext context, ref IvyData params, DirAttr[string] dirAttrs)
 {
 	import webtank.common.conv: conv;
 	import std.range: empty;
@@ -401,7 +401,7 @@ Tuple!(
 	string, `HTTPMethod`,
 	string[][string], `HTTPHeaders`
 )
-_getCallOpts(DirValueAttr[string] dirAttrs, HTTPContext context, ref RoutingConfigEntry entry)
+_getCallOpts(DirAttr[string] dirAttrs, HTTPContext context, ref RoutingConfigEntry entry)
 {
 	import std.algorithm: canFind;
 	import std.exception: enforce;
@@ -476,7 +476,7 @@ Tuple!(
 	string, `ivyModuleError`,
 	string, `ivyMethodError`
 )
-_getErrorOpts(DirValueAttr[string] dirAttrs, ref RoutingConfigEntry entry)
+_getErrorOpts(DirAttr[string] dirAttrs, ref RoutingConfigEntry entry)
 {
 	import std.range: empty;
 

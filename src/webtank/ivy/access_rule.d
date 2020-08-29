@@ -3,11 +3,11 @@ module webtank.ivy.access_rule;
 import webtank.security.right.iface.access_rule: IAccessRule;
 import webtank.security.right.common: RightDataTypes, RightDataVariant;
 import webtank.security.auth.iface.user_identity: IUserIdentity;
-import ivy.interpreter.data_node: IvyData, IvyDataType;
+import ivy.types.data: IvyData, IvyDataType;
 import ivy.engine: IvyEngine;
 import webtank.ivy.user: IvyUserIdentity;
 import webtank.datctrl.iface.record: IBaseRecord;
-import ivy.json: toIvyJSON;
+import ivy.types.data.conv.std_to_ivy_json: toIvyJSON;
 
 import std.json: JSONValue;
 import std.exception: enforce;

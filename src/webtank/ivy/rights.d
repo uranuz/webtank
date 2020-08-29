@@ -1,7 +1,7 @@
 module webtank.ivy.rights;
 
 import webtank.security.right.user_rights: UserRights;
-import ivy.interpreter.data_node: NotImplClassNode, IvyDataType, IvyNodeRange, IvyData;
+import ivy.types.data: NotImplClassNode, IvyDataType, IvyNodeRange, IvyData;
 
 class IvyUserRights: NotImplClassNode
 {

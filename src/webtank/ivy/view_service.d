@@ -28,7 +28,7 @@ class IvyViewService: IWebService, IIvyServiceMixin
 	import webtank.ivy.user: IvyUserIdentity;
 	import webtank.net.service.consts: ServiceRole;
 
-	import ivy.interpreter.data_node: IvyData;
+	import ivy.types.data: IvyData;
 	import webtank.ivy.service_mixin: IvyServiceMixin, ViewServiceURIPageRoute, processViewRequest;
 	import std.json: JSONValue, JSONType;
 	import std.exception: enforce;
@@ -267,10 +267,10 @@ public:
 		import webtank.security.right.controller: AccessRightController;
 		import webtank.common.std_json.to: toStdJSON;
 		import webtank.ivy.service_mixin: prepareIvyGlobals;
-		import ivy.interpreter.data_node: NodeEscapeState;
-		import ivy.json: toIvyJSON;
+		import ivy.types.data: NodeEscapeState;
+		import ivy.types.data.conv.std_to_ivy_json: toIvyJSON;
 
-		import ivy.interpreter.data_node: errorToIvyData;
+		import ivy.types.data: errorToIvyData;
 
 		// Если есть "мусор" в буфере вывода, то попытаемся его убрать
 		ctx.response.tryClearBody();

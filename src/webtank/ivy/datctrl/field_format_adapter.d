@@ -2,7 +2,7 @@ module webtank.ivy.datctrl.field_format_adapter;
 
 import ivy, ivy.compiler.compiler;
 import ivy.interpreter.interpreter;
-import ivy.interpreter.data_node;
+import ivy.types.data;
 
 import webtank.ivy.datctrl.deserialize;
 

@@ -38,7 +38,7 @@ import webtank.datctrl.iface.record: IBaseRecord;
 
 version(Have_ivy)
 {
-	import ivy.interpreter.data_node: IvyData;
+	import ivy.types.data: IvyData;
 	alias RightDataTypes = AliasSeq!(JSONValue, IBaseRecord, IvyData);
 } else {
 	alias RightDataTypes = AliasSeq!(JSONValue, IBaseRecord);

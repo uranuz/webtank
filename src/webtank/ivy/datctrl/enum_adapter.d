@@ -1,6 +1,6 @@
 module webtank.ivy.datctrl.enum_adapter;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.interpreter.data_node;
+import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.types.data;
 import webtank.ivy.datctrl.deserialize;
 
 import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;

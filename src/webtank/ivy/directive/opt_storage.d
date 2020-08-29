@@ -1,9 +1,9 @@
 module webtank.ivy.directive.opt_storage;
 
-import ivy.interpreter.data_node: IvyDataType, IvyNodeRange, IvyData, NotImplClassNode;
-import ivy.interpreter.iface: INativeDirectiveInterpreter;
+import ivy.types.data: IvyDataType, IvyNodeRange, IvyData, NotImplClassNode;
+import ivy.interpreter.directive.iface: IDirectiveInterpreter;
 import ivy.interpreter.interpreter: Interpreter;
-import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirValueAttr;
+import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirAttr;
 import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
 
 class OptStorage: NotImplClassNode
@@ -33,7 +33,7 @@ public:
 }
 
 
-class OptStorageInterpreter: INativeDirectiveInterpreter
+class OptStorageInterpreter: IDirectiveInterpreter
 {
 	override void interpret(Interpreter interp)
 	{
@@ -51,7 +51,7 @@ class OptStorageInterpreter: INativeDirectiveInterpreter
 	{
 		_attrBlocks = [
 			DirAttrsBlock( DirAttrKind.ExprAttr, [
-				DirValueAttr("opts", "any")
+				DirAttr("opts", "any")
 			]),
 			DirAttrsBlock(DirAttrKind.BodyAttr)
 		];

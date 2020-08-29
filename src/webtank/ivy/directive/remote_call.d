@@ -1,16 +1,16 @@
 module webtank.ivy.directive.remote_call;
 
-import ivy.interpreter.data_node: IvyDataType, IvyData;
-import ivy.interpreter.iface: INativeDirectiveInterpreter;
+import ivy.types.data: IvyDataType, IvyData;
+import ivy.interpreter.directive.iface: IDirectiveInterpreter;
 import ivy.interpreter.interpreter: Interpreter;
-import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirValueAttr;
+import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirAttr;
 import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
-import ivy.interpreter.async_result: AsyncResult;
+import ivy.types.data.async_result: AsyncResult;
 import webtank.net.std_json_rpc_client: RemoteCallInfo;
 
 import webtank.ivy.rpc_client: remoteCallWebForm;
 
-class RemoteCallInterpreter: INativeDirectiveInterpreter
+class RemoteCallInterpreter: IDirectiveInterpreter
 {
 	override void interpret(Interpreter interp)
 	{
@@ -65,9 +65,9 @@ class RemoteCallInterpreter: INativeDirectiveInterpreter
 	{
 		_attrBlocks = [
 			DirAttrsBlock( DirAttrKind.NamedAttr, [
-				`uri`: DirValueAttr("uri", "any"),
-				`method`: DirValueAttr("method", "any"),
-				`data`: DirValueAttr("data", "any")
+				`uri`: DirAttr("uri", "any"),
+				`method`: DirAttr("method", "any"),
+				`data`: DirAttr("data", "any")
 			]),
 			DirAttrsBlock(DirAttrKind.BodyAttr)
 		];

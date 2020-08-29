@@ -1,12 +1,12 @@
 module webtank.ivy.directive.to_json_base64;
 
-import ivy.interpreter.data_node: IvyDataType, IvyData;
-import ivy.interpreter.iface: INativeDirectiveInterpreter;
+import ivy.types.data: IvyDataType, IvyData;
+import ivy.interpreter.directive.iface: IDirectiveInterpreter;
 import ivy.interpreter.interpreter: Interpreter;
-import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirValueAttr;
+import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirAttr;
 import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
 
-class ToJSONBase64DirInterpreter: INativeDirectiveInterpreter
+class ToJSONBase64DirInterpreter: IDirectiveInterpreter
 {
 	import std.typecons: Tuple;
 
@@ -19,7 +19,7 @@ class ToJSONBase64DirInterpreter: INativeDirectiveInterpreter
 
 	private __gshared DirAttrsBlock[] _attrBlocks = [
 		DirAttrsBlock(DirAttrKind.ExprAttr, [
-			DirValueAttr("value", "any")
+			DirAttr("value", "any")
 		]),
 		DirAttrsBlock(DirAttrKind.BodyAttr)
 	];
