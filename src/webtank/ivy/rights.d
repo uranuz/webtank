@@ -1,10 +1,12 @@
 module webtank.ivy.rights;
 
-import webtank.security.right.user_rights: UserRights;
-import ivy.types.data: NotImplClassNode, IvyDataType, IvyNodeRange, IvyData;
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class IvyUserRights: NotImplClassNode
 {
+	import webtank.security.right.user_rights: UserRights;
+	import ivy.types.data: IvyDataType, IvyData;
+
 private:
 	UserRights _rights;
 	string _accessObject;

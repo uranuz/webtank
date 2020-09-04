@@ -270,7 +270,7 @@ public:
 		import ivy.types.data: NodeEscapeState;
 		import ivy.types.data.conv.std_to_ivy_json: toIvyJSON;
 
-		import ivy.types.data: errorToIvyData;
+		import ivy.types.data.utils: errorToIvyData;
 
 		// Если есть "мусор" в буфере вывода, то попытаемся его убрать
 		ctx.response.tryClearBody();

@@ -1,16 +1,18 @@
 module webtank.ivy.datctrl.record_adapter;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.types.data;
-
-import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
-import webtank.ivy.datctrl.enum_adapter: EnumAdapter;
-
-import std.exception: enforce;
-
-import webtank.datctrl.consts;
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class RecordAdapter: NotImplClassNode
 {
+	import ivy.types.data: IvyData, IvyDataType;
+	import ivy.types.data.iface.range: IvyDataRange;
+
+	import webtank.datctrl.consts: SrlField, SrlEntityType;
+	import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
+	import webtank.ivy.datctrl.enum_adapter: EnumAdapter;
+
+	import std.exception: enforce;
+
 private:
 	IvyData[] _items;
 	RecordFormatAdapter _fmt;
@@ -53,7 +55,7 @@ public:
 		return res;
 	}
 
-	static class Range: IvyNodeRange
+	static class Range: IvyDataRange
 	{
 	private:
 		RecordAdapter _rec;
@@ -82,7 +84,7 @@ public:
 	}
 
 	override {
-		IvyNodeRange opSlice() {
+		IvyDataRange opSlice() {
 			return new Range(this);
 		}
 

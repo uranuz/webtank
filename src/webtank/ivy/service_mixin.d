@@ -24,7 +24,7 @@ mixin template IvyServiceMixin()
 	import ivy.interpreter.interpreter: Interpreter;
 	import ivy.types.data: IvyData;
 	import ivy.loger: LogInfo, LogInfoType;
-	import ivy.interpreter.data_node_render: renderDataNode, DataRenderType;
+	import ivy.types.data.render: renderDataNode, DataRenderType;
 	
 	import ivy.types.data.async_result: AsyncResult;
 
@@ -126,7 +126,7 @@ private:
 
 import webtank.net.http.context: HTTPContext;
 import ivy.types.data: IvyData, IvyDataType;
-import ivy.directive_stuff: DirAttr;
+import ivy.types.symbol.dir_attr: DirAttr;
 import webtank.net.http.handler.iface: IHTTPHandler, HTTPHandlingResult;
 import webtank.net.service.config: RoutingConfigEntry;
 class ViewServiceURIPageRoute: IHTTPHandler
@@ -158,7 +158,7 @@ public:
 		import std.algorithm: equal;
 		import std.range: empty;
 
-		import ivy.types.data: errorToIvyData;
+		import ivy.types.data.utils: errorToIvyData;
 
 		if( !_entry.HTTPMethod.empty )
 		{
@@ -214,7 +214,7 @@ AsyncResult processViewRequest(
 
 		IIvyServiceMixin ivyService = _getServiceMixin(context);
 		ExecutableProgramme ivyProg = ivyService.ivyEngine.getByModuleName(entry.ivyModule);
-		auto modRes = ivyProg.runSaveState(IvyData(), prepareIvyGlobals(context));
+		auto modRes = ivyProg.runSaveState(prepareIvyGlobals(context));
 
 		modRes.asyncResult.then((IvyData) {
 			_onIvyModule_init(context, modRes.interp, entry, coreParams).then(asyncRes);
@@ -265,16 +265,18 @@ void _onIvyModule_initImpl(
 	IvyData coreParams,
 	AsyncResult asyncRes
 ) {
-	import ivy.types.data: errorToIvyData;
-	import std.range: empty;
-	import std.exception: enforce;
-
 	import webtank.ivy.rpc_client: remoteCallWebForm, IvyRPCCallResult;
 	import webtank.net.std_json_rpc_client: RemoteCallInfo;
 	import webtank.net.http.consts: JunkField;
 	import webtank.net.http.headers.consts: HTTPHeader;
 
-	DirAttr[string] dirAttrs = interp.getDirAttrs(entry.ivyMethod);
+	import ivy.types.data.utils: errorToIvyData;
+	import ivy.interpreter.interpreter: InterpDirAttr;
+
+	import std.range: empty;
+	import std.exception: enforce;
+
+	InterpDirAttr[string] dirAttrs = interp.getDirAttrs(entry.ivyMethod);
 	auto callOpts = _getCallOpts(dirAttrs, context, entry);
 	//context.junk[`ivyModule`] = entry.ivyModule.empty;
 	//context.junk[`ivyMethod`] = entry.ivyMethod;
@@ -349,7 +351,7 @@ void _onIvyModule_initImpl(
 }
 
 // Добавляем параметры, которые нужно передать напрямую в шаблон
-void _addViewParams(HTTPContext context, ref IvyData params, DirAttr[string] dirAttrs)
+void _addViewParams(HTTPContext context, ref IvyData params, InterpDirAttr[string] dirAttrs)
 {
 	import webtank.common.conv: conv;
 	import std.range: empty;
@@ -363,7 +365,7 @@ void _addViewParams(HTTPContext context, ref IvyData params, DirAttr[string] dir
 			if( attrName in params )
 				continue; // Не перезаписываем поля, переданные backend-сервером
 
-			if( dirAttr.typeName.empty || [`str`, `any`].canFind(dirAttr.typeName) ) {
+			if( dirAttr.attr.typeName.empty || [`str`, `any`].canFind(dirAttr.attr.typeName) ) {
 				// For string or `any` pass `as is`
 				params[attrName] = *valPtr;
 				continue;
@@ -374,7 +376,7 @@ void _addViewParams(HTTPContext context, ref IvyData params, DirAttr[string] dir
 			}
 
 			// Create white list of type that we can deserialize
-			switch( dirAttr.typeName )
+			switch( dirAttr.attr.typeName )
 			{
 				case `bool`: {
 					params[attrName] = conv!bool(*valPtr);
@@ -395,13 +397,14 @@ void _addViewParams(HTTPContext context, ref IvyData params, DirAttr[string] dir
 	}
 }
 
+import ivy.interpreter.interpreter: InterpDirAttr;
 import std.typecons: Tuple;
 Tuple!(
 	string, `address`,
 	string, `HTTPMethod`,
 	string[][string], `HTTPHeaders`
 )
-_getCallOpts(DirAttr[string] dirAttrs, HTTPContext context, ref RoutingConfigEntry entry)
+_getCallOpts(InterpDirAttr[string] dirAttrs, HTTPContext context, ref RoutingConfigEntry entry)
 {
 	import std.algorithm: canFind;
 	import std.exception: enforce;
@@ -476,7 +479,7 @@ Tuple!(
 	string, `ivyModuleError`,
 	string, `ivyMethodError`
 )
-_getErrorOpts(DirAttr[string] dirAttrs, ref RoutingConfigEntry entry)
+_getErrorOpts(InterpDirAttr[string] dirAttrs, ref RoutingConfigEntry entry)
 {
 	import std.range: empty;
 

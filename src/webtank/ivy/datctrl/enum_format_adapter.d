@@ -1,14 +1,14 @@
 module webtank.ivy.datctrl.enum_format_adapter;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.types.data;
-import webtank.ivy.datctrl.deserialize;
-
-import std.exception: enforce;
-
-import webtank.datctrl.consts;
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class EnumFormatAdapter: NotImplClassNode
 {
+	import ivy.types.data: IvyData, IvyDataType;
+	import ivy.types.data.iface.range: IvyDataRange;
+	import webtank.datctrl.consts: SrlField, SrlEntityType;
+
+	import std.exception: enforce;
 private:
 	IvyData _rawEnum;
 	NameByValue _names;
@@ -58,7 +58,7 @@ public:
 		return false;
 	}
 
-	static class Range: IvyNodeRange
+	static class Range: IvyDataRange
 	{
 	private:
 		EnumFormatAdapter _fmt;
@@ -154,7 +154,7 @@ public:
 	}
 
 	override {
-		IvyNodeRange opSlice() {
+		IvyDataRange opSlice() {
 			return new Range(this);
 		}
 		IvyData opIndex(IvyData index)

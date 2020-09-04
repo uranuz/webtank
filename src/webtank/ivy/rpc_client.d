@@ -1,8 +1,8 @@
 module webtank.ivy.rpc_client;
 
-import webtank.ivy.datctrl;
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.types.data;
 
+
+import webtank.common.trace_info: OverridenTraceInfo;
 import webtank.net.http.client: sendBlocking;
 import webtank.net.std_json_rpc_client:
 	remoteCallA = remoteCall,
@@ -10,6 +10,9 @@ import webtank.net.std_json_rpc_client:
 import webtank.net.http.context: HTTPContext;
 import webtank.net.http.input: HTTPInput;
 public import webtank.net.std_json_rpc_client: endpoint;
+
+import ivy.types.data: IvyData, IvyDataType;
+import webtank.ivy.datctrl;
 
 struct IvyRPCCallResult
 {
@@ -63,50 +66,10 @@ IvyData remoteCallWebForm(Result, Address)(
 	return remoteCallWebForm!IvyRPCCallResult(address, HTTPMethod, params).result;
 }
 
-class OverridenTraceInfo: object.Throwable.TraceInfo
-{
-	private char[][] _backTrace;
-	this(char[][] traceInfo) {
-		_backTrace = traceInfo;
-	}
-
-	override {
-		int opApply(scope int delegate(ref const(char[])) dg) const
-		{
-			int result = 0;
-			foreach( i; 0.._backTrace.length )
-			{
-				result = dg(_backTrace[i]);
-				if (result)
-					break;
-			}
-			return result;
-		}
-		int opApply(scope int delegate(ref size_t, ref const(char[])) dg) const
-		{
-			int result = 0;
-			foreach( i; 0.._backTrace.length )
-			{
-				result = dg(i, _backTrace[i]);
-				if (result)
-					break;
-			}
-			return result;
-		}
-		string toString() const
-		{
-			import std.array: join;
-			return cast(string) _backTrace.join('\n');
-		}
-	}
-}
-
 // Код проверки результата запроса по протоколу JSON-RPC
 // По сути этот код дублирует webtank.net.http.client.std_json_rpc, но с другим типом данных
 private void _checkIvyJSON_RPCErrors(ref IvyData response)
 {
-	import std.algorithm: map;
-	import std.array: array;
 	import std.exception: enforce;
 
 	enforce(
@@ -114,47 +77,55 @@ private void _checkIvyJSON_RPCErrors(ref IvyData response)
 		`Expected assoc array as JSON-RPC response`);
 
 	if( auto errorPtr = "error" in response )
-	{
-		enforce(
-			errorPtr.type == IvyDataType.AssocArray,
-			`"error" field in JSON-RPC response must be an object`);
-
-		string errorMsg;
-		if( auto messagePtr = "message" in *errorPtr ) {
-			errorMsg = messagePtr.type == IvyDataType.String? messagePtr.str: null;
-		}
-
-		Exception ex;
-		auto errorDataPtr = "data" in *errorPtr;
-		if( errorDataPtr && errorDataPtr.type == IvyDataType.AssocArray )
-		{
-			auto errorFilePtr = "file" in *errorDataPtr;
-			auto errorLinePtr = "line" in *errorDataPtr;
-
-			if(
-				errorFilePtr && errorFilePtr.type == IvyDataType.String &&
-				errorLinePtr && errorLinePtr.type == IvyDataType.Integer
-			) {
-				ex = new Exception(errorMsg, errorFilePtr.str, errorLinePtr.integer);
-			}
-
-			auto backtracePtr = "backtrace" in *errorDataPtr;
-			if( backtracePtr && backtracePtr.type == IvyDataType.Array ) {
-				ex.info = new OverridenTraceInfo((*backtracePtr).array.map!( (it) => it.str.dup ).array );
-			}
-		} else {
-			ex = new Exception(errorMsg);
-		}
-
-		throw ex;
-	}
+		throw parseError(*errorPtr);
 
 	if( "result" !in response )
 		throw new Exception(`Expected "result" field in JSON-RPC response`);
 }
 
+Exception parseError(IvyData error)
+{
+	import std.algorithm: map;
+	import std.array: array;
+
+	if( error.type != IvyDataType.AssocArray ) {
+		return new Exception(`"error" field in JSON-RPC response must be an object`);
+	}
+
+	string errorMsg;
+	if( auto messagePtr = "message" in error ) {
+		errorMsg = (messagePtr.type == IvyDataType.String? messagePtr.str: null);
+	}
+
+	auto dataPtr = "data" in error;
+	if( dataPtr is null || dataPtr.type != IvyDataType.AssocArray ) {
+		return new Exception(errorMsg);
+	}
+
+	auto filePtr = "file" in *dataPtr;
+	auto linePtr = "line" in *dataPtr;
+
+	Exception ex;
+	if(
+		filePtr && filePtr.type == IvyDataType.String &&
+		linePtr && linePtr.type == IvyDataType.Integer
+	) {
+		ex = new Exception(errorMsg, filePtr.str, linePtr.integer);
+	} else {
+		ex = new Exception(errorMsg);
+	}
+
+	auto backtracePtr = "backtrace" in *dataPtr;
+	if( backtracePtr && backtracePtr.type == IvyDataType.Array ) {
+		ex.info = new OverridenTraceInfo((*backtracePtr).array.map!( (it) => it.str.dup ).array);
+	}
+	return ex;
+}
+
 IvyData _tryParseResponse(Address)(Address addr, string messageBody)
 {
+	import ivy.types.data.conv.json_parser: parseIvyJSON, IvyJSONException;
+	
 	IvyData ivyJSON;
 	try {
 		ivyJSON = parseIvyJSON(messageBody);

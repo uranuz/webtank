@@ -1,17 +1,23 @@
 module webtank.ivy.directive.remote_call;
 
-import ivy.types.data: IvyDataType, IvyData;
-import ivy.interpreter.directive.iface: IDirectiveInterpreter;
-import ivy.interpreter.interpreter: Interpreter;
-import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirAttr;
-import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
-import ivy.types.data.async_result: AsyncResult;
-import webtank.net.std_json_rpc_client: RemoteCallInfo;
+import ivy.interpreter.directive.utils;
 
-import webtank.ivy.rpc_client: remoteCallWebForm;
-
-class RemoteCallInterpreter: IDirectiveInterpreter
+class RemoteCallInterpreter: BaseDirectiveInterpreter
 {
+	import ivy.types.data.async_result: AsyncResult;
+
+	import webtank.net.std_json_rpc_client: RemoteCallInfo;
+	import webtank.ivy.rpc_client: remoteCallWebForm;
+
+	shared static this()
+	{
+		_symbol = new DirectiveSymbol(`remoteCall`, [
+			DirAttr("uri", IvyAttrType.Any),
+			DirAttr("method", IvyAttrType.Any),
+			DirAttr("data", IvyAttrType.Any)
+		]);
+	}
+	
 	override void interpret(Interpreter interp)
 	{
 		import std.algorithm: canFind;
@@ -22,7 +28,9 @@ class RemoteCallInterpreter: IDirectiveInterpreter
 		IvyData uriNode = interp.getValue("uri");
 		IvyData methodNode = interp.getValue("method");
 		IvyData dataNode = interp.getValue("data");
-		interp.log.internalAssert(uriNode.type == IvyDataType.String, `Expected string as URI parameter`);
+		interp.log.internalAssert(
+			uriNode.type == IvyDataType.String,
+			`Expected string as URI parameter`);
 		interp.log.internalAssert(
 			[IvyDataType.String, IvyDataType.Undef, IvyDataType.Null].canFind(methodNode.type),
 			`Expected string as HTTP-method parameter`);
@@ -59,19 +67,4 @@ class RemoteCallInterpreter: IDirectiveInterpreter
 		}
 		interp._stack.push(fResult);
 	}
-
-	private __gshared DirAttrsBlock[] _attrBlocks;
-	shared static this()
-	{
-		_attrBlocks = [
-			DirAttrsBlock( DirAttrKind.NamedAttr, [
-				`uri`: DirAttr("uri", "any"),
-				`method`: DirAttr("method", "any"),
-				`data`: DirAttr("data", "any")
-			]),
-			DirAttrsBlock(DirAttrKind.BodyAttr)
-		];
-	}
-
-	mixin BaseNativeDirInterpreterImpl!("remoteCall");
 }

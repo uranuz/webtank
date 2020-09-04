@@ -1,16 +1,16 @@
 module webtank.ivy.datctrl.enum_adapter;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.types.data;
-import webtank.ivy.datctrl.deserialize;
-
-import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
-
-import std.exception: enforce;
-
-import webtank.datctrl.consts;
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class EnumAdapter: NotImplClassNode
 {
+	import ivy.types.data: IvyData, IvyDataType;
+
+	import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
+	import webtank.datctrl.consts: SrlField;
+
+	import std.exception: enforce;
+
 private:
 	EnumFormatAdapter _fmt;
 	IvyData _value;

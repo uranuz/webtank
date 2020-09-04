@@ -1,12 +1,14 @@
 module webtank.ivy.datctrl.recordset_adapter_slice;
 
-import ivy, ivy.compiler.compiler, ivy.interpreter.interpreter, ivy.types.data;
-import webtank.ivy.datctrl.record_adapter;
-import webtank.ivy.datctrl.recordset_adapter;
-import webtank.ivy.datctrl.deserialize;
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class RecordSetAdapterSlice: NotImplClassNode
 {
+	import ivy.types.data: IvyData, IvyDataType;
+	import ivy.types.data.iface.range: IvyDataRange;
+
+	import webtank.ivy.datctrl.recordset_adapter: RecordSetAdapter;
+
 private:
 	RecordSetAdapter _rs;
 	size_t _begin;
@@ -33,7 +35,7 @@ public:
 		}
 	}
 
-	static class Range: IvyNodeRange
+	static class Range: IvyDataRange
 	{
 	private:
 		RecordSetAdapterSlice _rs;
@@ -65,7 +67,7 @@ public:
 			throw new Exception(`RecordSetAdapterSlice index is out of range`);
 	}
 
-	override IvyNodeRange opSlice() {
+	override IvyDataRange opSlice() {
 		return new Range(this);
 	}
 

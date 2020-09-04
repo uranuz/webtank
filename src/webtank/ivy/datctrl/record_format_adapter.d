@@ -1,16 +1,19 @@
 module webtank.ivy.datctrl.record_format_adapter;
 
-import ivy, ivy.compiler.compiler;
-import ivy.interpreter.interpreter;
-import ivy.types.data;
-
-import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
-import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class RecordFormatAdapter: NotImplClassNode
 {
-	import webtank.datctrl.consts;
+	import ivy.types.data: IvyData, IvyDataType;
+	import ivy.types.data.iface.range: IvyDataRange;
+	import ivy.types.data.iface.class_node: IClassNode;
+
+	import webtank.datctrl.consts: SrlField;
+	import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
+	import webtank.ivy.datctrl.field_format_adapter: FieldFormatAdapter;
+
 	import std.exception: enforce;
+
 private:
 	IClassNode[] _items;
 	size_t[string] _namesMapping;
@@ -51,7 +54,7 @@ public:
 		return _namesMapping;
 	}
 
-	static class Range: IvyNodeRange
+	static class Range: IvyDataRange
 	{
 	private:
 		RecordFormatAdapter _fmt;
@@ -79,7 +82,7 @@ public:
 
 
 	override {
-		IvyNodeRange opSlice() {
+		IvyDataRange opSlice() {
 			return new Range(this);
 		}
 

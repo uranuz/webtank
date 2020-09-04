@@ -1,15 +1,14 @@
 module webtank.ivy.datctrl.field_format_adapter;
 
-import ivy, ivy.compiler.compiler;
-import ivy.interpreter.interpreter;
-import ivy.types.data;
-
-import webtank.ivy.datctrl.deserialize;
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class FieldFormatAdapter: NotImplClassNode
 {
+	import ivy.types.data: IvyData, IvyDataType;
+
+	import webtank.datctrl.consts: SrlField;
+
 	import std.exception: enforce;
-	import webtank.datctrl.consts;
 private:
 	IvyData _rawField;
 public:

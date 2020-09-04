@@ -1,13 +1,13 @@
 module webtank.ivy.directive.opt_storage;
 
-import ivy.types.data: IvyDataType, IvyNodeRange, IvyData, NotImplClassNode;
-import ivy.interpreter.directive.iface: IDirectiveInterpreter;
-import ivy.interpreter.interpreter: Interpreter;
-import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirAttr;
-import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
+import ivy.interpreter.directive.utils;
+
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class OptStorage: NotImplClassNode
 {
+	import ivy.types.data: IvyData, IvyDataType;
+
 private:
 	IvyData _opts;
 
@@ -19,7 +19,8 @@ public:
 	}
 
 	override {
-		IvyData __serialize__() {
+		IvyData __serialize__()
+		{
 			import std.base64: Base64;
 			return IvyData(
 				cast(string) Base64.encode(
@@ -33,11 +34,16 @@ public:
 }
 
 
-class OptStorageInterpreter: IDirectiveInterpreter
+class OptStorageInterpreter: BaseDirectiveInterpreter
 {
+	shared static this() {
+		_symbol = new DirectiveSymbol(`optStorage`, [DirAttr("opts", IvyAttrType.Any)]);
+	}
+	
 	override void interpret(Interpreter interp)
 	{
 		import std.algorithm: canFind;
+
 		IvyData optsNode = interp.getValue("opts");
 		interp.log.internalAssert(
 			[IvyDataType.AssocArray, IvyDataType.Null].canFind(optsNode.type),
@@ -45,17 +51,4 @@ class OptStorageInterpreter: IDirectiveInterpreter
 
 		interp._stack.push(new OptStorage(optsNode));
 	}
-
-	private __gshared DirAttrsBlock[] _attrBlocks;
-	shared static this()
-	{
-		_attrBlocks = [
-			DirAttrsBlock( DirAttrKind.ExprAttr, [
-				DirAttr("opts", "any")
-			]),
-			DirAttrsBlock(DirAttrKind.BodyAttr)
-		];
-	}
-
-	mixin BaseNativeDirInterpreterImpl!("optStorage");
 }

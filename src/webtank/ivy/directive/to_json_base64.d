@@ -1,14 +1,12 @@
 module webtank.ivy.directive.to_json_base64;
 
-import ivy.types.data: IvyDataType, IvyData;
-import ivy.interpreter.directive.iface: IDirectiveInterpreter;
-import ivy.interpreter.interpreter: Interpreter;
-import ivy.directive_stuff: DirAttrKind, DirAttrsBlock, DirAttr;
-import ivy.interpreter.directive: BaseNativeDirInterpreterImpl;
+import ivy.interpreter.directive.utils;
 
-class ToJSONBase64DirInterpreter: IDirectiveInterpreter
+class ToJSONBase64DirInterpreter: BaseDirectiveInterpreter
 {
-	import std.typecons: Tuple;
+	shared static this() {
+		_symbol = new DirectiveSymbol(`toJSONBase64`, [DirAttr("value", IvyAttrType.Any)]);
+	}
 
 	override void interpret(Interpreter interp)
 	{
@@ -16,13 +14,4 @@ class ToJSONBase64DirInterpreter: IDirectiveInterpreter
 		ubyte[] jsonStr = cast(ubyte[]) interp.getValue("value").toJSONString();
 		interp._stack.push(cast(string) Base64.encode(jsonStr));
 	}
-
-	private __gshared DirAttrsBlock[] _attrBlocks = [
-		DirAttrsBlock(DirAttrKind.ExprAttr, [
-			DirAttr("value", "any")
-		]),
-		DirAttrsBlock(DirAttrKind.BodyAttr)
-	];
-
-	mixin BaseNativeDirInterpreterImpl!("toJSONBase64");
 }

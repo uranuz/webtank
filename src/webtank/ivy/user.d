@@ -1,10 +1,12 @@
 module webtank.ivy.user;
 
-import webtank.security.auth.iface.user_identity: IUserIdentity;
-import ivy.types.data: NotImplClassNode, IvyDataType, IvyNodeRange, IvyData;
+import ivy.types.data.not_impl_class_node: NotImplClassNode;
 
 class IvyUserIdentity: NotImplClassNode
 {
+	import webtank.security.auth.iface.user_identity: IUserIdentity;
+	import ivy.types.data: IvyDataType, IvyData;
+
 private:
 	IUserIdentity _identity;
 
