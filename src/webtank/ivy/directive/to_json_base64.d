@@ -4,7 +4,7 @@ import ivy.interpreter.directive.utils;
 
 class ToJSONBase64DirInterpreter: BaseDirectiveInterpreter
 {
-	shared static this() {
+	this() {
 		_symbol = new DirectiveSymbol(`toJSONBase64`, [DirAttr("value", IvyAttrType.Any)]);
 	}
 

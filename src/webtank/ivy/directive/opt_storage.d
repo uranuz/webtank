@@ -36,7 +36,7 @@ public:
 
 class OptStorageInterpreter: BaseDirectiveInterpreter
 {
-	shared static this() {
+	this() {
 		_symbol = new DirectiveSymbol(`optStorage`, [DirAttr("opts", IvyAttrType.Any)]);
 	}
 	

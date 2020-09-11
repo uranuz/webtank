@@ -9,7 +9,7 @@ class RemoteCallInterpreter: BaseDirectiveInterpreter
 	import webtank.net.std_json_rpc_client: RemoteCallInfo;
 	import webtank.ivy.rpc_client: remoteCallWebForm;
 
-	shared static this()
+	this()
 	{
 		_symbol = new DirectiveSymbol(`remoteCall`, [
 			DirAttr("uri", IvyAttrType.Any),

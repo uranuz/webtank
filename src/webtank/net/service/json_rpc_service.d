@@ -17,7 +17,7 @@ class JSON_RPCService: IWebService, IDatabaseFactory
 	import webtank.net.http.handler.router: HTTPRouter;
 	import webtank.net.http.handler.json_rpc: JSON_RPC_Router;
 	import webtank.net.http.handler.uri_page_router: URIPageRouter;
-	import webtank.common.loger: Loger, FileLoger, ThreadedLoger, LogEvent, LogEventType, LogLevel;
+	import webtank.common.log.writer: LogWriter, FileLogWriter, ThreadedLogWriter, LogEvent, LogEventType, LogLevel;
 	import webtank.net.utils: makeErrorMsg;
 	import webtank.security.auth.iface.controller: IAuthController;
 	import webtank.security.right.iface.controller: IRightController;
@@ -36,10 +36,10 @@ protected:
 	URIPageRouter _pageRouter;
 
 	/// Основной объект для ведения журнала сайта
-	Loger _loger;
+	LogWriter _loger;
 
 	// Объект для логирования драйвера базы данных
-	Loger _databaseLoger;
+	LogWriter _databaseLoger;
 
 	IAuthController _accessController;
 	IRightController _rights;
@@ -91,18 +91,18 @@ public:
 		{
 			auto eventLogParamPtr = "siteEventLogFile" in _fileSystemPaths;
 			enforce(eventLogParamPtr, `Failed to get event log file path!`);
-			_loger = new ThreadedLoger(cast(shared) new FileLoger(*eventLogParamPtr, LogLevel.info));
+			_loger = new ThreadedLogWriter(cast(shared) new FileLogWriter(*eventLogParamPtr, LogLevel.info));
 		}
 
 		if( !_databaseLoger )
 		{
 			auto databaseLogParamPtr = "siteDatabaseLogFile" in _fileSystemPaths;
 			enforce(databaseLogParamPtr, `Failed to get database log file path!`);
-			_databaseLoger = new ThreadedLoger(cast(shared) new FileLoger(*databaseLogParamPtr, LogLevel.dbg));
+			_databaseLoger = new ThreadedLogWriter(cast(shared) new FileLogWriter(*databaseLogParamPtr, LogLevel.dbg));
 		}
 	}
 
-	override Loger log() @property
+	override LogWriter log() @property
 	{
 		assert(_rootRouter, `Main service log is not initialized!`);
 		return _loger;

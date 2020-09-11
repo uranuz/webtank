@@ -15,7 +15,7 @@ mixin template IvyServiceMixin()
 {
 	import webtank.net.http.context: HTTPContext;
 	import webtank.net.http.output: HTTPOutput;
-	import webtank.common.loger: Loger, LogEvent, LogEventType, ThreadedLoger, FileLoger, LogLevel;
+	import webtank.common.log.writer: LogWriter, LogEvent, LogEventType, ThreadedLogWriter, FileLogWriter, LogLevel;
 	import webtank.ivy.directive.standard_factory: makeStandardInterpreterDirFactory;
 
 	import ivy.engine: IvyEngine;
@@ -49,7 +49,7 @@ public:
 
 
 private:
-	Loger _ivyLoger;
+	LogWriter _ivyLoger;
 	IvyEngine _ivyEngine;
 
 	void _initTemplateCache()
@@ -82,8 +82,8 @@ private:
 
 		enforce("siteLogs" in _fileSystemPaths, `Failed to get logs directory!`);
 		if( !_ivyLoger ) {
-			_ivyLoger = new ThreadedLoger(
-				cast(shared) new FileLoger(
+			_ivyLoger = new ThreadedLogWriter(
+				cast(shared) new FileLogWriter(
 					buildNormalizedPath( _fileSystemPaths["siteLogs"], "ivy.log" ),
 					LogLevel.dbg
 				)

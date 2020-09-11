@@ -2,7 +2,7 @@ module webtank.net.server.thread_pool;
 
 import webtank.net.http.handler.iface: IHTTPHandler;
 import webtank.net.http.context: HTTPContext;
-import webtank.common.loger: Loger;
+import webtank.common.log.writer: LogWriter;
 import webtank.net.server.common: processRequest, ensureBindSocket;
 import webtank.net.service.iface: IWebService;
 import webtank.net.server.iface: IWebServer;

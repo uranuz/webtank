@@ -41,7 +41,7 @@ protected:
 	string _serviceName;
 	HTTPRouter _rootRouter;
 	URIPageRouter _pageRouter;
-	Loger _loger;
+	LogWriter _loger;
 
 	IAuthController _accessController;
 	IRightController _rights;
@@ -132,7 +132,7 @@ public:
 		return _pageRouter;
 	}
 
-	override Loger log() @property {
+	override LogWriter log() @property {
 		return _loger;
 	}
 
@@ -147,8 +147,8 @@ public:
 
 		enforce("siteLogs" in _fileSystemPaths, `Failed to get logs directory!`);
 		if( !_loger ) {
-			_loger = new ThreadedLoger(
-				cast(shared) new FileLoger(
+			_loger = new ThreadedLogWriter(
+				cast(shared) new FileLogWriter(
 					buildNormalizedPath( _fileSystemPaths["siteLogs"], "view_service.log" ),
 					LogLevel.info
 				)
