@@ -1,8 +1,8 @@
 module webtank.ivy.datctrl.enum_format_adapter;
 
-import ivy.types.data.not_impl_class_node: NotImplClassNode;
+import ivy.types.data.base_class_node: BaseClassNode;
 
-class EnumFormatAdapter: NotImplClassNode
+class EnumFormatAdapter: BaseClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.iface.range: IvyDataRange;
@@ -95,7 +95,7 @@ public:
 		}
 	}
 
-	static class NameByValue: NotImplClassNode
+	static class NameByValue: BaseClassNode
 	{
 		protected EnumFormatAdapter _fmt;
 
@@ -124,7 +124,7 @@ public:
 		}
 	}
 
-	static class ValueByName: NotImplClassNode
+	static class ValueByName: BaseClassNode
 	{
 		protected EnumFormatAdapter _fmt;
 

@@ -1,43 +1,12 @@
 module webtank.ivy.directive.opt_storage;
 
 import ivy.interpreter.directive.utils;
-
-import ivy.types.data.not_impl_class_node: NotImplClassNode;
-
-class OptStorage: NotImplClassNode
-{
-	import ivy.types.data: IvyData, IvyDataType;
-
-private:
-	IvyData _opts;
-
-public:
-	import std.exception: enforce;
-	this(IvyData opts)
-	{
-		_opts = opts;
-	}
-
-	override {
-		IvyData __serialize__()
-		{
-			import std.base64: Base64;
-			return IvyData(
-				cast(string) Base64.encode(
-					cast(ubyte[]) _opts.toJSONString()));
-		}
-		
-		size_t length() @property {
-			throw new Exception("Method length not implemented");
-		}
-	}
-}
-
+import webtank.ivy.opt_set: OptSet;
 
 class OptStorageInterpreter: BaseDirectiveInterpreter
 {
 	this() {
-		_symbol = new DirectiveSymbol(`optStorage`, [DirAttr("opts", IvyAttrType.Any)]);
+		_symbol = new DirectiveSymbol("optStorage", [DirAttr("opts", IvyAttrType.Any)]);
 	}
 	
 	override void interpret(Interpreter interp)
@@ -49,6 +18,6 @@ class OptStorageInterpreter: BaseDirectiveInterpreter
 			[IvyDataType.AssocArray, IvyDataType.Null].canFind(optsNode.type),
 			`Expected opts assoc array or null!`);
 
-		interp._stack.push(new OptStorage(optsNode));
+		interp._stack.push(new OptSet(optsNode));
 	}
 }

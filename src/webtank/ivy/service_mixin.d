@@ -23,7 +23,8 @@ mixin template IvyServiceMixin()
 	import ivy.programme: ExecutableProgramme;
 	import ivy.interpreter.interpreter: Interpreter;
 	import ivy.types.data: IvyData;
-	import ivy.loger: LogInfo, LogInfoType;
+	import ivy.log.info: LogInfo;
+	import ivy.log.consts: LogInfoType;
 	import ivy.types.data.render: renderDataNode, DataRenderType;
 	
 	import ivy.types.data.async_result: AsyncResult;

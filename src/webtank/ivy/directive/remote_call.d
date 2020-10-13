@@ -11,7 +11,7 @@ class RemoteCallInterpreter: BaseDirectiveInterpreter
 
 	this()
 	{
-		_symbol = new DirectiveSymbol(`remoteCall`, [
+		_symbol = new DirectiveSymbol("remoteCall", [
 			DirAttr("uri", IvyAttrType.Any),
 			DirAttr("method", IvyAttrType.Any),
 			DirAttr("data", IvyAttrType.Any)

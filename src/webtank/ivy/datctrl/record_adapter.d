@@ -1,8 +1,8 @@
 module webtank.ivy.datctrl.record_adapter;
 
-import ivy.types.data.not_impl_class_node: NotImplClassNode;
+import ivy.types.data.base_class_node: BaseClassNode;
 
-class RecordAdapter: NotImplClassNode
+class RecordAdapter: BaseClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.iface.range: IvyDataRange;

@@ -1,8 +1,8 @@
 module webtank.ivy.datctrl.enum_adapter;
 
-import ivy.types.data.not_impl_class_node: NotImplClassNode;
+import ivy.types.data.base_class_node: BaseClassNode;
 
-class EnumAdapter: NotImplClassNode
+class EnumAdapter: BaseClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 

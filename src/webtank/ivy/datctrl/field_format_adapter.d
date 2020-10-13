@@ -1,8 +1,8 @@
 module webtank.ivy.datctrl.field_format_adapter;
 
-import ivy.types.data.not_impl_class_node: NotImplClassNode;
+import ivy.types.data.base_class_node: BaseClassNode;
 
-class FieldFormatAdapter: NotImplClassNode
+class FieldFormatAdapter: BaseClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 
