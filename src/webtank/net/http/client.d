@@ -8,7 +8,7 @@ import webtank.net.uri: URI;
 /// На вход нужно передать экземпляр HTTPOutput, где как минимум должны быть заполнены
 /// свойства requestURI (или rawRequestURI) и method. Возможно, ещё вы захотите передать 
 /// и какое-то сообщение (используя метод write), если, например, используется HTTP метод POST
-HTTPInput sendBlocking(HTTPOutput request)
+HTTPInput remoteRequest(HTTPOutput request)
 {
 	import std.socket: Socket, TcpSocket, InternetAddress;
 	import std.exception: enforce;
@@ -27,27 +27,27 @@ HTTPInput sendBlocking(HTTPOutput request)
 	return readHTTPInputFromSocket(sock);
 }
 
-/// Более простая для понимания перегрузка метода sendBlocking - "для тех, кто в танке" :)
-HTTPInput sendBlocking( string requestURI, string method, string messageBody = null )
+/// Более простая для понимания перегрузка метода remoteRequest - "для тех, кто в танке" :)
+HTTPInput remoteRequest(string requestURI, string method, string messageBody = null)
 {
 	HTTPOutput request = new HTTPOutput();
 	request.rawRequestURI = requestURI;
 	request.method = method;
 	request.put(messageBody);
 	
-	return sendBlocking( request );
+	return remoteRequest( request );
 }
 
 /// Перегрузка метода с возможностью передать словарь с HTTP-заголовками
-HTTPInput sendBlocking( string requestURI, string method, string[string] headers, string messageBody = null ) {
-	return _sendBlockingImpl(requestURI, method, headers, messageBody);
+HTTPInput remoteRequest(string requestURI, string method, string[string] headers, string messageBody = null) {
+	return _remoteRequestImpl(requestURI, method, headers, messageBody);
 }
 
-HTTPInput sendBlocking( string requestURI, string method, string[][string] headers, string messageBody = null ) {
-	return _sendBlockingImpl(requestURI, method, headers, messageBody);
+HTTPInput remoteRequest(string requestURI, string method, string[][string] headers, string messageBody = null) {
+	return _remoteRequestImpl(requestURI, method, headers, messageBody);
 }
 
-private HTTPInput _sendBlockingImpl(Headers)(
+private HTTPInput _remoteRequestImpl(Headers)(
 	string requestURI,
 	string method,
 	Headers headers,
@@ -62,5 +62,5 @@ private HTTPInput _sendBlockingImpl(Headers)(
 		request.headers[key] = value;
 	}
 
-	return sendBlocking( request );
+	return remoteRequest( request );
 }

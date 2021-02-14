@@ -17,7 +17,7 @@ mixin template DBPerThreadPoolMixin()
 
 	// Проинициализировать пул соединений с БД
 	void _initDBPool() {
-		_db_pool = new DBPerThreadPool(new DBFactory(this.dbConnStrings, &this.databaseLogerMethod));
+		_db_pool = new DBPerThreadPool(new DBFactory(this.config.dbConnStrings, &this.databaseLogerMethod));
 	}
 
 	override IDatabase getDB(string dbID) {

@@ -11,7 +11,7 @@ private:
 
 public:
 	this(IvyData opts) {
-		_opts = opts;
+		this._opts = opts;
 	}
 
 	override {
@@ -20,7 +20,7 @@ public:
 			import std.base64: Base64;
 			return IvyData(
 				cast(string) Base64.encode(
-					cast(ubyte[]) _opts.toJSONString()));
+					cast(ubyte[]) this._opts.toJSONString()));
 		}
 	}
 }

@@ -4,7 +4,7 @@ import webtank.common.std_json.to: toStdJSON;
 import webtank.net.http.context: HTTPContext;
 import webtank.common.optional: Optional;
 import webtank.datctrl.navigation: Navigation;
-import webtank.net.service.json_rpc_service: JSON_RPCServiceContext;
+import webtank.net.service.json_rpc: JSON_RPCServiceContext;
 import webtank.db.consts: DBRole;
 
 import webtank.history.common;

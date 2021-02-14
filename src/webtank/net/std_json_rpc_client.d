@@ -49,9 +49,9 @@ HTTPInput remoteCall(Result, Address, T...)(Address addr, string rpcMethod, auto
 
 	string payloadStr = payload.toJSON(false, JSONOptions.specialFloatLiterals);
 	static if( is(Address: RemoteCallInfo) ) {
-		return sendBlocking(addr.URI, "POST", addr.headers, payloadStr);
+		return remoteRequest(addr.URI, "POST", addr.headers, payloadStr);
 	} else {
-		return sendBlocking(addr, "POST", payloadStr);
+		return remoteRequest(addr, "POST", payloadStr);
 	}
 }
 
@@ -171,7 +171,7 @@ string[][string] getAllowedRequestHeaders(HTTPContext ctx) {
 RemoteCallInfo endpoint(HTTPContext ctx, string serviceName, string endpointName = null)
 {
 	return RemoteCallInfo(
-		ctx.service.endpoint(serviceName, endpointName),
+		ctx.service.config.endpoint(serviceName, endpointName),
 		getAllowedRequestHeaders(ctx)
 	);
 }

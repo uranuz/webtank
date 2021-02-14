@@ -1,20 +1,8 @@
 module webtank.net.service.iface;
 
-// Отвечает за получение адресов к удаленным серверам
-interface IServiceConfig
+interface IWebService
 {
-	import std.json: JSONValue;
-
-	string[string] virtualPaths() @property;
-	string[string] fileSystemPaths() @property;
-	string[string] dbConnStrings() @property;
-	string[string] serviceRoles() @property;
-	JSONValue rawConfig() @property;
-	string endpoint(string serviceName, string endpointName = null);
-}
-
-interface IWebService: IServiceConfig
-{
+	import webtank.net.service.config.iface: IServiceConfig;
 	import webtank.common.log.writer: LogWriter;
 	import webtank.net.http.handler.iface: ICompositeHTTPHandler;
 	import webtank.security.auth.iface.controller: IAuthController;
@@ -24,6 +12,7 @@ interface IWebService: IServiceConfig
 	import webtank.net.http.output: HTTPOutput;
 	import webtank.net.server.iface: IWebServer;
 
+	IServiceConfig config() @property;
 	LogWriter log() @property;
 	ICompositeHTTPHandler rootRouter() @property;
 	IAuthController accessController() @property;

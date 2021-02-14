@@ -59,24 +59,30 @@ public override {
 			return false;
 		}
 		string moduleName;
-		string dirName;
+		string methodName;
 
 		if( splitted.length == 2 )
 		{
 			moduleName = splitted[0];
-			dirName = splitted[1];
+			methodName = splitted[1];
 		}
 		else
 		{
 			enforce(splitted[0] == `ivy`, `Expected "ivy" prefix as first argument`);
 			moduleName = splitted[1];
-			dirName = splitted[2];
+			methodName = splitted[2];
 		}
 
-		IvyData res = _ivyEngine.getByModuleName(moduleName).runMethodSync(dirName, IvyData([
-			`identity`: IvyData(new IvyUserIdentity(identity)),
-			`data`: IvyData(data)
-		]));
+		auto asyncRes = _ivyEngine.runMethod(
+			moduleName,
+			methodName, [
+				`identity`: IvyData(new IvyUserIdentity(identity)),
+				`data`: IvyData(data)
+			]);
+		enforce(asyncRes.isResolved, "Expected resolved async result of right check method!");
+
+		IvyData res;
+		asyncRes.then((it) => res = it);
 
 		enforce([
 			IvyDataType.Undef,

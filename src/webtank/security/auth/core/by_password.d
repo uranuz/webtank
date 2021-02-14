@@ -134,7 +134,7 @@ returning 'authenticated'`,
 	return new CoreUserIdentity(login, name, userRec.get!"roles"(), userData, sid);
 }
 
-import webtank.ivy.main_service: MainServiceContext;
+import webtank.ivy.service.main: MainServiceContext;
 import std.typecons: Tuple;
 
 // Аутентификация по логину и паролю с установкой удостоверения пользователя в контекст,

@@ -16,7 +16,7 @@ import webtank.security.right.iface.data_source:
 
 import webtank.security.right.access_exception: AccessSystemException, AccessException;
 
-import webtank.net.service.iface: IServiceConfig;
+import webtank.net.service.config: IServiceConfig;
 
 class RightRemoteSource: IRightDataSource
 {

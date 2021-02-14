@@ -1,19 +1,13 @@
-module webtank.net.service.json_rpc_service;
+module webtank.net.service.json_rpc.service;
 
 import webtank.net.service.iface: IWebService;
 import webtank.db.iface.factory: IDatabaseFactory;
-import webtank.net.http.context: HTTPContext;
-import webtank.net.http.input: HTTPInput;
-import webtank.net.http.output: HTTPOutput;
-import webtank.net.server.iface: IWebServer;
 
 // Класс основного сервиса работающего по протоколу JSON-RPC.
 // Служит для чтения и хранения конфигурации, единого доступа к логам,
 // маршрутизации и выполнения аутентификации запросов
 class JSON_RPCService: IWebService, IDatabaseFactory
 {
-	import webtank.net.service.config: ServiceConfigImpl, RoutingConfigEntry;
-	import webtank.net.service.api_info_mixin: ServiceAPIInfoMixin;
 	import webtank.net.http.handler.router: HTTPRouter;
 	import webtank.net.http.handler.json_rpc: JSON_RPC_Router;
 	import webtank.net.http.handler.uri_page_router: URIPageRouter;
@@ -21,15 +15,21 @@ class JSON_RPCService: IWebService, IDatabaseFactory
 	import webtank.net.utils: makeErrorMsg;
 	import webtank.security.auth.iface.controller: IAuthController;
 	import webtank.security.right.iface.controller: IRightController;
+	import webtank.net.service.json_rpc.context: JSON_RPCServiceContext;
+
+	import webtank.net.http.context: HTTPContext;
+	import webtank.net.http.input: HTTPInput;
+	import webtank.net.http.output: HTTPOutput;
+	import webtank.net.server.iface: IWebServer;
+
+	import webtank.net.service.config: IServiceConfig, ServiceConfig;
 	import webtank.db.per_thread_pool_mixin: DBPerThreadPoolMixin;
+	import webtank.net.service.api_info_mixin: ServiceAPIInfoMixin;
 
-	import std.json: JSONValue, parseJSON;
-
-	mixin ServiceConfigImpl;
 	mixin DBPerThreadPoolMixin;
 	mixin ServiceAPIInfoMixin;
 protected:
-	string _serviceName;
+	ServiceConfig _config;
 
 	HTTPRouter _rootRouter;
 	JSON_RPC_Router _jsonRPCRouter;
@@ -46,23 +46,27 @@ protected:
 
 public:
 	this(string serviceName)
-	{
+	{	
 		import std.exception: enforce;
-		enforce(serviceName.length, `Expected service name`);
-		
-		_serviceName = serviceName;
-		readConfig();
+
+		_config = new ServiceConfig(serviceName);
 		_startLoging();
 
 		_initDBPool();
 
 		_rootRouter = new HTTPRouter;
-		enforce("siteJSON_RPC" in virtualPaths, `Failed to get JSON-RPC virtual path!`);
-		_jsonRPCRouter = new JSON_RPC_Router( virtualPaths["siteJSON_RPC"] ~ "{remainder}" );
+		{
+			auto siteJSON_RPCParamPtr = "siteJSON_RPC" in this.config.virtualPaths;
+			enforce(siteJSON_RPCParamPtr, "Failed to get JSON-RPC virtual path!");
+			_jsonRPCRouter = new JSON_RPC_Router( (*siteJSON_RPCParamPtr) ~ "{remainder}" );
+		}
 		_rootRouter.addHandler(_jsonRPCRouter);
 
-		enforce("siteWebFormAPI" in virtualPaths, `Failed to get web-form API virtual path!`);
-		_pageRouter = new URIPageRouter( virtualPaths["siteWebFormAPI"] ~ "{remainder}" );
+		{
+			auto siteWebFormAPIParamPtr = "siteWebFormAPI" in this.config.virtualPaths;
+			enforce(siteWebFormAPIParamPtr, `Failed to get web-form API virtual path!`);
+			_pageRouter = new URIPageRouter( (*siteWebFormAPIParamPtr) ~ "{remainder}" );
+		}
 		_rootRouter.addHandler(_pageRouter);
 
 		_subscribeRoutingEvents();
@@ -89,17 +93,23 @@ public:
 
 		if( !_loger )
 		{
-			auto eventLogParamPtr = "siteEventLogFile" in _fileSystemPaths;
-			enforce(eventLogParamPtr, `Failed to get event log file path!`);
+			auto eventLogParamPtr = "siteEventLogFile" in this.config.fileSystemPaths;
+			enforce(eventLogParamPtr, "Failed to get event log file path!");
 			_loger = new ThreadedLogWriter(cast(shared) new FileLogWriter(*eventLogParamPtr, LogLevel.info));
 		}
 
 		if( !_databaseLoger )
 		{
-			auto databaseLogParamPtr = "siteDatabaseLogFile" in _fileSystemPaths;
-			enforce(databaseLogParamPtr, `Failed to get database log file path!`);
+			auto databaseLogParamPtr = "siteDatabaseLogFile" in this.config.fileSystemPaths;
+			enforce(databaseLogParamPtr, "Failed to get database log file path!");
 			_databaseLoger = new ThreadedLogWriter(cast(shared) new FileLogWriter(*databaseLogParamPtr, LogLevel.dbg));
 		}
+	}
+
+	override IServiceConfig config() @property
+	{
+		assert(_config, `Main service config is not initialized!`);
+		return _config;
 	}
 
 	override LogWriter log() @property
@@ -197,17 +207,3 @@ public:
 	}
 }
 
-class JSON_RPCServiceContext: HTTPContext
-{
-	this(HTTPInput req, HTTPOutput resp, IWebServer srv)
-	{
-		import std.exception: enforce;
-		super(req, resp, srv);
-		enforce(this.service !is null, `Expected instance of JSON_RPCService`);
-	}
-	
-	///Экземпляр сервиса, с общими для процесса данными
-	override JSON_RPCService service() @property {
-		return cast(JSON_RPCService) _server.service;
-	}
-}

@@ -5,7 +5,7 @@ import webtank.security.auth.iface.controller: IAuthController;
 ///Класс управляет выдачей билетов для доступа
 class AuthClientController: IAuthController
 {
-	import webtank.net.service.iface: IServiceConfig;
+	import webtank.net.service.config: IServiceConfig;
 	import webtank.net.std_json_rpc_client: RemoteCallInfo, getAllowedRequestHeaders, remoteCall;
 	import webtank.net.http.input: HTTPInput;
 	import webtank.security.auth.iface.user_identity: IUserIdentity;

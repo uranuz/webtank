@@ -1,6 +1,6 @@
 module webtank.history.service.service;
 
-import webtank.ivy.backend_service: IvyBackendService;
+import webtank.ivy.service.backend: IvyBackendService;
 
 import webtank.net.http.handler;
 

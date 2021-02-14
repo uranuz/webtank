@@ -1,15 +1,11 @@
 module webtank.ivy.rpc_client;
 
-
+public import webtank.net.std_json_rpc_client: endpoint;
 
 import webtank.common.trace_info: OverridenTraceInfo;
-import webtank.net.http.client: sendBlocking;
-import webtank.net.std_json_rpc_client:
-	remoteCallA = remoteCall,
-	RemoteCallInfo, getRemoteCallInfoURI;
-import webtank.net.http.context: HTTPContext;
+import webtank.net.http.client: remoteRequest;
+import webtank.net.std_json_rpc_client:	RemoteCallInfo, getRemoteCallInfoURI;
 import webtank.net.http.input: HTTPInput;
-public import webtank.net.std_json_rpc_client: endpoint;
 
 import ivy.types.data: IvyData, IvyDataType;
 import webtank.ivy.datctrl;
@@ -25,16 +21,35 @@ struct IvyRPCCallResult
 IvyRPCCallResult remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
 	if( is(Result == IvyRPCCallResult) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
 {
+	IvyData payload = [
+		"jsonrpc": "2.0",
+		"method": rpcMethod
+	];
+	static if( T.length == 0 ) {
+		payload["params"] = null;
+	} else {
+		payload["params"] = paramsObj[0];
+	}
+
 	IvyRPCCallResult res;
-	res.response = remoteCallA!HTTPInput(address, rpcMethod, paramsObj);
+	string payloadStr = payload.toJSONString();
+	static if( is(Address: RemoteCallInfo) ) {
+		res.response = remoteRequest(address.URI, "POST", address.headers, payloadStr);
+	} else {
+		res.response = remoteRequest(address, "POST", payloadStr);
+	}
 	res.result = _parseAndCheckResponse(address, res.response);
 	return res;
 }
 
-IvyData remoteCall(Result, Address, T...)(Address address, string rpcMethod, auto ref T paramsObj)
+IvyData remoteCall(Result, Address, T...)(
+	Address address,
+	string rpcMethod,
+	auto ref T paramsObj
+)
 	if( is(Result == IvyData) && T.length <= 1 && (is(Address: string) || is(Address: RemoteCallInfo)) )
 {
-	return remoteCallA!IvyRPCCallResult(address, rpcMethod, paramsObj).result;
+	return remoteCall!IvyRPCCallResult(address, rpcMethod, paramsObj).result;
 }
 
 IvyRPCCallResult remoteCallWebForm(Result, Address)(
@@ -47,9 +62,9 @@ IvyRPCCallResult remoteCallWebForm(Result, Address)(
 	IvyRPCCallResult res;
 
 	static if( is(Address: RemoteCallInfo) ) {
-		res.response = sendBlocking(address.URI, HTTPMethod, address.headers, params);
+		res.response = remoteRequest(address.URI, HTTPMethod, address.headers, params);
 	} else {
-		res.response = sendBlocking(address, HTTPMethod, params);
+		res.response = remoteRequest(address, HTTPMethod, params);
 	}
 	
 	res.result = _parseAndCheckResponse(address, res.response);

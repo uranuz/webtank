@@ -7,7 +7,7 @@ import webtank.db: queryParams;
 import webtank.db.utils: PGEscapeStr, PGEscapeIdent;
 import webtank.common.optional: Optional;
 import webtank.security.right.access_exception: AccessException;
-import webtank.net.service.json_rpc_service: JSON_RPCServiceContext;
+import webtank.net.service.json_rpc: JSON_RPCServiceContext;
 import webtank.db.consts: DBRole;
 import webtank.db.iface.database: IDatabase;
 import webtank.datctrl.record_format: RecordFormat, PrimaryKey;

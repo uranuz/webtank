@@ -1,33 +1,32 @@
-module webtank.ivy.main_service;
+module webtank.ivy.service.main.service;
 
-import webtank.net.service.json_rpc_service: JSON_RPCService, JSON_RPCServiceContext;
-import webtank.ivy.service_mixin: IvyServiceMixin, IIvyServiceMixin;
-import webtank.net.http.context: HTTPContext;
-import webtank.net.http.input: HTTPInput;
-import webtank.net.http.output: HTTPOutput;
-import webtank.net.server.iface: IWebServer;
+import webtank.ivy.service.backend: IvyBackendService;
 
-class IvyMainService: JSON_RPCService, IIvyServiceMixin
+class IvyMainService: IvyBackendService
 {
-	import webtank.ivy.access_rule_factory: IvyAccessRuleFactory;
 	import webtank.security.auth.core.controller: AuthCoreController;
 	import webtank.security.right.controller: AccessRightController;
 	import webtank.security.right.db_source: RightDatabaseSource;
 	import webtank.security.right.source_method: getAccessRightList;
 
-	mixin IvyServiceMixin;
+	import webtank.net.http.context: HTTPContext;
+	import webtank.net.http.input: HTTPInput;
+	import webtank.net.http.output: HTTPOutput;
+	import webtank.net.server.iface: IWebServer;
+
+	import webtank.ivy.access_rule_factory: IvyAccessRuleFactory;
+	import webtank.ivy.service.main.context: MainServiceContext;
+
 public:
 	this(string serviceName)
 	{
-		super(serviceName);
+		// Создаем бакэнд сервис, но с локальной аутентификацией
+		super(serviceName, new AuthCoreController(this));
 
-		_startIvyLogging();
-		_initTemplateCache();
-
+		// Устанавливаем локальный источник получения прав
 		_rights = new AccessRightController(
-			new IvyAccessRuleFactory(this.ivyEngine),
+			new IvyAccessRuleFactory(this._ivyEngine),
 			new RightDatabaseSource(this));
-		_accessController = new AuthCoreController(this);
 
 		// Добавляем метод получения прав доступа в состав основного сервиса
 		this.JSON_RPCRouter.join!( () =>
@@ -51,21 +50,5 @@ public:
 
 	override MainServiceContext createContext(HTTPInput request, HTTPOutput response, IWebServer server) {
 		return new MainServiceContext(request, response, server);
-	}
-}
-
-// Kind of HTTP-context that exposes details about IvyMainService
-class MainServiceContext: JSON_RPCServiceContext
-{
-	this(HTTPInput req, HTTPOutput resp, IWebServer srv)
-	{
-		import std.exception: enforce;
-		super(req, resp, srv);
-		enforce(this.service !is null, `Expected instance of IvyMainService`);
-	}
-	
-	///Экземпляр сервиса, с общими для процесса данными
-	override IvyMainService service() @property {
-		return cast(IvyMainService) _server.service;
 	}
 }
