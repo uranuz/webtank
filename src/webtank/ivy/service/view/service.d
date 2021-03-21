@@ -38,12 +38,15 @@ class IvyViewService: IWebService
 	import ivy.engine: IvyEngine;	
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.async_result: AsyncResult;
+	import ivy.interpreter.interpreter: Interpreter;
 	import ivy.types.symbol.dir_attr: DirAttr;
 
 	import webtank.net.web_form: IFormData;
 	import ivy.types.symbol.iface.callable: ICallableSymbol;
 
 	import webtank.common.log.writer: LogWriter;
+
+	import ivy.engine: SaveStateResult;
 
 	private static immutable DEFAULT_CLASS_METHOD = "render";
 
@@ -62,8 +65,8 @@ protected:
 	IAuthController _accessController;
 	IRightController _rights;
 
-	string _genTplModule;
-	string _genTplMethod;
+	string _appIvyModule;
+	string _appIvyMethod;
 
 public:
 	this(string serviceName, string pageURIPatternStr)
@@ -72,13 +75,13 @@ public:
 		_startLoging(); // Запускаем логирование сервиса
 
 		// Определяем мастер-шаблон из конфига
-		auto genTplModulePtr = "generalTemplateModule" in this.config.rawConfig;
-		auto genTplMethodPtr = "generalTemplateMethod" in this.config.rawConfig;
-		if( genTplModulePtr && genTplModulePtr.type == JSONType.string ) {
-			_genTplModule = genTplModulePtr.str;
+		auto appIvyModulePtr = "appIvyModule" in this.config.rawConfig;
+		auto appIvyMethodPtr = "appIvyMethod" in this.config.rawConfig;
+		if( appIvyModulePtr && appIvyModulePtr.type == JSONType.string ) {
+			_appIvyModule = appIvyModulePtr.str;
 		}
-		if( genTplMethodPtr && genTplMethodPtr.type == JSONType.string ) {
-			_genTplMethod = genTplMethodPtr.str;
+		if( appIvyMethodPtr && appIvyMethodPtr.type == JSONType.string ) {
+			_appIvyMethod = appIvyMethodPtr.str;
 		}
 
 		// Стартуем шаблонизатор для рендеринга страниц
@@ -194,7 +197,7 @@ public:
 		{
 			auto messages = makeErrorMsg(ex);
 			log.error(messages.details);
-			renderResult(context, IvyData(messages.userError));
+			_renderApp(context, IvyData(messages.userError));
 			context.response.headers.statusCode = HTTPStatus.InternalServerError;
 			return true; // Ошибка обработана
 		});
@@ -221,29 +224,139 @@ public:
 		}
 	}
 
-	void renderResult(HTTPContext ctx, IvyData content)
+	/// Process request to render control (methodName) from ivy module (moduleName) inside app template
+	void processViewRequest(IvyViewServiceContext ctx, string moduleName, string methodName)
 	{
+		import ivy.types.data.utils: errorToIvyData;
+
+		SaveStateResult execRes = _renderContent(ctx, _prepareGlobalParams(ctx), moduleName, methodName);
+		
+		execRes.asyncResult.then(
+			(IvyData content) {
+				_renderApp(ctx, execRes.interp, content);
+			},
+			(Throwable error) {
+				_renderApp(ctx, execRes.interp, errorToIvyData(error));
+			});
+	}
+
+	/// Prepare global params for ivy interpreter calls
+	IvyData[string] _prepareGlobalParams(HTTPContext context)
+	{
+		import webtank.net.std_json_rpc_client: getAllowedRequestHeaders;
+
+		IvyData[string] ctx;
+		ctx["user"] = new IvyUserIdentity(context.user);
+		ctx["rights"] = new IvyUserRights(context.rights);
+		ctx["vpaths"] = context.service.config.virtualPaths;
+		ctx["forwardHTTPHeaders"] = context.getAllowedRequestHeaders();
+		ctx["endpoints"] = context.service.config.endpoints;
+
+		return [
+			"context": IvyData(ctx)
+		];
+	}
+
+	/// Render content of page
+	SaveStateResult _renderContent(
+		HTTPContext ctx,
+		ref IvyData[string] globalParams,
+		string moduleName,
+		string methodName
+	) {
+		AsyncResult asyncRes = new AsyncResult();
+
+		SaveStateResult moduleExecRes = this.ivyEngine.runModule(moduleName, _prepareGlobalParams(ctx));
+		auto interp = moduleExecRes.interp;
+
+		moduleExecRes.asyncResult.then((IvyData modRes) {
+			// Module executed successfuly, then call method
+			auto methodCallable = interp.asCallable(modRes.execFrame.getValue(methodName));
+
+			IvyData[string] params;
+			// We shal get method symbol from current module scope
+			// Then try to deserialize and pass parameters from web-form to method args
+			_addViewParams(params, ctx.request.form, methodCallable.symbol);
+			// Run method with params
+			interp.execCallable(methodCallable, params).then(asyncRes);
+		}, &asyncRes.reject);
+
+		return SaveStateResult(interp, asyncRes);
+	}
+
+	void _renderApp(HTTPContext ctx, IvyData content) {
+		_renderApp(ctx, this.ivyEngine.makeInterp(_prepareGlobalParams(ctx)), content);
+	}
+
+	void _renderApp(
+		HTTPContext ctx,
+		Interpreter interp,
+		IvyData content
+	) {
 		import std.range: empty;
-		import std.exception: enforce;
+		import std.string: toLower;
+
+		import ivy.types.data.utils: errorToIvyData;
+
+		// Если не задан мастер-шаблон, либо установлена опция вывода без мастер-шаблона, то выводим без мастер-шаблона. В чем, собственно, логика есть...
+		if( _appIvyModule.empty || ctx.request.queryForm.get("appTemplate", null).toLower() == "no" )
+		{
+			_renderResultToResponse(ctx, content);
+			return;
+		}
+
+		_renderAppTemplate(ctx, interp, content).then(
+			(IvyData appContent) {
+				_renderResultToResponse(ctx, appContent);
+			},
+			(Throwable error) {
+				_renderResultToResponse(ctx, errorToIvyData(error));
+			});
+	}
+
+	AsyncResult _renderAppTemplate(
+		HTTPContext ctx,
+		Interpreter interp,
+		IvyData content
+	) {
+		import ivy.types.iface.callable_object: ICallableObject;
+		import ivy.types.data.iface.class_node: IClassNode;
+
+		AsyncResult asyncRes = new AsyncResult();
+
+		auto appModuleExecRes = this.ivyEngine.runModule(_appIvyModule, interp);
+
+		appModuleExecRes.asyncResult.then((IvyData modRes) {
+			auto methodCallable = interp.asCallable(modRes.execFrame.getValue(_appIvyMethod));
+
+			// Run app control constructor with params
+			interp.execCallable(methodCallable, _prepareAppParams(ctx, content)).then(
+				(IvyData appContent) {
+					// If app content is a class then try to run render method on it
+					if( appContent.type == IvyDataType.ClassNode ) {
+						IClassNode control = appContent.classNode;
+						ICallableObject renderCallable = control.__getAttr__(DEFAULT_CLASS_METHOD).callable;
+						interp.execCallable(renderCallable).then(asyncRes);
+					} else {
+						asyncRes.resolve(appContent);
+					}
+				},
+				&asyncRes.reject);
+		}, &asyncRes.reject);
+
+		return asyncRes;
+	}
+
+	IvyData[string] _prepareAppParams(HTTPContext ctx, IvyData content)
+	{
 		import std.algorithm: splitter, map, filter;
-		import std.string: strip, toLower;
+		import std.string: strip;
 		import std.array: array;
 
 		import webtank.security.right.source_method: getAccessRightList;
 		import webtank.common.std_json.to: toStdJSON;
 		import ivy.types.data.conv.std_to_ivy_json: toIvyJSON;
-
-		import ivy.types.data.utils: errorToIvyData;
-
-		// Если есть "мусор" в буфере вывода, то попытаемся его убрать
-		ctx.response.tryClearBody();
-
-		// Если не задан мастер-шаблон, либо установлена опция вывода без мастер-шаблона, то выводим без мастер-шаблона. В чем, собственно, логика есть...
-		if( _genTplModule.empty || ctx.request.queryForm.get("generalTemplate", null).toLower() == "no" )
-		{
-			_renderResultToResponse(ctx, content);
-			return;
-		}
+		import ivy.types.data.iface.class_node: IClassNode;
 
 		auto rights = getAccessRightList(rightController.rightSource);
 		IvyData ivyRights;
@@ -258,7 +371,17 @@ public:
 			.filter!((it) => it.length)
 			.array;
 
-		IvyData[string] params = [
+		string webpackLib;
+		if( content.type == IvyDataType.ClassNode )
+		{
+			IClassNode control = content.classNode;
+			// Get JavaScript module name for control
+			string jsModuleName = control.__getAttr__("moduleName").str;
+			// Get webpack library name for control
+			webpackLib = this._webpackManifest.getLibPath(jsModuleName);
+		}
+
+		return [
 			"content": content,
 			"userRightData": IvyData([
 				"user": IvyData([
@@ -267,76 +390,21 @@ public:
 					"accessRoles": IvyData(accessRoles),
 					"sessionId": (ctx.user.isAuthenticated()? IvyData("dummy"): IvyData())
 				]),
-				"right": ivyRights,
-				"vpaths": IvyData(ctx.service.config.virtualPaths)
+				"right": ivyRights
 			]),
-			"webpackLib": IvyData(this._webpackManifest.getLibPath(ctx.junk.get(`moduleName`, null)))
+			"webpackLib": IvyData(webpackLib)
 		];
-
-		this.processIvyRequest(ctx, _genTplModule, _genTplMethod, params).then(
-			(IvyData ivyRes) {
-				_renderResultToResponse(ctx, ivyRes);
-			},
-			(Throwable error) {
-				_renderResultToResponse(ctx, errorToIvyData(error));
-			});
 	}
 
 	private void _renderResultToResponse(HTTPContext ctx, IvyData content)
 	{
 		import ivy.types.data.render: renderDataNode, DataRenderType;
 
+		// Если есть "мусор" в буфере вывода, то попытаемся его убрать
+		ctx.response.tryClearBody();
+
 		HTTPOutput response = ctx.response;
-
 		renderDataNode!(DataRenderType.HTML)(response, content);
-	}
-
-	AsyncResult processIvyRequest(
-		HTTPContext context,
-		string moduleName,
-		string methodName,
-		IvyData[string] params = null
-	) {
-		import ivy.types.iface.callable_object: ICallableObject;
-		
-		AsyncResult asyncRes = new AsyncResult();
-
-		auto moduleExecRes = this.ivyEngine.runModule(moduleName, prepareIvyGlobals(context));
-
-		moduleExecRes.asyncResult.then((IvyData modRes) {
-			// Module executed successfuly, then call method
-			auto interp = moduleExecRes.interp;
-			auto methodCallable = interp.asCallable(modRes.execFrame.getValue(methodName));
-			// We shal get method symbol from current module scope
-			// Then try to deserialize and pass parameters from web-form to method args
-			_addViewParams(params, context.request.form, methodCallable.symbol);
-			// Run method with params
-			interp.execCallable(methodCallable, params).then((IvyData classOrRes) {
-				if( classOrRes.type == IvyDataType.ClassNode ) {
-					ICallableObject renderCallable = classOrRes.classNode.__getAttr__(DEFAULT_CLASS_METHOD).callable;
-					interp.execCallable(renderCallable).then(asyncRes);
-				} else {
-					asyncRes.resolve(classOrRes);
-				}
-			}, &asyncRes.reject);
-		}, &asyncRes.reject);
-
-		return asyncRes;
-	}
-
-	IvyData[string] prepareIvyGlobals(HTTPContext context)
-	{
-		import webtank.net.std_json_rpc_client: getAllowedRequestHeaders;
-
-		IvyData[string] res;
-
-		res["user"] = new IvyUserIdentity(context.user);
-		res["rights"] = new IvyUserRights(context.rights);
-		res["vpaths"] = context.service.config.virtualPaths;
-		res["forwardHTTPHeaders"] = context.getAllowedRequestHeaders();
-		res["endpoints"] = context.service.config.endpoints;
-
-		return res;
 	}
 
 	static void _addViewParams(ref IvyData[string] params, IFormData form, ICallableSymbol symb)

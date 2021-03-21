@@ -105,7 +105,7 @@ void formDataToStruct(ResultBaseType, DictType, string subFieldDelim = "__", str
 				try {
 					result = convertPlainType!ResultType(*formFieldPtr);
 				} catch(ConvException ex) {
-					throw new ConvException(`Error while extracting form field: ` ~ prefix ~ `. Error msg: ` ~ ex.msg);
+					throw new ConvException(`Error while extracting form field: ` ~ prefix ~ `. Error msg: ` ~ (cast(string) ex.message));
 				}
 			}
 			else static if( isArray!ResultType )
@@ -128,7 +128,7 @@ void formDataToStruct(ResultBaseType, DictType, string subFieldDelim = "__", str
 									try {
 										return convertPlainType!Elem(it);
 									} catch(ConvException ex) {
-										throw new ConvException(`Error while extracting form field array item: ` ~ prefix ~ `. Error msg: ` ~ ex.msg);
+										throw new ConvException(`Error while extracting form field array item: ` ~ prefix ~ `. Error msg: ` ~ (cast(string) ex.message));
 									}
 								})().array;
 							}

@@ -14,7 +14,7 @@ class OptStorageInterpreter: BaseDirectiveInterpreter
 		import std.algorithm: canFind;
 
 		IvyData optsNode = interp.getValue("opts");
-		interp.log.internalAssert(
+		interp.assure(
 			[IvyDataType.AssocArray, IvyDataType.Null].canFind(optsNode.type),
 			`Expected opts assoc array or null!`);
 

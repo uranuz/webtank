@@ -579,7 +579,7 @@ struct URI
 				catch(SocketException e)
 				{
 					// IPv6 address did not parse
-					throw new URIException(e.msg);
+					throw new URIException(cast(string) e.message);
 				}
 			}
 			consume(input, ']');

@@ -34,10 +34,10 @@ class RemoteCallInterpreter: BaseDirectiveInterpreter
 			[IvyDataType.Null, IvyDataType.AssocArray].canFind(params.type),
 			"JSON-RPC params field must be object or null");
 
-		string[][string] headers = extraxtHeaders(interp.getGlobalValue("forwardHTTPHeaders"));
-		string uri = getEndpointURI(
-			interp.getGlobalValue("endpoints").assocArray,
-			service, endpoint);
+		IvyData[string] context = interp.getGlobalValue("context").assocArray;
+
+		string[][string] headers = extraxtHeaders(context["forwardHTTPHeaders"]);
+		string uri = getEndpointURI(context["endpoints"].assocArray, service, endpoint);
 
 		AsyncResult fResult = new AsyncResult();
 		try

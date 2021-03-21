@@ -68,7 +68,7 @@ public:
 
 		LogEvent event;
 		event.type = eventType;
-		event.text = exc.msg;
+		event.text = cast(string) exc.message;
 		event.title = typeid(exc).toString();
 		event.file = exc.file;
 		event.line = exc.line;

@@ -91,15 +91,17 @@ Tuple!(
 makeErrorMsg(Throwable error)
 {
 	import std.typecons: Tuple;
+	import std.string: join;
 	import std.conv: to;
 	import trifle.backtrace: getBacktrace;
 
 	typeof(return) res;
 
-	string debugInfo = "\r\nIn module " ~ error.file ~ ":" ~ error.line.text ~ ". Backtrace:\r\n" ~ getBacktrace(error).to!string;
-	res.details = error.msg ~ debugInfo;
+	string backtrace = getBacktrace(error).join("\r\n");
+	string debugInfo = "\r\nIn module " ~ error.file ~ ":" ~ error.line.text ~ ". Backtrace:\r\n" ~ backtrace;
+	res.details = (cast(string) error.message) ~ debugInfo;
 	debug res.userError = res.details;
-	else res.userError = error.msg;
+	else res.userError = cast(string) error.message;
 
 	return res;
 }
@@ -111,7 +113,7 @@ auto errorToJSON(Throwable ex)
 
 	return JSONValue([
 		"code": JSONValue(1), // Пока не знаю откуда мне брать код ошибки... Пусть будет 1
-		"message": JSONValue(ex.msg),
+		"message": JSONValue(cast(string) ex.message),
 		"data": JSONValue([
 			"file": JSONValue(ex.file),
 			"line": JSONValue(ex.line),

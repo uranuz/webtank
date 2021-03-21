@@ -7,6 +7,7 @@ class ViewServiceURIPageRoute: IHTTPHandler
 	import webtank.net.http.context: HTTPContext;	
 	import webtank.net.http.handler.iface: HTTPHandlingResult;
 	import webtank.net.service.config.page_routing: RoutingConfigEntry;
+	import webtank.net.http.consts: JunkField;
 
 	import webtank.net.uri_pattern: URIPattern;
 
@@ -59,13 +60,7 @@ public:
 
 		context.request.requestURIMatch = uriMatchData;
 
-		context.service.processIvyRequest(context, _entry.ivyModule, _entry.ivyMethod).then(
-			(IvyData res) {
-				context.service.renderResult(context, res);
-			},
-			(Throwable error) {
-				context.service.renderResult(context, errorToIvyData(error));
-			});
+		context.service.processViewRequest(context, _entry.ivyModule, _entry.ivyMethod);
 
 		return HTTPHandlingResult.handled; // Запрос обработан
 	}

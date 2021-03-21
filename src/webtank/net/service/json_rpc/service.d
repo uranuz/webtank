@@ -114,7 +114,7 @@ public:
 
 	override LogWriter log() @property
 	{
-		assert(_rootRouter, `Main service log is not initialized!`);
+		assert(_loger, `Main service log is not initialized!`);
 		return _loger;
 	}
 

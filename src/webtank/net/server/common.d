@@ -67,7 +67,7 @@ void makeErrorResponse(Throwable error, HTTPOutput response)
 			// By default print as HTML
 			messageBody = `<html><head><title>` ~ statusCode.text ~ ` ` ~ reasonPhrase ~ `</title></head><body>`
 				~ `<h3>` ~ statusCode.text ~ ` ` ~ reasonPhrase ~ `</h3>`
-				~ `<h4>` ~ makeErrorMsg(error).userError ~ `</h4>`
+				~ `<h4 style="white-space: pre-wrap; line-height: 2em;">` ~ makeErrorMsg(error).userError ~ `</h4>`
 				~ `<hr/><p style="text-align: right;">webtank.net.server</p>`
 				~ `</body></html>`;
 			break;

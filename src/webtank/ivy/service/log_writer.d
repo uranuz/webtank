@@ -19,7 +19,7 @@ public:
 	}
 
 	// Метод перенаправляющий логи шаблонизатора в файл
-	void writeEvent(LogInfo logInfo)
+	void writeEvent(ref LogInfo logInfo)
 	{
 		import std.datetime: Clock;
 		import std.conv: text;
