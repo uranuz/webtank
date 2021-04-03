@@ -229,7 +229,8 @@ public:
 	{
 		import ivy.types.data.utils: errorToIvyData;
 
-		SaveStateResult execRes = _renderContent(ctx, _prepareGlobalParams(ctx), moduleName, methodName);
+		auto globalParams = _prepareGlobalParams(ctx);
+		SaveStateResult execRes = _renderContent(ctx, globalParams, moduleName, methodName);
 		
 		execRes.asyncResult.then(
 			(IvyData content) {
@@ -319,7 +320,7 @@ public:
 		Interpreter interp,
 		IvyData content
 	) {
-		import ivy.types.iface.callable_object: ICallableObject;
+		import ivy.types.callable_object: CallableObject;
 		import ivy.types.data.iface.class_node: IClassNode;
 
 		AsyncResult asyncRes = new AsyncResult();
@@ -335,7 +336,7 @@ public:
 					// If app content is a class then try to run render method on it
 					if( appContent.type == IvyDataType.ClassNode ) {
 						IClassNode control = appContent.classNode;
-						ICallableObject renderCallable = control.__getAttr__(DEFAULT_CLASS_METHOD).callable;
+						CallableObject renderCallable = control.__getAttr__(DEFAULT_CLASS_METHOD).callable;
 						interp.execCallable(renderCallable).then(asyncRes);
 					} else {
 						asyncRes.resolve(appContent);
