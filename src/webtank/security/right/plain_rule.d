@@ -10,7 +10,7 @@ import webtank.datctrl.iface.record: IBaseRecord;
 version(Have_ivy) import ivy.types.data: IvyData, IvyDataType;
 
 import ivy.types.data.conv.std_to_ivy_json: toIvyJSON;
-import ivy.types.data.conv.ivy_to_std_json: toStdJSON;
+import ivy.types.data.conv.ivy_to_std_json: toStdJSON2;
 
 import std.meta: staticMap;
 import std.variant: Algebraic, visit;
@@ -122,7 +122,7 @@ public:
 		{
 			return _del.visit!(
 				(AddAccessRuleDelType!(JSONValue) del) {
-					return del(identity, data.toStdJSON());
+					return del(identity, data.toStdJSON2());
 				},
 				(AddAccessRuleDelType!(IBaseRecord) del) {
 					enforce!AccessSystemException(false, `Conversion is not implemented yet!`);

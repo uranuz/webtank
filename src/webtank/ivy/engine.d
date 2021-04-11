@@ -14,7 +14,7 @@ public:
 	this(string[] importPaths, LogWriter webtankLog = null)
 	{
 		import ivy.engine_config: IvyConfig;
-		import webtank.ivy.directive.standard_factory: makeStandardInterpreterDirFactory;
+		import webtank.ivy.directive.standard_factory: webtankDirFactory;
 		
 		import std.exception: enforce;
 		enforce(importPaths.length > 0, "Import paths for templates are required");
@@ -34,7 +34,7 @@ public:
 			ivyConfig.interpreterLoger = &this._loger.writeEvent;
 		}
 
-		ivyConfig.directiveFactory = makeStandardInterpreterDirFactory();
+		ivyConfig.directiveFactory = webtankDirFactory;
 
 		debug ivyConfig.clearCache = true;
 

@@ -112,7 +112,7 @@ public:
 
 		enforce!JSON_RPC_Exception(
 			[JSONType.object, JSONType.null_].canFind(paramsPtr.type),
-			`JSON-RPC params field shoul be object or null`);
+			`JSON-RPC params field should be object or null`);
 
 		jResponse["result"] = method(*paramsPtr, context); // Вызов метода
 	}
@@ -155,8 +155,7 @@ template callJSON_RPC_Method(alias Method)
 	import webtank.common.std_json.to: toStdJSON;
 
 	import std.traits: Parameters, ReturnType, ParameterIdentifierTuple, ParameterDefaults;
-	import std.json: JSONValue, JSONType;
-	import std.conv: to;
+	import std.json: JSONValue;
 	import std.typecons: Tuple;
 	import std.exception: enforce;
 
