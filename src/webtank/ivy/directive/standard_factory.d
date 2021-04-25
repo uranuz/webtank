@@ -81,10 +81,13 @@ AsyncResult remoteCallFn(
 	return fResult;
 }
 
-string toJSONBase64Fn(IvyData value)
+string toJSONBase64Fn(IvyData value, Interpreter interp)
 {
 	import std.base64: Base64;
 
-	ubyte[] jsonStr = cast(ubyte[]) value.toJSONString();
+	import ivy.types.data.render: DataRenderType;
+	import ivy.types.data.render: renderDataNode2;
+
+	ubyte[] jsonStr = cast(ubyte[]) renderDataNode2!(DataRenderType.JSON)(value, interp);
 	return cast(string) Base64.encode(jsonStr);
 }

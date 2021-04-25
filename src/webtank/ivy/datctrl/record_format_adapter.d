@@ -1,12 +1,14 @@
 module webtank.ivy.datctrl.record_format_adapter;
 
-import ivy.types.data.base_class_node: BaseClassNode;
+import ivy.types.data.decl_class_node: DeclClassNode;
 
-class RecordFormatAdapter: BaseClassNode
+class RecordFormatAdapter: DeclClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.iface.range: IvyDataRange;
 	import ivy.types.data.iface.class_node: IClassNode;
+	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass, makeClass;
 
 	import webtank.datctrl.consts: SrlField;
 	import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
@@ -22,6 +24,8 @@ private:
 public:
 	this(IvyData rawData)
 	{
+		super(_declClass);
+
 		enforce(rawData.type == IvyDataType.AssocArray, `Record format raw data must be object`);
 		auto fmtPtr = SrlField.format in rawData;
 		enforce(fmtPtr, `Expected format field "` ~ SrlField.format ~ `" in record raw data!`);
@@ -109,21 +113,30 @@ public:
 			return IvyData();
 		}
 
-		IvyData __serialize__()
-		{
-			IvyData[] formats;
-			foreach( fmt; _items ) {
-				formats ~= fmt.__serialize__();
-			}
-
-			return IvyData([
-				SrlField.format: IvyData(formats),
-				SrlField.keyFieldIndex: IvyData(_keyFieldIndex)
-			]);
-		}
-
 		size_t length() @property {
 			return _items.length;
 		}
 	}
+
+	@IvyMethodAttr()
+	IvyData __serialize__()
+	{
+		IvyData[] formats;
+		foreach( fmt; _items ) {
+			formats ~= IvyData(); //  fmt.__serialize__();
+		}
+
+		return IvyData([
+			SrlField.format: IvyData(formats),
+			SrlField.keyFieldIndex: IvyData(_keyFieldIndex)
+		]);
+	}
+
+	private __gshared DeclClass _declClass;
+
+	shared static this()
+	{
+		_declClass = makeClass!(typeof(this))("RecordFormatAdapter");
+	}
+
 }

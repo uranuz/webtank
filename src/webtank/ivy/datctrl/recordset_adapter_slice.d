@@ -1,11 +1,13 @@
 module webtank.ivy.datctrl.recordset_adapter_slice;
 
-import ivy.types.data.base_class_node: BaseClassNode;
+import ivy.types.data.decl_class_node: DeclClassNode;
 
-class RecordSetAdapterSlice: BaseClassNode
+class RecordSetAdapterSlice: DeclClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.iface.range: IvyDataRange;
+	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass;
 
 	import webtank.ivy.datctrl.recordset_adapter: RecordSetAdapter;
 
@@ -17,21 +19,23 @@ private:
 public:
 	this(RecordSetAdapter rs, size_t begin, size_t end)
 	{
+		super(_declClass);
+
 		if( rs is null )
-			throw new Exception(`Wrong input for RecordSetAdapterSlice`);
+			throw new Exception("Wrong input for RecordSetAdapterSlice");
 
-		_rs = rs;
-		_begin = begin;
-		_end = end;
+		this._rs = rs;
+		this._begin = begin;
+		this._end = end;
 
-		if( _begin > _rs.length ) {
-			_begin = rs.length;
+		if( this._begin > this._rs.length ) {
+			this._begin = rs.length;
 		}
-		if( _end > _rs.length ) {
-			_end = rs.length;
+		if( this._end > this._rs.length ) {
+			this._end = rs.length;
 		}
-		if( _begin > _end ) {
-			_begin = _end;
+		if( this._begin > this._end ) {
+			this._begin = this._end;
 		}
 	}
 
@@ -43,16 +47,16 @@ public:
 
 	public:
 		this(RecordSetAdapterSlice recordSet) {
-			_rs = recordSet;
+			this._rs = recordSet;
 		}
 
 		override {
 			bool empty() @property {
-				return i >= _rs.length;
+				return i >= this._rs.length;
 			}
 
 			IvyData front() {
-				return _rs[IvyData(i)];
+				return this._rs[IvyData(i)];
 			}
 
 			void popFront() {
@@ -64,7 +68,7 @@ public:
 	private void _testIndex(size_t index)
 	{
 		if( index >= length )
-			throw new Exception(`RecordSetAdapterSlice index is out of range`);
+			throw new Exception("RecordSetAdapterSlice index is out of range");
 	}
 
 	override IvyDataRange opSlice() {
@@ -79,22 +83,26 @@ public:
 		{
 			case IvyDataType.Integer: {
 				_testIndex(index.integer);
-				return _rs[IvyData(index.integer + _begin)];
+				return this._rs[IvyData(index.integer + _begin)];
 			}
 			default: break;
 		}
-		throw new Exception(`Unexpected kind of index argument: ` ~ index.type.text);
+		throw new Exception("Unexpected kind of index argument: " ~ index.type.text);
 	}
 
 	override IvyData __getAttr__(string attrName) {
-		return _rs.__getAttr__(attrName);
-	}
-
-	override IvyData __serialize__() {
-		return _rs.serializeSlice(_begin, _end);
+		return this._rs.__getAttr__(attrName);
 	}
 
 	override size_t length() @property {
-		return _end - _begin;
+		return this._end - this._begin;
 	}
+
+	@IvyMethodAttr()
+	IvyData __serialize__() {
+		return this._rs.serializeSlice(this._begin, this._end);
+	}
+
+	// Initialized in webtank.ivy.datctrl._recordset_init because of circular dependencies
+	package __gshared DeclClass _declClass;
 }

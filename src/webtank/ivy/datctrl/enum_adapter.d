@@ -1,10 +1,12 @@
 module webtank.ivy.datctrl.enum_adapter;
 
-import ivy.types.data.base_class_node: BaseClassNode;
+import ivy.types.data.decl_class_node: DeclClassNode;
 
-class EnumAdapter: BaseClassNode
+class EnumAdapter: DeclClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
+	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass, makeClass;
 
 	import webtank.ivy.datctrl.enum_format_adapter: EnumFormatAdapter;
 	import webtank.datctrl.consts: SrlField;
@@ -18,7 +20,8 @@ private:
 public:
 	this(IvyData rawEnum)
 	{
-		
+		super(_declClass);
+
 		_fmt = new EnumFormatAdapter(rawEnum);
 		auto valPtr = SrlField.data in rawEnum;
 		enforce(valPtr, `Expected field "` ~ SrlField.data ~ `" as enum value`);
@@ -28,6 +31,8 @@ public:
 
 	this(EnumFormatAdapter fmt, IvyData val)
 	{
+		super(_declClass);
+
 		_fmt = fmt;
 
 		enforce(fmt !is null, `Enum format is null`);
@@ -53,12 +58,20 @@ public:
 			}
 			throw new Exception(`Unexpected EnumAdapter property`);
 		}
+	}
 
-		IvyData __serialize__()
-		{
-			IvyData res = _fmt.__serialize__();
-			res[SrlField.data] = _value;
-			return res;
-		}
+	@IvyMethodAttr()
+	IvyData __serialize__()
+	{
+		IvyData res = _fmt.__serialize__();
+		res[SrlField.data] = _value;
+		return res;
+	}
+
+	private __gshared DeclClass _declClass;
+
+	shared static this()
+	{
+		_declClass = makeClass!(typeof(this))("EnumAdapter");
 	}
 }

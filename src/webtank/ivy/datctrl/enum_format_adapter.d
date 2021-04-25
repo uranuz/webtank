@@ -1,12 +1,15 @@
 module webtank.ivy.datctrl.enum_format_adapter;
 
-import ivy.types.data.base_class_node: BaseClassNode;
+import ivy.types.data.decl_class_node: DeclClassNode;
 
-class EnumFormatAdapter: BaseClassNode
+class EnumFormatAdapter: DeclClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.iface.range: IvyDataRange;
 	import webtank.datctrl.consts: SrlField, SrlEntityType;
+	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass, makeClass;
+	import ivy.types.data.base_class_node: BaseClassNode;
 
 	import std.exception: enforce;
 private:
@@ -17,6 +20,8 @@ private:
 public:
 	this(IvyData rawEnum)
 	{
+		super(_declClass);
+
 		_rawEnum = rawEnum;
 
 		auto typePtr = SrlField.type in _rawEnum;
@@ -177,14 +182,22 @@ public:
 			throw new Exception(`Unexpected attribute for EnumFormatAdapter`);
 		}
 
-		IvyData __serialize__() {
-			// Maybe we should make deep copy of it there, but because of productivity
-			// we shall not do it now. Just say for now that nobody should modifiy serialized data
-			return _rawEnum;
-		}
-
 		size_t length() @property {
 			return _rawItems.length;
 		}
+	}
+
+	@IvyMethodAttr()
+	IvyData __serialize__() {
+		// Maybe we should make deep copy of it there, but because of productivity
+		// we shall not do it now. Just say for now that nobody should modifiy serialized data
+		return _rawEnum;
+	}
+
+	private __gshared DeclClass _declClass;
+
+	shared static this()
+	{
+		_declClass = makeClass!(typeof(this))("EnumFormatAdapter");
 	}
 }

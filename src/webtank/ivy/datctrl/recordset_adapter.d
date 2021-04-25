@@ -1,11 +1,13 @@
 module webtank.ivy.datctrl.recordset_adapter;
 
-import ivy.types.data.base_class_node: BaseClassNode;
+import ivy.types.data.decl_class_node: DeclClassNode;
 
-class RecordSetAdapter: BaseClassNode
+class RecordSetAdapter: DeclClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.iface.range: IvyDataRange;
+	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass;
 
 	import webtank.datctrl.consts: SrlField, SrlEntityType;
 	import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
@@ -14,12 +16,14 @@ class RecordSetAdapter: BaseClassNode
 
 	import std.exception: enforce;
 private:
-	RecordAdapter[] _items;
 	RecordFormatAdapter _fmt;
+	RecordAdapter[] _items;
 
 public:
 	this(IvyData rawRS)
 	{
+		super(_declClass);
+
 		auto typePtr = SrlField.type in rawRS;
 		auto dataPtr = SrlField.data in rawRS;
 		auto fmtPtr = SrlField.format in rawRS;
@@ -32,17 +36,11 @@ public:
 			typePtr.type == IvyDataType.String && typePtr.str == SrlEntityType.recordSet,
 			`Expected "` ~ SrlEntityType.recordSet ~ `" value in "` ~ SrlField.format ~ `" field`);
 
-		_fmt = new RecordFormatAdapter(rawRS);
+		this._fmt = new RecordFormatAdapter(rawRS);
 
-		import webtank.ivy.datctrl.deserialize: _deserializeRecordData;
+		import webtank.ivy.datctrl.deserialize.record_data: _deserializeRecordData;
 		foreach( i, ref recData; dataPtr.array )
-		{
-			IvyData[] recordData;
-			foreach( j, ref fieldData; recData.array ) {
-				recordData ~= _deserializeRecordData(fieldData, _fmt[IvyData(j)]);
-			}
-			_items ~= new RecordAdapter(_fmt, recordData);
-		}
+			this._items ~= new RecordAdapter(this._fmt, _deserializeRecordData(recData, this._fmt));
 	}
 
 	static class Range: IvyDataRange
@@ -53,18 +51,18 @@ public:
 
 	public:
 		this(RecordSetAdapter recordSet) {
-			_rs = recordSet;
+			this._rs = recordSet;
 		}
 
 		override {
 			bool empty() @property
 			{
 				import std.range: empty;
-				return i >= _rs._items.length;
+				return i >= this._rs._items.length;
 			}
 
 			IvyData front() {
-				return IvyData(_rs._getRecord(i));
+				return IvyData(this._rs._getRecord(i));
 			}
 
 			void popFront() {
@@ -76,8 +74,8 @@ public:
 	private RecordAdapter _getRecord(size_t index)
 	{
 		import std.conv: text;
-		enforce(index < _items.length, `No record with index ` ~ index.text ~ ` in record set!`);
-		return _items[index];
+		enforce(index < this._items.length, `No record with index ` ~ index.text ~ ` in record set!`);
+		return this._items[index];
 	}
 
 	override {
@@ -112,36 +110,34 @@ public:
 			return IvyData();
 		}
 
-		IvyData __serialize__()
-		{
-			IvyData res = _fmt.__serialize__();
-			res[SrlField.type] = SrlEntityType.recordSet;
-
-			IvyData[] itemsData;
-			foreach( record; _items ) {
-				itemsData ~= record._serializeData();
-			}
-			res[SrlField.data] = itemsData;
-			
-			return res;
-		}
-
 		size_t length() @property {
-			return _items.length;
+			return this._items.length;
 		}
 	}
 
-	IvyData serializeSlice(size_t begin, size_t end)
+	IvyData serializeSlice(size_t begin, size_t end) {
+		return this._serializeItems(this._items[begin..end]);
+	}
+
+	@IvyMethodAttr()
+	IvyData __serialize__() {
+		return this._serializeItems(this._items);
+	}
+
+	private IvyData _serializeItems(RecordAdapter[] items)
 	{
-		IvyData res = _fmt.__serialize__();
+		IvyData res = this._fmt.__serialize__();
 		res[SrlField.type] = SrlEntityType.recordSet;
 
 		IvyData[] itemsData;
-		foreach( record; _items[begin..end] ) {
+		foreach( record; items ) {
 			itemsData ~= record._serializeData();
 		}
 		res[SrlField.data] = itemsData;
 		
 		return res;
 	}
+
+	// Initialized in webtank.ivy.datctrl._recordset_init because of circular dependencies
+	package __gshared DeclClass _declClass;
 }

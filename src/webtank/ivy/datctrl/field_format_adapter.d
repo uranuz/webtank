@@ -1,12 +1,15 @@
 module webtank.ivy.datctrl.field_format_adapter;
 
-import ivy.types.data.base_class_node: BaseClassNode;
+import ivy.types.data.decl_class_node: DeclClassNode;
 
-class FieldFormatAdapter: BaseClassNode
+class FieldFormatAdapter: DeclClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 
 	import webtank.datctrl.consts: SrlField;
+
+	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass, makeClass;
 
 	import std.exception: enforce;
 private:
@@ -14,6 +17,8 @@ private:
 public:
 	this(IvyData rawField)
 	{
+		super(_declClass);
+
 		_rawField = rawField;
 
 		enforce(SrlField.type in _rawField, `Expected type field "` ~ SrlField.type ~ `" in field format raw data!`);
@@ -29,16 +34,26 @@ public:
 				case "typeStr": return _rawField[SrlField.type];
 				default: break;
 			}
-			throw new Exception(`Unexpected attribute name for FieldFormatAdapter`);
-		}
-		IvyData __serialize__() {
-			// Maybe we should make deep copy of it there, but because of productivity
-			// we shall not do it now. Just say for now that nobody should modifiy serialized data
-			return _rawField;
+			return super.__getAttr__(attrName);
 		}
 	}
 
 	string typeStr() @property {
 		return _rawField[SrlField.type].str;
 	}
+
+	@IvyMethodAttr()
+	IvyData __serialize__() {
+		// Maybe we should make deep copy of it there, but because of productivity
+		// we shall not do it now. Just say for now that nobody should modifiy serialized data
+		return _rawField;
+	}
+
+	private __gshared DeclClass _declClass;
+
+	shared static this()
+	{
+		_declClass = makeClass!(typeof(this))("FieldFormatAdapter");
+	}
+
 }

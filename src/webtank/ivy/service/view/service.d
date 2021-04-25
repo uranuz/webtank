@@ -302,16 +302,16 @@ public:
 		// Если не задан мастер-шаблон, либо установлена опция вывода без мастер-шаблона, то выводим без мастер-шаблона. В чем, собственно, логика есть...
 		if( _appIvyModule.empty || ctx.request.queryForm.get("appTemplate", null).toLower() == "no" )
 		{
-			_renderResultToResponse(ctx, content);
+			_renderResultToResponse(ctx, content, interp);
 			return;
 		}
 
 		_renderAppTemplate(ctx, interp, content).then(
 			(IvyData appContent) {
-				_renderResultToResponse(ctx, appContent);
+				_renderResultToResponse(ctx, appContent, interp);
 			},
 			(Throwable error) {
-				_renderResultToResponse(ctx, errorToIvyData(error));
+				_renderResultToResponse(ctx, errorToIvyData(error), interp);
 			});
 	}
 
@@ -335,9 +335,7 @@ public:
 				(IvyData appContent) {
 					// If app content is a class then try to run render method on it
 					if( appContent.type == IvyDataType.ClassNode ) {
-						IClassNode control = appContent.classNode;
-						CallableObject renderCallable = control.__getAttr__(DEFAULT_CLASS_METHOD).callable;
-						interp.execCallable(renderCallable).then(asyncRes);
+						interp.execClassMethod(appContent.classNode, DEFAULT_CLASS_METHOD).then(asyncRes);
 					} else {
 						asyncRes.resolve(appContent);
 					}
@@ -397,7 +395,7 @@ public:
 		];
 	}
 
-	private void _renderResultToResponse(HTTPContext ctx, IvyData content)
+	private void _renderResultToResponse(HTTPContext ctx, IvyData content, Interpreter interp)
 	{
 		import ivy.types.data.render: renderDataNode, DataRenderType;
 
@@ -405,7 +403,7 @@ public:
 		ctx.response.tryClearBody();
 
 		HTTPOutput response = ctx.response;
-		renderDataNode!(DataRenderType.HTML)(response, content);
+		renderDataNode!(DataRenderType.HTML)(response, content, interp);
 	}
 
 	static void _addViewParams(ref IvyData[string] params, IFormData form, ICallableSymbol symb)

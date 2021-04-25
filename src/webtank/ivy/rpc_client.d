@@ -31,8 +31,11 @@ IvyRPCCallResult remoteCall(Result, Address, T...)(Address address, string rpcMe
 		payload["params"] = paramsObj[0];
 	}
 
+	import ivy.types.data.render: renderDataNode2;
+	import ivy.types.data.render: DataRenderType;
+
 	IvyRPCCallResult res;
-	string payloadStr = payload.toJSONString();
+	string payloadStr = renderDataNode2!(DataRenderType.JSON)(payload);
 	static if( is(Address: RemoteCallInfo) ) {
 		res.response = remoteRequest(address.URI, "POST", address.headers, payloadStr);
 	} else {

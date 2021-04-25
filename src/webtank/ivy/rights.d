@@ -1,11 +1,14 @@
 module webtank.ivy.rights;
 
-import ivy.types.data.base_class_node: BaseClassNode;
+import ivy.types.data.decl_class_node: DeclClassNode;
 
-class IvyUserRights: BaseClassNode
+class IvyUserRights: DeclClassNode
 {
-	import webtank.security.right.user_rights: UserRights;
 	import ivy.types.data: IvyDataType, IvyData;
+	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass, makeClass;
+
+	import webtank.security.right.user_rights: UserRights;
 
 private:
 	UserRights _rights;
@@ -17,6 +20,8 @@ public:
 	import std.exception: enforce;
 	this(UserRights rights)
 	{
+		super(_declClass);
+
 		_rights = rights;
 	}
 
@@ -25,14 +30,14 @@ public:
 		{
 			switch(attrName)
 			{
-				case `object`: return IvyData(_accessObject);
-				case `kind`: return IvyData(_accessKind);
-				case `data`: return _data;
-				case `hasRight`: return IvyData(
+				case "object": return IvyData(_accessObject);
+				case "kind": return IvyData(_accessKind);
+				case "data": return _data;
+				case "hasRight": return IvyData(
 					_rights.hasRight(_accessObject, _accessKind, _data));
 				default: break;
 			}
-			throw new Exception(`Unexpected IvyUserRights attribute: ` ~ attrName);
+			return super.__getAttr__(attrName);
 		}
 
 		void __setAttr__(IvyData val, string attrName)
@@ -40,18 +45,18 @@ public:
 			import std.algorithm: canFind;
 			switch(attrName)
 			{
-				case `object`:
+				case "object":
 				{
 					// Access object is essential
 					enforce(val.type == IvyDataType.String, `Expected string as access object name!!!`);
 					_accessObject = val.str;
 					break;
 				}
-				case `kind`:
+				case "kind":
 				{
 					// Access kind is optional
 					enforce([IvyDataType.Undef, IvyDataType.Null, IvyDataType.String].canFind(val.type),
-						`Expected string, null or undef as access kind name!!!`);
+						"Expected string, null or undef as access kind name!!!");
 					if( val.type == IvyDataType.String ) {
 						_accessKind = val.str;
 					} else {
@@ -59,23 +64,31 @@ public:
 					}
 					break;
 				}
-				case `data`:
+				case "data":
 				{
 					_data = val;
 					break;
 				}
 				default:
-					throw new Exception(`Unexpected IvyUserRights attribute: ` ~ attrName);
+					throw new Exception("Unexpected IvyUserRights attribute: " ~ attrName);
 			}
 		}
+	}
 
-		IvyData __serialize__()
-		{
-			IvyData res;
-			foreach( field; [`object`, `kind`, `data`, `hasRight`] ) {
-				res[field] = this.__getAttr__(field);
-			}
-			return res;
+	@IvyMethodAttr()
+	IvyData __serialize__()
+	{
+		IvyData res;
+		foreach( field; ["object", "kind", "data", "hasRight"] ) {
+			res[field] = this.__getAttr__(field);
 		}
+		return res;
+	}
+
+	private __gshared DeclClass _declClass;
+
+	shared static this()
+	{
+		_declClass = makeClass!(typeof(this))("UserRights");
 	}
 }

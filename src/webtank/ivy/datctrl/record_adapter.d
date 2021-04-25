@@ -1,11 +1,13 @@
 module webtank.ivy.datctrl.record_adapter;
 
-import ivy.types.data.base_class_node: BaseClassNode;
+import ivy.types.data.decl_class_node: DeclClassNode;
 
-class RecordAdapter: BaseClassNode
+class RecordAdapter: DeclClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.iface.range: IvyDataRange;
+	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass, makeClass;
 
 	import webtank.datctrl.consts: SrlField, SrlEntityType;
 	import webtank.ivy.datctrl.record_format_adapter: RecordFormatAdapter;
@@ -20,6 +22,9 @@ private:
 public:
 	this(IvyData rawRec)
 	{
+		import webtank.ivy.datctrl.deserialize.record_data: _deserializeRecordData;
+		super(_declClass);
+
 		auto typePtr = SrlField.type in rawRec;
 		auto dataPtr = SrlField.data in rawRec;
 		auto fmtPtr = SrlField.format in rawRec;
@@ -32,27 +37,18 @@ public:
 			typePtr.type == IvyDataType.String && typePtr.str == SrlEntityType.record,
 			`Expected "` ~ SrlEntityType.record ~ `" value in "` ~ SrlField.type ~ `" field`);
 	
-		_fmt = new RecordFormatAdapter(rawRec);
-		_items = _deserialize(rawRec);
+		this._fmt = new RecordFormatAdapter(rawRec);
+		this._items = _deserializeRecordData(*dataPtr, this._fmt);
 	}
 
 	this(RecordFormatAdapter fmt, IvyData[] items)
 	{
+		super(_declClass);
+
 		enforce(fmt !is null, `Expected record format adapter`);
 		enforce(items.length == fmt.length, `Number of field in record format must match number of items in record data`);
 		_fmt = fmt;
 		_items = items;
-	}
-
-	IvyData[] _deserialize(IvyData rawRec)
-	{
-		import webtank.ivy.datctrl.deserialize: _deserializeRecordData;
-		IvyData rawItems = rawRec[SrlField.data];
-		IvyData[] res;
-		foreach( i, ref fieldData; rawItems.array ) {
-			res ~= _deserializeRecordData(fieldData, _fmt[IvyData(i)]);
-		}
-		return res;
 	}
 
 	static class Range: IvyDataRange
@@ -116,15 +112,6 @@ public:
 			return this[IvyData(attrName)];
 		}
 
-		IvyData __serialize__()
-		{
-			IvyData res = _fmt.__serialize__();
-			res[SrlField.data] = _serializeData();
-			res[SrlField.type] = SrlEntityType.record;
-
-			return res;
-		}
-
 		size_t length() @property {
 			return _fmt.length;
 		}
@@ -140,7 +127,7 @@ public:
 				} else if ( EnumAdapter maybeEnum = cast(EnumAdapter) value.classNode ) {
 					data ~= maybeEnum.__getAttr__("value");
 				} else {
-					data ~= value.classNode.__serialize__();
+					data ~= IvyData(null); // value.classNode.__serialize__();
 				}
 			} else {
 				data ~= value;
@@ -148,5 +135,22 @@ public:
 		}
 
 		return IvyData(data);
+	}
+
+	@IvyMethodAttr()
+	IvyData __serialize__()
+	{
+		IvyData res = _fmt.__serialize__();
+		res[SrlField.data] = _serializeData();
+		res[SrlField.type] = SrlEntityType.record;
+
+		return res;
+	}
+
+	private __gshared DeclClass _declClass;
+
+	shared static this()
+	{
+		_declClass = makeClass!(typeof(this))("RecordAdapter");
 	}
 }
