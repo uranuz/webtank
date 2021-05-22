@@ -6,7 +6,8 @@ shared static this()
 	import webtank.ivy.datctrl.recordset_adapter: RecordSetAdapter;
 	import webtank.ivy.datctrl.recordset_adapter_slice: RecordSetAdapterSlice;
 
-	import ivy.types.data.decl_class: DeclClass, makeClass;
+	import ivy.types.data.decl_class: DeclClass;
+	import ivy.types.data.decl_class_utils: makeClass;
 	
 	RecordSetAdapter._declClass = makeClass!RecordSetAdapter("RecordSetAdapter");
 	RecordSetAdapterSlice._declClass = makeClass!RecordSetAdapterSlice("RecordSetAdapterSlice");

@@ -6,7 +6,7 @@ class RecordSetAdapter: DeclClassNode
 {
 	import ivy.types.data: IvyData, IvyDataType;
 	import ivy.types.data.iface.range: IvyDataRange;
-	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.interpreter.directive.utils: IvyMethodAttr;
 	import ivy.types.data.decl_class: DeclClass;
 
 	import webtank.datctrl.consts: SrlField, SrlEntityType;

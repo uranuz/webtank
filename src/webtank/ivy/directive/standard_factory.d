@@ -3,7 +3,6 @@ module webtank.ivy.directive.standard_factory;
 import ivy.types.data: IvyData, IvyDataType;
 import ivy.interpreter.interpreter: Interpreter;
 import ivy.interpreter.directive.factory: InterpreterDirectiveFactory;
-import ivy.interpreter.directive.base: makeDir;
 import ivy.types.symbol.dir_attr: DirAttr;
 import ivy.types.symbol.consts: IvyAttrType;
 import ivy.types.data.async_result: AsyncResult;
@@ -17,6 +16,7 @@ private __gshared InterpreterDirectiveFactory _factory;
 shared static this()
 {
 	import ivy.interpreter.directive.standard_factory: ivyDirFactory;
+	import ivy.interpreter.directive.utils: makeDir;
 
 	// Use ivy factory as a base for webtank factory
 	_factory = new InterpreterDirectiveFactory(ivyDirFactory);

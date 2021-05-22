@@ -45,8 +45,6 @@ public:
 		import std.algorithm: equal;
 		import std.range: empty;
 
-		import ivy.types.data.utils: errorToIvyData;
-
 		if( !_entry.HTTPMethod.empty )
 		{
 			// Filter by HTTP-method if it was specified

@@ -7,9 +7,10 @@ class OptSet: DeclClassNode
 	import std.exception: enforce;
 
 	import ivy.types.data: IvyData, IvyDataType;
-	import ivy.interpreter.directive.base: IvyMethodAttr;
+	import ivy.interpreter.directive.utils: IvyMethodAttr;
 	import ivy.interpreter.interpreter: Interpreter;
-	import ivy.types.data.decl_class: DeclClass, makeClass;
+	import ivy.types.data.decl_class: DeclClass;
+	import ivy.types.data.decl_class_utils: makeClass;
 	import ivy.types.data.render: renderDataNode2;
 	import ivy.types.data.render: DataRenderType;
 

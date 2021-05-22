@@ -5,8 +5,12 @@ import ivy.types.data.decl_class_node: DeclClassNode;
 class IvyUserRights: DeclClassNode
 {
 	import ivy.types.data: IvyDataType, IvyData;
-	import ivy.interpreter.directive.base: IvyMethodAttr;
-	import ivy.types.data.decl_class: DeclClass, makeClass;
+	import ivy.interpreter.directive.utils: IvyMethodAttr;
+	import ivy.types.data.decl_class: DeclClass;
+	import ivy.types.data.decl_class_utils: makeClass;
+	import ivy.types.symbol.dir_attr: DirAttr;
+	import ivy.types.symbol.consts: IvyAttrType;
+
 
 	import webtank.security.right.user_rights: UserRights;
 
@@ -17,72 +21,20 @@ private:
 	IvyData _data = null; // Workaround for data not being undef and ivy node search not crash
 
 public:
-	import std.exception: enforce;
 	this(UserRights rights)
 	{
 		super(_declClass);
 
-		_rights = rights;
+		this._rights = rights;
 	}
 
-	override {
-		IvyData __getAttr__(string attrName)
-		{
-			switch(attrName)
-			{
-				case "object": return IvyData(_accessObject);
-				case "kind": return IvyData(_accessKind);
-				case "data": return _data;
-				case "hasRight": return IvyData(
-					_rights.hasRight(_accessObject, _accessKind, _data));
-				default: break;
-			}
-			return super.__getAttr__(attrName);
-		}
-
-		void __setAttr__(IvyData val, string attrName)
-		{
-			import std.algorithm: canFind;
-			switch(attrName)
-			{
-				case "object":
-				{
-					// Access object is essential
-					enforce(val.type == IvyDataType.String, `Expected string as access object name!!!`);
-					_accessObject = val.str;
-					break;
-				}
-				case "kind":
-				{
-					// Access kind is optional
-					enforce([IvyDataType.Undef, IvyDataType.Null, IvyDataType.String].canFind(val.type),
-						"Expected string, null or undef as access kind name!!!");
-					if( val.type == IvyDataType.String ) {
-						_accessKind = val.str;
-					} else {
-						_accessKind = null; // Need to clear it
-					}
-					break;
-				}
-				case "data":
-				{
-					_data = val;
-					break;
-				}
-				default:
-					throw new Exception("Unexpected IvyUserRights attribute: " ~ attrName);
-			}
-		}
-	}
-
-	@IvyMethodAttr()
-	IvyData __serialize__()
-	{
-		IvyData res;
-		foreach( field; ["object", "kind", "data", "hasRight"] ) {
-			res[field] = this.__getAttr__(field);
-		}
-		return res;
+	@IvyMethodAttr(null, [
+		DirAttr("object", IvyAttrType.Any),
+		DirAttr("kind", IvyAttrType.Any),
+		DirAttr("data", IvyAttrType.Any)
+	])
+	bool hasRight(string object, string kind, IvyData data) {
+		return this._rights.hasRight(object, kind, data);
 	}
 
 	private __gshared DeclClass _declClass;
