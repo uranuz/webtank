@@ -17,9 +17,9 @@ mixin template RecordSetRangeImpl()
 		template _opApplyImpl(Rec, bool withIndex)
 		{
 			static if( withIndex ) {
-				alias DelegateType = scope int delegate(size_t, Rec);
+				alias DelegateType = int delegate(size_t, Rec);
 			} else {
-				alias DelegateType = scope int delegate(Rec);
+				alias DelegateType = int delegate(Rec);
 			}
 
 			int _opApplyImpl(DelegateType dg)

@@ -46,7 +46,7 @@ class IvyViewService: IWebService
 
 	import webtank.common.log.writer: LogWriter;
 
-	import ivy.engine: SaveStateResult;
+	import ivy.engine: ContextAsyncResult;
 
 	private static immutable DEFAULT_CLASS_METHOD = "render";
 
@@ -230,7 +230,7 @@ public:
 		import ivy.types.data.utils: errorToIvyData;
 
 		auto globalParams = _prepareGlobalParams(ctx);
-		SaveStateResult execRes = _renderContent(ctx, globalParams, moduleName, methodName);
+		ContextAsyncResult execRes = _renderContent(ctx, globalParams, moduleName, methodName);
 		
 		execRes.asyncResult.then(
 			(IvyData content) {
@@ -259,7 +259,7 @@ public:
 	}
 
 	/// Render content of page
-	SaveStateResult _renderContent(
+	ContextAsyncResult _renderContent(
 		HTTPContext ctx,
 		ref IvyData[string] globalParams,
 		string moduleName,
@@ -267,7 +267,7 @@ public:
 	) {
 		AsyncResult asyncRes = new AsyncResult();
 
-		SaveStateResult moduleExecRes = this.ivyEngine.runModule(moduleName, _prepareGlobalParams(ctx));
+		ContextAsyncResult moduleExecRes = this.ivyEngine.runModule(moduleName, _prepareGlobalParams(ctx));
 		auto interp = moduleExecRes.interp;
 
 		moduleExecRes.asyncResult.then((IvyData modRes) {
@@ -282,7 +282,7 @@ public:
 			interp.execCallable(methodCallable, params).then(asyncRes);
 		}, &asyncRes.reject);
 
-		return SaveStateResult(interp, asyncRes);
+		return ContextAsyncResult(interp, asyncRes);
 	}
 
 	void _renderApp(HTTPContext ctx, IvyData content) {

@@ -1,7 +1,5 @@
 module webtank.security.auth.core.controller;
 
-import std.conv, std.digest.digest, std.datetime, std.utf, std.base64 : Base64URL;
-
 import webtank.security.auth.iface.controller: IAuthController;
 
 
@@ -37,6 +35,8 @@ public:
 	override IUserIdentity authenticate(HTTPInput req)
 	{
 		import std.conv: text;
+		import std.base64: Base64URL;
+
 		import webtank.net.http.headers.consts: HTTPHeader, CookieName;
 		import webtank.datctrl.record_format: RecordFormat, PrimaryKey;
 		import webtank.db.datctrl: getRecord;

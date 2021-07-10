@@ -135,7 +135,7 @@ public:
 		_values[SetCookieAttr.Secure] = val? "true": null;
 	}
 
-	ref string[string] values() @property {
+	ref string[string] values() return @property {
 		return _values;
 	}
 

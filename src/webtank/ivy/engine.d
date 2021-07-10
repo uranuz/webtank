@@ -13,15 +13,15 @@ private:
 public:
 	this(string[] importPaths, LogWriter webtankLog = null)
 	{
-		import ivy.engine_config: IvyConfig;
+		import ivy.engine.config: IvyEngineConfig;
 		import webtank.ivy.directive.standard_factory: webtankDirFactory;
 		
 		import std.exception: enforce;
 		enforce(importPaths.length > 0, "Import paths for templates are required");
 
-		IvyConfig ivyConfig;
-		ivyConfig.importPaths = importPaths;
-		ivyConfig.fileExtension = ".ivy";
+		IvyEngineConfig config;
+		config.importPaths = importPaths;
+		config.fileExtension = ".ivy";
 
 		if( webtankLog !is null )
 			_loger = new IvyLogWriter(webtankLog);
@@ -29,15 +29,15 @@ public:
 		if( _loger !is null )
 		{
 			// Направляем логирование шаблонизатора в файл
-			ivyConfig.parserLoger = &this._loger.writeEvent;
-			ivyConfig.compilerLoger = &this._loger.writeEvent;
-			ivyConfig.interpreterLoger = &this._loger.writeEvent;
+			config.parserLoger = &this._loger.writeEvent;
+			config.compilerLoger = &this._loger.writeEvent;
+			config.interpreterLoger = &this._loger.writeEvent;
 		}
 
-		ivyConfig.directiveFactory = webtankDirFactory;
+		config.directiveFactory = webtankDirFactory;
 
-		debug ivyConfig.clearCache = true;
+		debug config.clearCache = true;
 
-		super(ivyConfig);
+		super(config);
 	}
 }
