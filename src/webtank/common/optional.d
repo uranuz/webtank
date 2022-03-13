@@ -309,7 +309,7 @@ This function is also called for the implicit conversion to $(D T).
 	}
 	
 	string toString()
-		/*pure @safe nothrow*/
+		const pure @safe
 	{
 		return isSet? _value.to!string: (isNull? "Optional.Null": "Optional.Undef");
 	}
